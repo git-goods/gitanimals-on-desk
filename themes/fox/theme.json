@@ -39,7 +39,7 @@
     "idle":         ["idle-follow.svg"],
     "thinking":     ["thinking.svg"],
     "working":      ["typing.svg"],
-    "error":        ["idle-follow.svg"],
+    "error":        ["error.svg"],
     "attention":    ["happy.svg"],
     "notification": ["notification.svg"],
     "sleeping":     ["idle-follow.svg"],
