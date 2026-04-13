@@ -38,7 +38,7 @@
   "states": {
     "idle":         ["idle-follow.svg"],
     "thinking":     ["idle-follow.svg"],
-    "working":      ["idle-follow.svg"],
+    "working":      ["typing.svg"],
     "error":        ["idle-follow.svg"],
     "attention":    ["idle-follow.svg"],
     "notification": ["idle-follow.svg"],
