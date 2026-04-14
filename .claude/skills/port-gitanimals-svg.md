@@ -1,11 +1,12 @@
 ---
 name: port-gitanimals-svg
 description: >
-  Use when porting GitAnimals-style character SVGs (templates with *{id}, *{act}, *{contribution}
-  placeholders) to Clawd theme asset files. Covers coordinate extraction from CSS keyframes,
-  nested animation groups, z-order, keyframe prefix, viewBox alignment, and Clawd eye-tracking
-  conventions. Invoke whenever the user provides a reference .svg file and asks you to create
-  or update a Clawd theme pose.
+  Use when creating or updating Clawd theme SVG assets — whether porting from GitAnimals templates,
+  deriving new state poses from existing bases, or tuning hitBox/animation. Covers coordinate
+  extraction from CSS keyframes, nested animation groups, z-order, keyframe prefix, viewBox
+  alignment, eye variants (^^, X, closed), prop animations, walk/flip patterns, hitBox debugging,
+  and Clawd eye-tracking conventions. Invoke whenever the user asks to create, update, or debug
+  a Clawd theme pose SVG.
 ---
 
 # GitAnimals SVG → Clawd 테마 에셋 이식 가이드
@@ -215,6 +216,9 @@ node scripts/validate-theme.js themes/<name>
 | 눈이 다른 픽셀에 묻힘 | z-order 문제 | 눈 rect를 head 그룹 끝으로 이동 |
 | 소품이 몸과 같이 움직임 | obj 안에 소품 배치 | obj 그룹 바깥으로 이동 |
 | 아이 트래킹 깜빡임 | `#eyes-js`에 CSS transform | 자식 그룹으로 애니메이션 내리기 |
+| hitBox 클릭 안 됨 | hitBox y 가 캐릭터보다 아래 | Debug Hitbox 켜서 확인 후 y 올리기 (Step 11) |
+| scaleX 시 캐릭터 튕김 | transform-origin 미설정 (기본 0,0 기준 flip) | CSS `transform-origin: 7.5px 7px` 캐릭터 중심 설정 |
+| 1-shot 애니 후 상태 안 바뀜 | wakeDuration 미설정 | theme.json `timings.wakeDuration` 추가 |
 
 ---
 
@@ -294,7 +298,7 @@ GitAnimals SVG 없이 완성된 베이스 SVG (idle-follow / typing 등) 에서 
 | 상태 | 구현 | 비고 |
 |------|------|------|
 | 기본 (normal) | `x=8 y=4 w=1 h=2` / `x=11 y=4 w=1 h=2` | 세로 rect |
-| 감긴 (sleeping) | `x=8 y=5 w=1 h=1` / `x=11 y=5 w=1 h=1` | 가로선 1px (─) |
+| 감긴 (sleeping) | `x=7.6 y=4.6 w=1.8 h=0.8` / `x=10.6 y=4.6 w=1.8 h=0.8` | 두꺼운 대시 (─). 1×1 은 너무 얇아 안 보임 |
 | 반눈 (waking) | `x=8 y=5 w=1 h=1` + `x=8 y=4 w=1 h=1 opacity=0.3` (양쪽) | 아래 절반만 진하게 |
 | X 눈 (error) | **아래 X 눈 공식 참조** | rotated rect 2개/눈 |
 | `^^` 반달 (happy) | **아래 `^^` 공식 참조** | 5-pixel arc/눈 |
@@ -480,6 +484,64 @@ Shadow 는 공중(20%, 35%)에서 scaleX 축소, 착지(28%, 42%)에서 확장.
 }
 ```
 
+### 8-e. 좌우 걸음 + 제자리 flip (waking, 1-shot)
+
+> ⚠️ 픽셀아트에서 scaleY stretch/squash 같은 복잡한 변형은 깨지기 쉬움. 단순 translate 이동 + scaleX flip 이 가장 안전.
+
+**1-shot 설정**:
+```css
+#dfox-wake-obj {
+  transform-origin: 7.5px 7px;  /* ⚠️ 반드시 CSS 로 (SVG attr 은 CSS animation 이 무시) */
+  animation: dfox-wake-obj 5s ease-in-out forwards 1;
+}
+```
+- `iteration-count: 1` + `fill-mode: forwards` → 한 번 재생 후 최종 프레임 유지
+- `theme.json` 에 `timings.wakeDuration: 5000` 설정 (상태 유지 시간 = 애니 duration)
+
+**scaleX squeeze-through-zero** (자연스러운 2D 턴):
+```css
+@keyframes dfox-wake-obj {
+  0%, 4%     { transform: translate(0, 0)     scaleX(1); }    /* 중앙 정지 */
+  42%        { transform: translate(3px, 0)   scaleX(1); }    /* 우측으로 걸음 */
+  /* 제자리 turn — x 고정, scaleX 만 0 통과 */
+  44%        { transform: translate(3px, 0)   scaleX(0.3); }
+  47%        { transform: translate(3px, 0)   scaleX(0); }    /* 세로선 (턴 순간) */
+  48%        { transform: translate(3px, 0)   scaleX(-0.3); }
+  50%        { transform: translate(3px, 0)   scaleX(-1); }   /* 반대 방향 */
+  82%        { transform: translate(-3px, 0)  scaleX(-1); }   /* 좌측으로 걸음 */
+  /* 다시 제자리 turn */
+  84%        { transform: translate(-3px, 0)  scaleX(-0.3); }
+  87%        { transform: translate(-3px, 0)  scaleX(0); }
+  88%        { transform: translate(-3px, 0)  scaleX(1); }
+  100%       { transform: translate(0, 0)     scaleX(1); }    /* 중앙 복귀 */
+}
+```
+
+핵심: **flip 구간에서 translate x 는 고정** → "이동 중 튕기기" 없이 제자리에서 도는 것처럼 보임.
+
+**다리/머리: 걸음 구간에만 sway, 중앙 정지 시 static**:
+```css
+/* 1-shot forwards — 시작/끝 정지, 걸음 구간만 sway */
+@keyframes dfox-wake-leg-left {
+  0%, 4%     { transform: translate(5px, 5px); }
+  10%        { transform: translate(5px, 5px) rotate(10deg); }  /* sway 1 */
+  17%        { transform: translate(5px, 5px); }
+  /* ...walk 구간 반복... */
+  82%, 100%  { transform: translate(5px, 5px); }               /* 정지 */
+}
+```
+
+**눈 전환 (open → closed → open)**:
+```css
+/* 걸음 중 감김, 중앙 정지 시 뜸 */
+@keyframes dfox-wake-eyes-closed {
+  0%, 15% { opacity: 0; } 20%, 80% { opacity: 1; } 85%, 100% { opacity: 0; }
+}
+@keyframes dfox-wake-eyes-open {
+  0%, 15% { opacity: 1; } 20%, 80% { opacity: 0; } 85%, 100% { opacity: 1; }
+}
+```
+
 ---
 
 ## Step 9 — 프롭 애니메이션 카탈로그
@@ -553,3 +615,51 @@ Shadow 는 공중(20%, 35%)에서 scaleX 축소, 착지(28%, 42%)에서 확장.
 | 0.6s | error | 스트레스, 불안정 |
 | 0.5s | notification | 놀람, 당황 (종종거림) |
 | 0s (정지) | sleeping / typing | 휴식 |
+
+---
+
+## Step 11 — hitBox 설정 및 디버깅
+
+### hitBox 좌표 이해
+
+hitBox 는 **viewBox 좌표계** 로 정의 (스크린 픽셀 아님):
+```json
+"hitBoxes": {
+  "default":  { "x": -3, "y": -8, "w": 22, "h": 20 },
+  "sleeping": { "x": -3, "y": -5, "w": 22, "h": 18 }
+}
+```
+
+`hit-geometry.js` 의 `getHitRectScreen()` 가 viewBox → 스크린 변환:
+```
+top  = artRect.y + (hitBox.y - viewBox.y) * (artRect.h / viewBox.height)
+left = artRect.x + (hitBox.x - viewBox.x) * (artRect.w / viewBox.width)
+```
+
+> ⚠️ **normalized layout 함정**: `contentBox` + `visibleHeightRatio` 를 쓰는 테마는 artRect 이 윈도우보다 **훨씬 크게** 스케일됨 (예: 1.45 × 윈도우 높이). 이 때문에 hitBox y 값이 직관과 다르게 배치될 수 있음. 반드시 디버그 모드로 시각 확인.
+
+### 디버그 모드 사용법
+
+1. `.env` 에 `CLAWD_DEBUG=1` 설정 (launch.js 가 process.env 에 주입)
+2. 앱 시작 → 우클릭 → **Debug** 서브메뉴 → **Show Hitbox** 체크
+3. 시각 확인:
+   - **빨간 반투명** = hitWin (실제 클릭 영역)
+   - **파란 반투명 배경** = 이미지 렌더 영역 (SVG object/img 경계)
+4. 상태 변경 (sleeping, waking 등) 시 hitBox 크기/위치 변화 확인
+5. `CLAWD_DEBUG` 미설정 시 Debug 메뉴 자체가 노출되지 않음
+
+### hitBox 설정 가이드
+
+1. **캐릭터 실제 범위 측정**: SVG 에서 가장 위(귀 끝)~아래(다리/그림자) 의 y 좌표, 가장 왼쪽~오른쪽 x 좌표 확인
+2. **여유 마진 추가**: 귀 위 2~3px, 다리 아래 2~3px 여유
+3. **sleeping 전용 hitBox**: 앉은/누운 포즈는 서있을 때와 범위가 다름 → `sleepingHitboxFiles` 에 해당 SVG 등록 필수
+4. **디버그로 확인**: Show Hitbox 켜고 빨간 영역이 캐릭터를 충분히 감싸는지 검증
+5. **반복 조정**: hitBox 값 변경 → 앱 재시작 → 시각 확인 (hot-reload 안 됨)
+
+### 자주 하는 실수
+
+| 실수 | 결과 | 해결 |
+|------|------|------|
+| hitBox y 를 양수로만 설정 | 머리/귀 클릭 불가 | 캐릭터 최상단 y 에 마진 더해 설정 |
+| sleeping hitBox 미설정 | sleeping 시 클릭 불가 | `hitBoxes.sleeping` + `sleepingHitboxFiles` 추가 |
+| normalized layout 무시 | 스크린에서 hitBox 위치 예측 실패 | 반드시 Debug Hitbox 로 시각 확인 |
