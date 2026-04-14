@@ -42,7 +42,7 @@
     "error":        ["error.svg"],
     "attention":    ["happy.svg"],
     "notification": ["notification.svg"],
-    "sleeping":     ["idle-follow.svg"],
+    "sleeping":     ["sleeping.svg"],
     "waking":       ["idle-follow.svg"]
   },
 
@@ -67,7 +67,7 @@
     "default":  { "x": -1, "y": 4, "w": 16, "h": 12 },
     "sleeping": { "x": -2, "y": 9, "w": 18, "h": 7 }
   },
-  "sleepingHitboxFiles": ["idle-follow.svg"],
+  "sleepingHitboxFiles": ["sleeping.svg"],
 
   "miniMode": { "supported": false },
 
