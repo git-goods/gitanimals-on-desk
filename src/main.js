@@ -192,6 +192,8 @@ function stopMonitorForAgent(agentId) {
 // ── Theme loader ──
 const themeLoader = require("./theme-loader");
 themeLoader.init(__dirname, app.getPath("userData"));
+const remoteThemeSync = require("./remote-theme-sync");
+remoteThemeSync.init(app.getPath("userData"));
 
 let activeTheme = themeLoader.loadTheme(_settingsController.get("theme") || "clawd");
 
@@ -1501,6 +1503,15 @@ if (!gotTheLock) {
 
     // Register global shortcut for toggling pet visibility
     registerToggleShortcut();
+
+    // Background: fetch remote theme registry + per-theme configs & assets.
+    // Menu is rebuilt on each successful theme sync so new themes appear.
+    remoteThemeSync.onSyncComplete(() => {
+      try { rebuildAllMenus(); } catch (err) {
+        console.warn("Clawd: rebuildAllMenus after remote sync failed:", err && err.message);
+      }
+    });
+    remoteThemeSync.syncAll();
 
     // Construct log monitors. We always instantiate them so toggling the
     // agent on/off later can call start()/stop() without paying the require
