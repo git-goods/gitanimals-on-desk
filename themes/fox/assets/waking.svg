@@ -1,0 +1,226 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45">
+  <!--
+    Dessert Fox — waking state (one-shot, 4s)
+    Sequence: still at center (eyes open) → walk right, close eyes → turn in place
+              → walk left (eyes closed) → turn in place → settle at center (eyes open)
+    Key points:
+      - start & end at center (translate 0, 0) with legs/head static
+      - legs & head sway only during walking phases
+      - eyes closed during the middle (walking + turns)
+      - flip: scaleX squeeze-through-zero, x held constant → "turn in place"
+      - transform-origin: 7.5px 7px (character center) for in-place flip
+    Keyframe prefix: dfox-wake-*
+  -->
+  <style>
+    /* Walk segments extended: 4-42% (right), 50-88% (left). Turns tightened. */
+    @keyframes dfox-wake-obj {
+      0%, 4%     { transform: translate(0, 0)     scaleX(1); }
+      42%        { transform: translate(3px, 0)   scaleX(1); }
+      /* turn at x=3 (tight) */
+      44%        { transform: translate(3px, 0)   scaleX(0.3); }
+      47%        { transform: translate(3px, 0)   scaleX(0); }
+      48%        { transform: translate(3px, 0)   scaleX(-0.3); }
+      50%        { transform: translate(3px, 0)   scaleX(-1); }
+      82%        { transform: translate(-3px, 0)  scaleX(-1); }
+      /* turn at x=-3 (tight) */
+      84%        { transform: translate(-3px, 0)  scaleX(-0.3); }
+      86%        { transform: translate(-3px, 0)  scaleX(0); }
+      87%        { transform: translate(-3px, 0)  scaleX(0.3); }
+      88%        { transform: translate(-3px, 0)  scaleX(1); }
+      /* slow walk back to center (88-100%) */
+      94%        { transform: translate(-1.5px, 0) scaleX(1); }
+      100%       { transform: translate(0, 0)     scaleX(1); }
+    }
+    @keyframes dfox-wake-shadow {
+      0%, 4%     { transform: translate(3px, 7px)  scaleX(1); opacity: 0.8; }
+      42%        { transform: translate(6px, 7px)  scaleX(1); opacity: 0.7; }
+      50%        { transform: translate(6px, 7px)  scaleX(1); opacity: 0.7; }
+      82%        { transform: translate(0, 7px)    scaleX(1); opacity: 0.7; }
+      88%        { transform: translate(0, 7px)    scaleX(1); opacity: 0.7; }
+      94%        { transform: translate(1.5px, 7px) scaleX(1); opacity: 0.75; }
+      100%       { transform: translate(3px, 7px)  scaleX(1); opacity: 0.8; }
+    }
+    /* legs: 3 sways per walk segment (longer walking = more steps) */
+    @keyframes dfox-wake-leg-left {
+      0%, 4%     { transform: translate(5px, 5px); }
+      /* walk right (4-42%): 3 sways */
+      10%        { transform: translate(5px, 5px) rotate(10deg); }
+      17%        { transform: translate(5px, 5px); }
+      23%        { transform: translate(5px, 5px) rotate(10deg); }
+      30%        { transform: translate(5px, 5px); }
+      36%        { transform: translate(5px, 5px) rotate(10deg); }
+      42%, 50%   { transform: translate(5px, 5px); }
+      /* walk left (50-88%): 3 sways */
+      56%        { transform: translate(5px, 5px) rotate(10deg); }
+      63%        { transform: translate(5px, 5px); }
+      69%        { transform: translate(5px, 5px) rotate(10deg); }
+      76%        { transform: translate(5px, 5px); }
+      78%        { transform: translate(5px, 5px) rotate(10deg); }
+      82%, 88%   { transform: translate(5px, 5px); }
+      /* return walk (88-100%): 1 sway */
+      94%        { transform: translate(5px, 5px) rotate(10deg); }
+      100%       { transform: translate(5px, 5px); }
+    }
+    @keyframes dfox-wake-leg-right {
+      0%, 4%     { transform: translate(8px, 5px); }
+      10%        { transform: translate(8px, 5px) rotate(-10deg); }
+      17%        { transform: translate(8px, 5px); }
+      23%        { transform: translate(8px, 5px) rotate(-10deg); }
+      30%        { transform: translate(8px, 5px); }
+      36%        { transform: translate(8px, 5px) rotate(-10deg); }
+      42%, 50%   { transform: translate(8px, 5px); }
+      56%        { transform: translate(8px, 5px) rotate(-10deg); }
+      63%        { transform: translate(8px, 5px); }
+      69%        { transform: translate(8px, 5px) rotate(-10deg); }
+      76%        { transform: translate(8px, 5px); }
+      78%        { transform: translate(8px, 5px) rotate(-10deg); }
+      82%, 88%   { transform: translate(8px, 5px); }
+      94%        { transform: translate(8px, 5px) rotate(-10deg); }
+      100%       { transform: translate(8px, 5px); }
+    }
+    /* head: bobs with each step (3 bobs per walk segment) */
+    @keyframes dfox-wake-head-nod {
+      0%, 4%     { transform: translate(0, 0) rotate(0deg); }
+      10%        { transform: translate(1px, -0.5px) rotate(5deg); }
+      17%        { transform: translate(0, 0) rotate(0deg); }
+      23%        { transform: translate(1px, -0.5px) rotate(5deg); }
+      30%        { transform: translate(0, 0) rotate(0deg); }
+      36%        { transform: translate(1px, -0.5px) rotate(5deg); }
+      42%, 50%   { transform: translate(0, 0) rotate(0deg); }
+      56%        { transform: translate(1px, -0.5px) rotate(5deg); }
+      63%        { transform: translate(0, 0) rotate(0deg); }
+      69%        { transform: translate(1px, -0.5px) rotate(5deg); }
+      76%        { transform: translate(0, 0) rotate(0deg); }
+      78%        { transform: translate(1px, -0.5px) rotate(5deg); }
+      82%, 88%   { transform: translate(0, 0) rotate(0deg); }
+      94%        { transform: translate(1px, -0.5px) rotate(5deg); }
+      100%       { transform: translate(0, 0) rotate(0deg); }
+    }
+    /* eyes: open at start → closed during middle (15-85%) → open at end */
+    @keyframes dfox-wake-eyes-closed {
+      0%, 15%    { opacity: 0; }
+      20%, 80%   { opacity: 1; }
+      85%, 100%  { opacity: 0; }
+    }
+    @keyframes dfox-wake-eyes-open {
+      0%, 15%    { opacity: 1; }
+      20%, 80%   { opacity: 0; }
+      85%, 100%  { opacity: 1; }
+    }
+
+    #dfox-wake-obj {
+      transform-origin: 7.5px 7px;
+      animation: dfox-wake-obj 5s ease-in-out forwards 1;
+    }
+    #dfox-wake-shadow {
+      animation: dfox-wake-shadow 5s ease-in-out forwards 1;
+    }
+    #dfox-wake-leg-left {
+      animation: dfox-wake-leg-left 5s ease-in-out forwards 1;
+    }
+    #dfox-wake-leg-right {
+      animation: dfox-wake-leg-right 5s ease-in-out forwards 1;
+    }
+    #dfox-wake-head-nod {
+      animation: dfox-wake-head-nod 5s ease-in-out forwards 1;
+    }
+    #dfox-wake-eyes-c {
+      animation: dfox-wake-eyes-closed 5s steps(1, end) forwards 1;
+    }
+    #dfox-wake-eyes-o {
+      animation: dfox-wake-eyes-open 5s steps(1, end) forwards 1;
+    }
+  </style>
+
+  <!-- Shadow -->
+  <g id="dfox-wake-shadow" transform="translate(3, 7)">
+    <rect width="8" height="1" transform="matrix(-1 0 0 1 8 0.5)" fill="#2B4447" fill-opacity="0.1"/>
+    <rect width="6.76923" height="0.25" transform="matrix(-1 0 0 1 7.38452 0.25)" fill="#2B4447" fill-opacity="0.1"/>
+    <rect width="6.76923" height="0.25" transform="matrix(-1 0 0 1 7.38452 1.5)" fill="#2B4447" fill-opacity="0.1"/>
+    <rect width="5.53846" height="0.25" transform="matrix(-1 0 0 1 6.76929 0)" fill="#2B4447" fill-opacity="0.1"/>
+    <rect width="5.53846" height="0.25" transform="matrix(-1 0 0 1 6.76929 1.75)" fill="#2B4447" fill-opacity="0.1"/>
+  </g>
+
+  <!-- obj: walk + in-place flips -->
+  <g id="dfox-wake-obj">
+    <!-- Legs (static at center, sway during walking) -->
+    <g id="dfox-wake-leg-left" transform="translate(5, 5)">
+      <rect width="2" height="3" fill="#DDD7B5"/>
+    </g>
+    <g id="dfox-wake-leg-right" transform="translate(8, 5)">
+      <rect width="2" height="3" fill="#DDD7B5"/>
+    </g>
+
+    <!-- Body -->
+    <g transform="translate(-2, 2)">
+      <rect x="2" y="2" width="3" height="1" fill="#F5F5F7"/>
+      <rect x="3" y="3" width="3" height="1" fill="#F5F5F7"/>
+      <rect y="3" width="2" height="1" fill="#F5F5F7"/>
+      <rect x="3" y="2" width="8" height="1" fill="#DDD7B5"/>
+      <rect x="7" width="6" height="4" fill="#DDD7B5"/>
+      <rect x="7" y="2" width="6" height="2" fill="#DDD7B5"/>
+      <rect x="4" y="2" width="8" height="2" fill="#DDD7B5"/>
+      <rect x="6" y="1" width="7" height="3" fill="#DDD7B5"/>
+      <rect x="6" y="3" width="7" height="2" fill="#DDD7B5"/>
+      <rect x="9" y="2" width="3" height="3" fill="#F5F5F7"/>
+      <rect x="8" y="3" width="3" height="2" fill="#F5F5F7"/>
+      <rect x="7" y="4" width="3" height="1" fill="#F5F5F7"/>
+      <rect x="2" y="1" width="2" height="1" fill="#DDD7B5"/>
+      <rect x="1" y="2" width="1" height="1" fill="#DDD7B5"/>
+      <rect y="3" width="1" height="1" fill="#DDD7B5"/>
+      <rect x="4" y="3" width="2" height="1" fill="black" fill-opacity="0.1"/>
+      <rect x="6" y="4" width="2" height="1" fill="black" fill-opacity="0.1"/>
+      <rect x="3" y="2" width="1" height="1" fill="black" fill-opacity="0.1"/>
+    </g>
+
+    <!-- Head: outer = static position, inner = delta (nod during walk) -->
+    <g transform="translate(0, -5)">
+      <g id="dfox-wake-head-nod">
+        <rect x="7" y="2" width="4" height="5" fill="#DDD7B5"/>
+        <rect x="9" y="5" width="2" height="2" fill="#F5F5F7"/>
+        <rect x="6" y="3" width="6" height="4" fill="#DDD7B5"/>
+        <rect x="8" y="6" width="4" height="1" fill="#F5F5F7"/>
+        <rect x="8" y="6" width="3" height="2" fill="#F5F5F7"/>
+        <rect x="6" y="3" width="6" height="1" fill="#DDD7B5"/>
+        <rect x="3" y="4" width="12" height="1" fill="#DDD7B5"/>
+        <rect x="5" y="3" width="8" height="3" fill="#DDD7B5"/>
+        <rect x="7" y="7" width="4" height="1" fill="#DDD7B5"/>
+        <!-- Left ear -->
+        <rect x="1" y="2" width="4" height="1" fill="#DDD7B5"/>
+        <rect y="1" width="4" height="1" fill="#DDD7B5"/>
+        <rect x="1" width="2" height="3" fill="#DDD7B5"/>
+        <rect x="1" y="1" width="2" height="1" fill="#FBB3BE"/>
+        <rect x="2" y="1" width="1" height="2" fill="#FBB3BE"/>
+        <rect x="2" y="2" width="2" height="2" fill="#FBB3BE"/>
+        <rect x="3" y="3" width="2" height="2" fill="#FBB3BE"/>
+        <rect x="3" y="4" width="3" height="1" fill="#FBB3BE"/>
+        <!-- Right ear -->
+        <rect x="13" y="2" width="4" height="1" fill="#DDD7B5"/>
+        <rect x="14" y="1" width="4" height="1" fill="#DDD7B5"/>
+        <rect x="15" width="2" height="3" fill="#DDD7B5"/>
+        <rect x="15" y="1" width="2" height="1" fill="#FBB3BE"/>
+        <rect x="15" y="1" width="1" height="2" fill="#FBB3BE"/>
+        <rect x="14" y="2" width="2" height="2" fill="#FBB3BE"/>
+        <rect x="13" y="3" width="2" height="2" fill="#FBB3BE"/>
+        <rect x="12" y="4" width="3" height="1" fill="#FBB3BE"/>
+        <!-- Nose -->
+        <rect x="10" y="6" width="1" height="1" fill="black"/>
+        <!-- Muzzle highlight -->
+        <rect x="7" y="7" width="4" height="1" fill="#F5F5F7"/>
+        <rect x="9" y="5" width="3" height="1" fill="#F5F5F7"/>
+        <!-- Shadow under muzzle -->
+        <rect x="7" y="7" width="2" height="1" fill="black" fill-opacity="0.1"/>
+        <rect x="6" y="6" width="1" height="1" fill="black" fill-opacity="0.1"/>
+        <!-- Eyes: open at start & end, closed during middle (walking) -->
+        <g id="dfox-wake-eyes-c">
+          <rect x="7.6"  y="4.6" width="1.8" height="0.8" fill="black"/>
+          <rect x="10.6" y="4.6" width="1.8" height="0.8" fill="black"/>
+        </g>
+        <g id="dfox-wake-eyes-o">
+          <rect x="8"  y="4" width="1" height="2" fill="black"/>
+          <rect x="11" y="4" width="1" height="2" fill="black"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

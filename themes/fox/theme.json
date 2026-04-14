@@ -43,7 +43,7 @@
     "attention":    ["happy.svg"],
     "notification": ["notification.svg"],
     "sleeping":     ["sleeping.svg"],
-    "waking":       ["idle-follow.svg"]
+    "waking":       ["waking.svg"]
   },
 
   "timings": {
@@ -60,12 +60,13 @@
       "notification": 2500
     },
     "mouseIdleTimeout": 20000,
-    "mouseSleepTimeout": 60000
+    "mouseSleepTimeout": 60000,
+    "wakeDuration": 5000
   },
 
   "hitBoxes": {
-    "default":  { "x": -1, "y": 4, "w": 16, "h": 12 },
-    "sleeping": { "x": -2, "y": 9, "w": 18, "h": 7 }
+    "default":  { "x": -3, "y": -8, "w": 22, "h": 20 },
+    "sleeping": { "x": -3, "y": -5, "w": 22, "h": 18 }
   },
   "sleepingHitboxFiles": ["sleeping.svg"],
 
