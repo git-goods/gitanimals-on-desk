@@ -154,7 +154,6 @@ initWithConfig(tc);
 
 // Theme switch: reload + IPC push overrides additionalArguments
 window.electronAPI.onThemeConfig((newConfig) => {
-  // Clean up layered tracking before reinitializing
   _cleanupLayeredTracking();
   initWithConfig(newConfig);
 });
@@ -259,6 +258,17 @@ function getAssetUrl(file) {
   }
   return `${_sourceAssetsPath}/${file}`;
 }
+
+// --- Debug hitbox: show blue outline around image element ---
+let _debugHitbox = false;
+function applyDebugOutline(el) {
+  if (!el) return;
+  el.style.backgroundColor = _debugHitbox ? "rgba(0, 120, 255, 0.15)" : "transparent";
+}
+window.electronAPI.onDebugHitbox((enabled) => {
+  _debugHitbox = enabled;
+  applyDebugOutline(clawdEl);
+});
 
 // --- IPC-triggered reactions (from hit window via main relay) ---
 window.electronAPI.onStartDragReaction(() => startDragReaction());
@@ -379,6 +389,7 @@ function swapToFile(file, state, useObjectChannel) {
       pendingSvgFile = null;
       clawdEl = next;
       currentDisplayedSvg = file;
+      applyDebugOutline(next);
 
       if (state && needsObjectChannel(state, file)) {
         attachEyeTracking(next);
@@ -428,6 +439,7 @@ function swapToFile(file, state, useObjectChannel) {
       pendingSvgFile = null;
       clawdEl = next;
       currentDisplayedSvg = file;
+      applyDebugOutline(next);
     };
 
     next.addEventListener("load", swap, { once: true });
@@ -444,7 +456,6 @@ function swapToFile(file, state, useObjectChannel) {
 
 // --- State change → switch animation (preload + instant swap) ---
 window.electronAPI.onStateChange((state, svg) => {
-  // Main process state change → cancel any active click reaction
   cancelReaction();
 
   // Dedup: same file already displayed OR currently loading → don't re-swap
@@ -780,3 +791,6 @@ if (!currentDisplayedSvg && _idleFollowSvg) {
   currentIdleSvg = _idleFollowSvg;
   swapToFile(_idleFollowSvg, "idle");
 }
+
+// All IPC listeners registered — signal main process it's safe to send state
+window.electronAPI.signalReady();
