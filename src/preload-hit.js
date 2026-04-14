@@ -24,4 +24,8 @@ contextBridge.exposeInMainWorld("hitAPI", {
   // State sync ← main
   onStateSync: (cb) => ipcRenderer.on("hit-state-sync", (_, data) => cb(data)),
   onCancelReaction: (cb) => ipcRenderer.on("hit-cancel-reaction", () => cb()),
+  // Debug
+  onDebugHitbox: (cb) => ipcRenderer.on("debug-hitbox", (_, enabled) => cb(enabled)),
+  // Handshake: hit renderer signals all IPC listeners are registered
+  signalReady: () => ipcRenderer.send("hit-renderer-ready"),
 });

@@ -399,6 +399,26 @@ let menuOpen = false;
 let idlePaused = false;
 let forceEyeResend = false;
 let themeReloadInProgress = false;
+let _themeReloadReadyBits = 0; // bitmask: 1=win, 2=hit
+
+function _onWinReady() {
+  _themeReloadReadyBits |= 1;
+  if (_themeReloadReadyBits !== 3) return;
+  _finishThemeReload();
+}
+function _onHitReady() {
+  _themeReloadReadyBits |= 2;
+  if (_themeReloadReadyBits !== 3) return;
+  _finishThemeReload();
+}
+function _finishThemeReload() {
+  themeReloadInProgress = false;
+  _themeReloadReadyBits = 0;
+  syncHitStateAfterLoad();
+  syncRendererStateAfterLoad({ includeStartupRecovery: false });
+  syncHitWin();
+  startMainTick();
+}
 
 // ── Mini Mode — delegated to src/mini.js ──
 // Initialized after state module (needs applyState, resolveDisplayState, etc.)
@@ -1143,10 +1163,14 @@ function createWindow() {
     win.on("move", syncFloatingWindows);
     win.on("resize", syncFloatingWindows);
 
-    // Send initial state to hitWin once it's ready
-    hitWin.webContents.on("did-finish-load", () => {
+    // hitWin ready handshake: hit-renderer.js signals after all IPC listeners registered
+    ipcMain.on("hit-renderer-ready", (event) => {
+      if (!hitWin || hitWin.isDestroyed() || event.sender !== hitWin.webContents) return;
       sendToHitWin("theme-config", themeLoader.getHitRendererConfig());
-      if (themeReloadInProgress) return;
+      if (themeReloadInProgress) {
+        _onHitReady();
+        return;
+      }
       syncHitStateAfterLoad();
     });
 
@@ -1158,6 +1182,19 @@ function createWindow() {
   }
 
   ipcMain.on("show-context-menu", showPetContextMenu);
+
+  // Debug hitbox overlay
+  let debugHitbox = false;
+  ipcMain.on("toggle-debug-hitbox", () => {
+    debugHitbox = !debugHitbox;
+    sendToHitWin("debug-hitbox", debugHitbox);
+  });
+  _menuCtx.toggleDebugHitbox = () => {
+    debugHitbox = !debugHitbox;
+    sendToHitWin("debug-hitbox", debugHitbox);
+    sendToRenderer("debug-hitbox", debugHitbox);
+    return debugHitbox;
+  };
 
   ipcMain.on("move-window-by", (event, dx, dy) => {
     if (_mini.getMiniMode() || _mini.getMiniTransitioning()) return;
@@ -1242,9 +1279,16 @@ function createWindow() {
   // Wait for renderer to be ready before sending initial state
   // If hooks arrived during startup, respect them instead of forcing idle
   // Also handles crash recovery (render-process-gone → reload)
-  win.webContents.on("did-finish-load", () => {
+  // Renderer ready handshake: renderer.js signals after all IPC listeners registered.
+  // This replaces did-finish-load for IPC dispatch — did-finish-load can fire before
+  // renderer.js executes, causing messages to be silently dropped.
+  ipcMain.on("renderer-ready", (event) => {
+    if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
     sendToRenderer("theme-config", themeLoader.getRendererConfig());
-    if (themeReloadInProgress) return;
+    if (themeReloadInProgress) {
+      _onWinReady();
+      return;
+    }
     syncRendererStateAfterLoad();
   });
 
@@ -1391,23 +1435,14 @@ function switchTheme(themeId) {
   _tick.refreshTheme();
   if (_mini.getMiniMode()) _mini.handleDisplayChange();
 
-  // 4. Reload both windows
+  // 4. Reload both windows.
+  // The renderer-ready / hit-renderer-ready IPC handlers (registered in
+  // createWindow) send theme-config and call _onWinReady / _onHitReady
+  // when themeReloadInProgress is true.
   themeReloadInProgress = true;
+  _themeReloadReadyBits = 0;
   win.webContents.reload();
   hitWin.webContents.reload();
-
-  // 5. After both reloads complete, re-sync state with the new theme.
-  let ready = 0;
-  const onReady = () => {
-    if (++ready < 2) return;
-    themeReloadInProgress = false;
-    syncHitStateAfterLoad();
-    syncRendererStateAfterLoad({ includeStartupRecovery: false });
-    syncHitWin();
-    startMainTick();
-  };
-  win.webContents.once("did-finish-load", onReady);
-  hitWin.webContents.once("did-finish-load", onReady);
 
   // Persist theme choice through the controller so it survives restarts.
   // flushRuntimeStateToPrefs only captures window bounds + mini state;

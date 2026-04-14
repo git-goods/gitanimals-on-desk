@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45">
+  <!--
+    Dessert Fox — sleeping state
+    Base: typing.svg (sitting pose, notebook removed)
+    Changes:
+      - Eyes: closed (thin dashes ─ ─ centered at eye centers)
+      - Legs: completely static (no sway — asleep)
+      - obj: very gentle breathing (4.5s, ~0.3px y drift)
+      - Shadow: subtle scaleX pulse (0.03) synced
+      - Head: nested group, no delta animation (calm)
+      - 3 pixel-Z Zzz particles, 6s cycle, 2s staggered delays
+    Keyframe prefix: dfox-sleep-*
+  -->
+  <defs>
+    <style>
+      @keyframes dfox-sleep-obj {
+        0%, 100% { transform: translate(0, 0); }
+        50%      { transform: translate(0, -0.3px); }
+      }
+      @keyframes dfox-sleep-shadow {
+        0%, 100% { transform: translate(3px, 9.5px) scaleX(1); }
+        50%      { transform: translate(3px, 9.5px) scaleX(1.03); }
+      }
+      /* Zzz: float up-right, growing, fade in/out */
+      @keyframes dfox-sleep-zzz {
+        0%   { transform: translate(12px, -2px) scale(0.5); opacity: 0; }
+        10%  { opacity: 1; }
+        50%  { transform: translate(16px, -8px) scale(0.8); opacity: 1; }
+        90%  { opacity: 0.7; }
+        100% { transform: translate(20px, -14px) scale(1.1); opacity: 0; }
+      }
+
+      #dfox-sleep-obj {
+        animation: dfox-sleep-obj 4.5s ease-in-out infinite;
+      }
+      #dfox-sleep-shadow {
+        animation: dfox-sleep-shadow 4.5s ease-in-out infinite;
+      }
+      .dfox-sleep-z {
+        opacity: 0;
+        animation: dfox-sleep-zzz 6s ease-in-out infinite;
+      }
+      .dfox-sleep-z1 { animation-delay: 0s; }
+      .dfox-sleep-z2 { animation-delay: 2s; }
+      .dfox-sleep-z3 { animation-delay: 4s; }
+    </style>
+
+    <!-- Pixel-art "Z" (4x4 grid) -->
+    <g id="dfox-sleep-pixel-z">
+      <rect x="0" y="0" width="4" height="1"/>
+      <rect x="2" y="1" width="1" height="1"/>
+      <rect x="1" y="2" width="1" height="1"/>
+      <rect x="0" y="3" width="4" height="1"/>
+    </g>
+  </defs>
+
+  <!-- Shadow -->
+  <g id="dfox-sleep-shadow" transform="translate(3, 9.5)">
+    <rect width="8" height="1" transform="matrix(-1 0 0 1 8 0.5)" fill="#2B4447" fill-opacity="0.1"/>
+    <rect width="6.76923" height="0.25" transform="matrix(-1 0 0 1 7.38452 0.25)" fill="#2B4447" fill-opacity="0.1"/>
+    <rect width="6.76923" height="0.25" transform="matrix(-1 0 0 1 7.38452 1.5)" fill="#2B4447" fill-opacity="0.1"/>
+    <rect width="5.53846" height="0.25" transform="matrix(-1 0 0 1 6.76929 0)" fill="#2B4447" fill-opacity="0.1"/>
+    <rect width="5.53846" height="0.25" transform="matrix(-1 0 0 1 6.76929 1.75)" fill="#2B4447" fill-opacity="0.1"/>
+  </g>
+
+  <!-- obj: legs + body + head (sitting, very gentle breathing) -->
+  <g id="dfox-sleep-obj">
+    <!-- Legs (static — sitting, asleep) -->
+    <g transform="translate(5, 7.5)">
+      <rect width="2" height="3" fill="#DDD7B5"/>
+    </g>
+    <g transform="translate(8, 7.5)">
+      <rect width="2" height="3" fill="#DDD7B5"/>
+    </g>
+
+    <!-- Body (sitting pose: translate(-2, 4.5)) -->
+    <g transform="translate(-2, 4.5)">
+      <rect x="2" y="2" width="3" height="1" fill="#F5F5F7"/>
+      <rect x="3" y="3" width="3" height="1" fill="#F5F5F7"/>
+      <rect y="3" width="2" height="1" fill="#F5F5F7"/>
+      <rect x="3" y="2" width="8" height="1" fill="#DDD7B5"/>
+      <rect x="7" width="6" height="4" fill="#DDD7B5"/>
+      <rect x="7" y="2" width="6" height="2" fill="#DDD7B5"/>
+      <rect x="4" y="2" width="8" height="2" fill="#DDD7B5"/>
+      <rect x="6" y="1" width="7" height="3" fill="#DDD7B5"/>
+      <rect x="6" y="3" width="7" height="2" fill="#DDD7B5"/>
+      <rect x="9" y="2" width="3" height="3" fill="#F5F5F7"/>
+      <rect x="8" y="3" width="3" height="2" fill="#F5F5F7"/>
+      <rect x="7" y="4" width="3" height="1" fill="#F5F5F7"/>
+      <rect x="2" y="1" width="2" height="1" fill="#DDD7B5"/>
+      <rect x="1" y="2" width="1" height="1" fill="#DDD7B5"/>
+      <rect y="3" width="1" height="1" fill="#DDD7B5"/>
+      <rect x="4" y="3" width="2" height="1" fill="black" fill-opacity="0.1"/>
+      <rect x="6" y="4" width="2" height="1" fill="black" fill-opacity="0.1"/>
+      <rect x="3" y="2" width="1" height="1" fill="black" fill-opacity="0.1"/>
+    </g>
+
+    <!-- Head: outer = static position, inner group for consistency (no delta anim) -->
+    <g transform="translate(0, -2.5)">
+      <g>
+        <rect x="7" y="2" width="4" height="5" fill="#DDD7B5"/>
+        <rect x="9" y="5" width="2" height="2" fill="#F5F5F7"/>
+        <rect x="6" y="3" width="6" height="4" fill="#DDD7B5"/>
+        <rect x="8" y="6" width="4" height="1" fill="#F5F5F7"/>
+        <rect x="8" y="6" width="3" height="2" fill="#F5F5F7"/>
+        <rect x="6" y="3" width="6" height="1" fill="#DDD7B5"/>
+        <rect x="3" y="4" width="12" height="1" fill="#DDD7B5"/>
+        <rect x="5" y="3" width="8" height="3" fill="#DDD7B5"/>
+        <rect x="7" y="7" width="4" height="1" fill="#DDD7B5"/>
+        <!-- Left ear -->
+        <rect x="1" y="2" width="4" height="1" fill="#DDD7B5"/>
+        <rect y="1" width="4" height="1" fill="#DDD7B5"/>
+        <rect x="1" width="2" height="3" fill="#DDD7B5"/>
+        <rect x="1" y="1" width="2" height="1" fill="#FBB3BE"/>
+        <rect x="2" y="1" width="1" height="2" fill="#FBB3BE"/>
+        <rect x="2" y="2" width="2" height="2" fill="#FBB3BE"/>
+        <rect x="3" y="3" width="2" height="2" fill="#FBB3BE"/>
+        <rect x="3" y="4" width="3" height="1" fill="#FBB3BE"/>
+        <!-- Right ear -->
+        <rect x="13" y="2" width="4" height="1" fill="#DDD7B5"/>
+        <rect x="14" y="1" width="4" height="1" fill="#DDD7B5"/>
+        <rect x="15" width="2" height="3" fill="#DDD7B5"/>
+        <rect x="15" y="1" width="2" height="1" fill="#FBB3BE"/>
+        <rect x="15" y="1" width="1" height="2" fill="#FBB3BE"/>
+        <rect x="14" y="2" width="2" height="2" fill="#FBB3BE"/>
+        <rect x="13" y="3" width="2" height="2" fill="#FBB3BE"/>
+        <rect x="12" y="4" width="3" height="1" fill="#FBB3BE"/>
+        <!-- Nose -->
+        <rect x="10" y="6" width="1" height="1" fill="black"/>
+        <!-- Muzzle highlight -->
+        <rect x="7" y="7" width="4" height="1" fill="#F5F5F7"/>
+        <rect x="9" y="5" width="3" height="1" fill="#F5F5F7"/>
+        <!-- Shadow under muzzle -->
+        <rect x="7" y="7" width="2" height="1" fill="black" fill-opacity="0.1"/>
+        <rect x="6" y="6" width="1" height="1" fill="black" fill-opacity="0.1"/>
+        <!-- Eyes: closed (dashes, centered at 8.5/11.5 — thicker/longer for visibility) -->
+        <rect x="7.6"  y="4.6" width="1.8" height="0.8" fill="black"/>
+        <rect x="10.6" y="4.6" width="1.8" height="0.8" fill="black"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Zzz particles (outside obj — float in world space) -->
+  <use href="#dfox-sleep-pixel-z" class="dfox-sleep-z dfox-sleep-z1" fill="#90A4AE"/>
+  <use href="#dfox-sleep-pixel-z" class="dfox-sleep-z dfox-sleep-z2" fill="#B0BEC5"/>
+  <use href="#dfox-sleep-pixel-z" class="dfox-sleep-z dfox-sleep-z3" fill="#CFD8DC"/>
+</svg>

@@ -1,0 +1,81 @@
+{
+  "_comment": "Dessert Fox theme — adapted from GitAnimals dessert-fox pixel art",
+
+  "schemaVersion": 1,
+  "name": "Dessert Fox",
+  "author": "sumi",
+  "version": "1.0.0",
+  "description": "A coding fox with a pocket notebook — pixel-perfect fennec inspired by GitAnimals",
+  "license": "MIT",
+
+  "viewBox": { "x": -15, "y": -25, "width": 45, "height": 45 },
+
+  "layout": {
+    "contentBox": { "x": -2, "y": -2, "width": 20, "height": 18 },
+    "centerX": 7.5,
+    "baselineY": 15,
+    "visibleHeightRatio": 0.58,
+    "baselineBottomRatio": 0.05
+  },
+
+  "eyeTracking": {
+    "enabled": false,
+    "states": ["idle"],
+    "eyeRatioX": 0.52,
+    "eyeRatioY": 0.45,
+    "maxOffset": 1.5,
+    "bodyScale": 0.25,
+    "shadowStretch": 0.15,
+    "shadowShift": 0.3,
+    "ids": {
+      "eyes": "eyes-js",
+      "body": "body-js",
+      "shadow": "shadow-js"
+    },
+    "shadowOrigin": "7.5px 14px"
+  },
+
+  "states": {
+    "idle":         ["idle-follow.svg"],
+    "thinking":     ["thinking.svg"],
+    "working":      ["typing.svg"],
+    "error":        ["error.svg"],
+    "attention":    ["happy.svg"],
+    "notification": ["notification.svg"],
+    "sleeping":     ["sleeping.svg"],
+    "waking":       ["waking.svg"]
+  },
+
+  "timings": {
+    "minDisplay": {
+      "attention": 4000,
+      "error": 5000,
+      "notification": 2500,
+      "working": 1000,
+      "thinking": 1000
+    },
+    "autoReturn": {
+      "attention": 4000,
+      "error": 5000,
+      "notification": 2500
+    },
+    "mouseIdleTimeout": 20000,
+    "mouseSleepTimeout": 60000,
+    "wakeDuration": 5000
+  },
+
+  "hitBoxes": {
+    "default":  { "x": -3, "y": -8, "w": 22, "h": 20 },
+    "sleeping": { "x": -3, "y": -5, "w": 22, "h": 18 }
+  },
+  "sleepingHitboxFiles": ["sleeping.svg"],
+
+  "miniMode": { "supported": false },
+
+  "objectScale": {
+    "widthRatio": 1.9,
+    "heightRatio": 1.3,
+    "offsetX": -0.45,
+    "offsetY": -0.25
+  }
+}

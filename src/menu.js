@@ -464,6 +464,22 @@ module.exports = function initMenu(ctx) {
       { type: "separator" },
       { label: t("quit"), click: () => requestAppQuit() },
     );
+    if (process.env.CLAWD_DEBUG) {
+      template.push(
+        { type: "separator" },
+        {
+          label: "Debug",
+          submenu: [
+            {
+              label: "Show Hitbox",
+              type: "checkbox",
+              checked: false,
+              click: (item) => { item.checked = ctx.toggleDebugHitbox(); },
+            },
+          ],
+        },
+      );
+    }
     ctx.contextMenu = Menu.buildFromTemplate(template);
   }
 

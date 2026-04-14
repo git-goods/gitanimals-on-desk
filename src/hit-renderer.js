@@ -46,6 +46,13 @@ let isReacting = false;
 let isDragReacting = false;
 
 // Cancel signal from main (e.g. state change)
+// Debug hitbox overlay
+window.hitAPI.onDebugHitbox((enabled) => {
+  document.body.style.background = enabled
+    ? "rgba(255, 0, 0, 0.3)"
+    : "rgba(0, 0, 0, 0.004)";
+});
+
 window.hitAPI.onCancelReaction(() => {
   if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; clickCount = 0; firstClickDir = null; }
   isReacting = false;
@@ -230,3 +237,6 @@ document.addEventListener("contextmenu", (e) => {
   e.preventDefault();
   window.hitAPI.showContextMenu();
 });
+
+// All IPC listeners registered — signal main process it's safe to send state
+window.hitAPI.signalReady();
