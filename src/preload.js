@@ -24,4 +24,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Render window → main (cursor polling control during reactions)
   pauseCursorPolling: () => ipcRenderer.send("pause-cursor-polling"),
   resumeFromReaction: () => ipcRenderer.send("resume-from-reaction"),
+  // Debug
+  onDebugHitbox: (cb) => ipcRenderer.on("debug-hitbox", (_, enabled) => cb(enabled)),
+  // Handshake: renderer signals all IPC listeners are registered
+  signalReady: () => ipcRenderer.send("renderer-ready"),
 });
