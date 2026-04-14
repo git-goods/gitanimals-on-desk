@@ -6,7 +6,7 @@ Create your own Clawd desktop pet theme with custom characters and animations.
 
 1. Copy the template:
    ```bash
-   cp -r themes/template ~/.config/clawd-on-desk/themes/my-theme   # Linux/macOS
+   cp -r reference/themes/template ~/.config/clawd-on-desk/themes/my-theme   # Linux/macOS
    # or
    xcopy /E themes\template "%APPDATA%\clawd-on-desk\themes\my-theme\"  # Windows
    ```
@@ -45,7 +45,7 @@ my-theme/
 
 **Minimum viable theme: 1 SVG + 7 GIF/APNG files.**
 
-1. Start from `themes/template/`
+1. Start from `reference/themes/template/`
 2. Edit `assets/idle-follow.svg` — replace the placeholder shapes inside `#body-js` and `#eyes-js` with your character
 3. Create simple frame animations (4-12 frames) for other states using [Piskel](https://www.piskelapp.com/) (free, browser-based) or [Aseprite](https://www.aseprite.org/) (paid, pixel art pro tool)
 4. Export as APNG (best quality) or GIF (pixel art works fine)

@@ -63,7 +63,7 @@ const SCHEMA = {
   showSessionId: { type: "boolean", default: false },
   soundMuted: { type: "boolean", default: false },
   // Theme
-  theme: { type: "string", default: "clawd" },
+  theme: { type: "string", default: "fox" },
   // Phase 2/3 placeholders — schema reserves the keys so future migrations don't need v2.
   agents: {
     type: "object",

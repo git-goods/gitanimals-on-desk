@@ -195,7 +195,7 @@ themeLoader.init(__dirname, app.getPath("userData"));
 const remoteThemeSync = require("./remote-theme-sync");
 remoteThemeSync.init(app.getPath("userData"));
 
-let activeTheme = themeLoader.loadTheme(_settingsController.get("theme") || "clawd");
+let activeTheme = themeLoader.loadTheme(_settingsController.get("theme") || "fox");
 
 // ── CSS <object> sizing (from theme) ──
 function getObjRect(bounds) {
@@ -787,7 +787,7 @@ const _menuCtx = {
   reapplyMacVisibility,
   switchTheme: (id) => switchTheme(id),
   discoverThemes: () => themeLoader.discoverThemes(),
-  getActiveThemeId: () => activeTheme ? activeTheme._id : "clawd",
+  getActiveThemeId: () => activeTheme ? activeTheme._id : "fox",
   ensureUserThemesDir: () => themeLoader.ensureUserThemesDir(),
   openSettingsWindow: () => openSettingsWindow(),
 };
