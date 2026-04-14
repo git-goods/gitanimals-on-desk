@@ -56,6 +56,8 @@ scripts/*
 !scripts/run-clawdbot-stress.sh
 !scripts/monitor-clawd-resources.sh
 !scripts/validate-theme.js
+!scripts/dev.js
+!scripts/clean-cache.js
 
 # oh-my-cursor state
 .omc/
