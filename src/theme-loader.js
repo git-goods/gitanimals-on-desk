@@ -116,19 +116,28 @@ function discoverThemes() {
     _scanThemesDir(userThemesDir, false, themes, seen);
   }
 
+  // Cached remote themes: {userData}/theme-cache/<id>/theme.json
+  // Lowest priority — builtin > user > remote. Never overrides existing id.
+  if (themeCacheDir) {
+    _scanThemesDir(themeCacheDir, false, themes, seen, { source: "remote" });
+  }
+
   return themes;
 }
 
-function _scanThemesDir(dir, builtin, themes, seen) {
+function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
   try {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith(".")) continue; // skip dot-dirs like cache metadata
       if (seen.has(entry.name)) continue;
       const jsonPath = path.join(dir, entry.name, "theme.json");
       if (!fs.existsSync(jsonPath)) continue;
       try {
         const cfg = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-        themes.push({ id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin });
+        const item = { id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin };
+        if (opts.source) item.source = opts.source;
+        themes.push(item);
         seen.add(entry.name);
       } catch { /* skip malformed */ }
     }
@@ -141,8 +150,8 @@ function _scanThemesDir(dir, builtin, themes, seen) {
  * @returns {object} merged theme config
  */
 function loadTheme(themeId) {
-  // Try built-in first, then user themes dir
-  const { raw, isBuiltin, themeDir } = _readThemeJson(themeId);
+  // Try built-in → user → cached-remote
+  const { raw, isBuiltin, themeDir, source } = _readThemeJson(themeId);
 
   if (!raw) {
     console.error(`[theme-loader] Theme "${themeId}" not found`);
@@ -159,9 +168,15 @@ function loadTheme(themeId) {
   // Merge defaults for optional fields
   const theme = mergeDefaults(raw, themeId, isBuiltin);
   theme._themeDir = themeDir;
+  theme._source = source || (isBuiltin ? "builtin" : "user");
 
-  // For external themes: sanitize SVGs + resolve asset paths
-  if (!isBuiltin) {
+  if (source === "remote") {
+    // Remote-cached theme: SVGs in {themeDir}/assets/ are already sanitized by remote-theme-sync
+    const assetsDir = path.join(themeDir, "assets");
+    theme._assetsDir = assetsDir;
+    theme._assetsFileUrl = pathToFileURL(assetsDir).href;
+  } else if (!isBuiltin) {
+    // External theme: sanitize SVGs + resolve asset paths
     const assetsDir = _resolveExternalAssetsDir(themeId, themeDir);
     theme._assetsDir = assetsDir;
     theme._assetsFileUrl = pathToFileURL(assetsDir).href;
@@ -201,9 +216,27 @@ function _readThemeJson(themeId) {
       }
       try {
         const raw = JSON.parse(fs.readFileSync(userPath, "utf8"));
-        return { raw, isBuiltin: false, themeDir: path.join(userThemesDir, themeId) };
+        return { raw, isBuiltin: false, themeDir: path.join(userThemesDir, themeId), source: "user" };
       } catch (e) {
         console.error(`[theme-loader] Failed to parse user theme "${themeId}":`, e.message);
+      }
+    }
+  }
+
+  // Cached remote themes ({userData}/theme-cache/<id>/theme.json)
+  if (themeCacheDir) {
+    const cachePath = path.join(themeCacheDir, themeId, "theme.json");
+    if (fs.existsSync(cachePath)) {
+      const resolved = path.resolve(cachePath);
+      if (!resolved.startsWith(path.resolve(themeCacheDir) + path.sep)) {
+        console.error(`[theme-loader] Path traversal detected for remote theme "${themeId}"`);
+        return { raw: null, isBuiltin: false, themeDir: null };
+      }
+      try {
+        const raw = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+        return { raw, isBuiltin: false, themeDir: path.join(themeCacheDir, themeId), source: "remote" };
+      } catch (e) {
+        console.error(`[theme-loader] Failed to parse cached remote theme "${themeId}":`, e.message);
       }
     }
   }
@@ -725,4 +758,5 @@ module.exports = {
   getHitRendererConfig,
   ensureUserThemesDir,
   getSoundUrl,
+  sanitizeSvg,
 };
