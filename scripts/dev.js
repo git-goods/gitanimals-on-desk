@@ -32,4 +32,16 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 spawnChild("mock-server", "python3", ["-m", "http.server", "--directory", ".mock-server", "8765"]);
-spawnChild("app", "node", ["launch.js"]);
+
+// Wait for mock server to bind before launching app (avoids sync race)
+const net = require("net");
+function waitForPort(port, retries = 20) {
+  return new Promise((resolve) => {
+    (function attempt(n) {
+      const sock = net.createConnection(port, "127.0.0.1");
+      sock.on("connect", () => { sock.destroy(); resolve(); });
+      sock.on("error", () => { n > 0 ? setTimeout(() => attempt(n - 1), 150) : resolve(); });
+    })(retries);
+  });
+}
+waitForPort(8765).then(() => spawnChild("app", "node", ["launch.js"]));
