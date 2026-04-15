@@ -19,6 +19,7 @@ CHANGELOG-draft.md
 docs/*
 !docs/copilot-setup.md
 !docs/release-v0.5.5.md
+!docs/release-and-signing.md
 !docs/guide-theme-creation.md
 !docs/permission-hook-fail-deny-investigation.md
 !docs/state-mapping.md
@@ -53,8 +54,8 @@ logs/
 # GIF recording tools (not part of main project)
 scripts/*
 !scripts/remote-deploy.sh
-!scripts/run-clawdbot-stress.sh
-!scripts/monitor-clawd-resources.sh
+!scripts/run-gitanimalsbot-stress.sh
+!scripts/monitor-gitanimals-resources.sh
 !scripts/validate-theme.js
 !scripts/dev.js
 !scripts/clean-cache.js
