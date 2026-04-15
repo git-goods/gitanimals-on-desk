@@ -14,6 +14,9 @@ const {
   readRuntimePort,
   writeRuntimeConfig,
 } = require("../hooks/server-config");
+const { bc, report } = (() => {
+  try { return require("./telemetry"); } catch { return { bc() {}, report() {} }; }
+})();
 
 // ExitPlanMode (Plan Review) and AskUserQuestion (elicitation) happen to
 // travel through /permission, but they're UX flows — not approvals the
@@ -217,10 +220,20 @@ function startHttpServer() {
           // hanging on our HTTP connection. Still surfaces as a success code
           // so hook exit behavior is unchanged.
           if (typeof ctx.isAgentEnabled === "function" && !ctx.isAgentEnabled(agentId)) {
+            try { bc("hook", "gated", { agentId, state }); } catch {}
             res.writeHead(204, { [GITANIMALS_SERVER_HEADER]: GITANIMALS_SERVER_ID });
             res.end();
             return;
           }
+          try {
+            bc("hook", "state", {
+              state,
+              session_id: session_id || "default",
+              event,
+              agentId,
+              headless,
+            });
+          } catch {}
           if (ctx.STATE_SVGS[state]) {
             const sid = session_id || "default";
             if (state.startsWith("mini-") && !svg) {
@@ -515,8 +528,10 @@ function startHttpServer() {
       const firstPort = listenPorts[0];
       const lastPort = listenPorts[listenPorts.length - 1];
       console.warn(`Ports ${firstPort}-${lastPort} are occupied — state sync and permission bubbles are disabled`);
+      try { report("[server] all ports occupied", "error", { firstPort, lastPort }); } catch {}
     } else {
       console.error("HTTP server error:", err.message);
+      try { report("[server] http error", "error", { code: err.code, message: err.message }); } catch {}
     }
   });
 
@@ -524,6 +539,7 @@ function startHttpServer() {
     activeServerPort = listenPorts[listenIndex];
     writeRuntimeConfig(activeServerPort);
     console.log(`GitAnimals state server listening on 127.0.0.1:${activeServerPort}`);
+    try { bc("server", "listen", { port: activeServerPort }); } catch {}
     // Defer hook/plugin registration off the startup path. Each sync call
     // reads+parses+writes a config JSON (50-150ms cumulative on slow disks),
     // and all five operate on independent files for independent agents, so
