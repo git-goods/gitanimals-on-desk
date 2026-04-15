@@ -112,7 +112,7 @@ function createSettingsController({
       prefs.save(prefsPath, store.getSnapshot());
       return { status: "ok" };
     } catch (err) {
-      console.warn("Clawd: failed to persist prefs:", err && err.message);
+      console.warn("GitAnimals: failed to persist prefs:", err && err.message);
       return { status: "error", message: err && err.message };
     }
   }

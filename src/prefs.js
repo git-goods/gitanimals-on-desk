@@ -3,7 +3,7 @@
 // ── Preferences (pure data layer) ──
 //
 // This module is the canonical schema definition + load/save/migrate/validate
-// for `clawd-prefs.json`. It has zero dependencies on Electron, the store, the
+// for `gitanimals-prefs.json`. It has zero dependencies on Electron, the store, the
 // controller, or anything stateful — it deals in plain snapshots.
 //
 // `load(prefsPath)`  — read file, migrate to current version, validate, return snapshot
@@ -12,7 +12,7 @@
 // `validate(snapshot)` — coerces an arbitrary object into a valid snapshot, dropping bad fields
 // `migrate(raw)` — applies version-to-version migrations, returns the upgraded raw snapshot
 //
-// Bad-file handling: read failure → backup as `clawd-prefs.json.bak` → return defaults.
+// Bad-file handling: read failure → backup as `gitanimals-prefs.json.bak` → return defaults.
 // Future-version handling: read succeeds but version > current → warn + refuse to overwrite
 //   (caller still gets a valid snapshot, but `save()` becomes a no-op via the locked flag).
 
@@ -233,9 +233,9 @@ function load(prefsPath) {
     try {
       const bak = prefsPath + ".bak";
       fs.copyFileSync(prefsPath, bak);
-      console.warn(`Clawd: prefs file unreadable, backed up to ${bak}:`, err.message);
+      console.warn(`GitAnimals: prefs file unreadable, backed up to ${bak}:`, err.message);
     } catch (bakErr) {
-      console.warn("Clawd: prefs file unreadable and backup failed:", err.message, bakErr.message);
+      console.warn("GitAnimals: prefs file unreadable and backup failed:", err.message, bakErr.message);
     }
     return { snapshot: getDefaults(), locked: false };
   }
@@ -246,7 +246,7 @@ function load(prefsPath) {
   const incomingVersion = typeof raw.version === "number" ? raw.version : 0;
   if (incomingVersion > CURRENT_VERSION) {
     console.warn(
-      `Clawd: prefs file version ${incomingVersion} is newer than supported (${CURRENT_VERSION}). ` +
+      `GitAnimals: prefs file version ${incomingVersion} is newer than supported (${CURRENT_VERSION}). ` +
       `Settings will be readable but not saved to avoid data loss.`
     );
     return { snapshot: validate(raw), locked: true };

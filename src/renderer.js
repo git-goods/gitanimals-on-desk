@@ -3,7 +3,7 @@
 // Reactions are triggered via IPC from main (relayed from hit window).
 
 const container = document.getElementById("pet-container");
-let clawdEl = document.getElementById("clawd");
+let petEl = document.getElementById("gitanimals");
 let pendingNext = null;
 
 // ── Theme config (injected via preload.js additionalArguments) ──
@@ -20,8 +20,8 @@ function initWithConfig(cfg) {
   _shadowStretch = (tc.eyeTracking && tc.eyeTracking.shadowStretch) || 0.15;
   _shadowShift = (tc.eyeTracking && tc.eyeTracking.shadowShift) || 0.3;
   _eyeTrackingStates = (tc.eyeTrackingStates) || ["idle", "dozing", "mini-idle"];
-  _dragSvg = tc.dragSvg || "clawd-react-drag.svg";
-  _idleFollowSvg = tc.idleFollowSvg || "clawd-idle-follow.svg";
+  _dragSvg = tc.dragSvg || "react-drag.svg";
+  _idleFollowSvg = tc.idleFollowSvg || "idle-follow.svg";
   _glyphFlipDefs = tc.glyphFlips || { "pixel-z": 4, "pixel-z-small": 3 };
 
   // Layered tracking: detect if theme uses multi-layer config
@@ -47,7 +47,7 @@ function initWithConfig(cfg) {
   _transitions = tc.transitions || {};
   _miniFlipAssets = !!tc.miniFlipAssets;
 
-  applyObjectScaleStyle(clawdEl);
+  applyObjectScaleStyle(petEl);
   applyObjectScaleStyle(pendingNext);
 }
 
@@ -187,11 +187,11 @@ window.electronAPI.onMiniModeChange((enabled, edge) => {
   _inMiniMode = enabled;
   miniLeftFlip = enabled && edge === "left";
   container.classList.toggle("mini-left", miniLeftFlip);
-  applyMiniFlip(clawdEl);
+  applyMiniFlip(petEl);
   if (miniLeftFlip) {
-    applyGlyphFlipCompensation(clawdEl);
+    applyGlyphFlipCompensation(petEl);
   } else {
-    removeGlyphFlipCompensation(clawdEl);
+    removeGlyphFlipCompensation(petEl);
   }
 });
 
@@ -267,7 +267,7 @@ function applyDebugOutline(el) {
 }
 window.electronAPI.onDebugHitbox((enabled) => {
   _debugHitbox = enabled;
-  applyDebugOutline(clawdEl);
+  applyDebugOutline(petEl);
 });
 
 // --- IPC-triggered reactions (from hit window via main relay) ---
@@ -326,7 +326,7 @@ function endDragReaction() {
 }
 
 // --- Generic swap function: handles both <object> and <img> channels ---
-let currentDisplayedSvg = getObjectSvgName(clawdEl);
+let currentDisplayedSvg = getObjectSvgName(petEl);
 let pendingSvgFile = null; // tracks the SVG currently being loaded (for dedup)
 currentIdleSvg = currentDisplayedSvg;
 
@@ -361,7 +361,7 @@ function swapToFile(file, state, useObjectChannel) {
     // Object channel: <object type="image/svg+xml">
     const next = document.createElement("object");
     next.type = "image/svg+xml";
-    next.id = "clawd";
+    next.id = "gitanimals";
     next.style.opacity = "0";
     applyObjectScaleStyle(next, file);
 
@@ -378,7 +378,7 @@ function swapToFile(file, state, useObjectChannel) {
       }
       next.style.opacity = "1";
 
-      for (const child of [...container.querySelectorAll("object, img.clawd-img")]) {
+      for (const child of [...container.querySelectorAll("object, img.gitanimals-img")]) {
         if (child !== next) {
           if (fadeOutMs > 0) fadeOutAndRemove(child, fadeOutMs);
           else if (child.tagName === "OBJECT") releaseObject(child);
@@ -387,7 +387,7 @@ function swapToFile(file, state, useObjectChannel) {
       }
       pendingNext = null;
       pendingSvgFile = null;
-      clawdEl = next;
+      petEl = next;
       currentDisplayedSvg = file;
       applyDebugOutline(next);
 
@@ -409,8 +409,8 @@ function swapToFile(file, state, useObjectChannel) {
   } else {
     // Img channel: <img> for pure playback (all formats)
     const next = document.createElement("img");
-    next.className = "clawd-img";
-    next.id = "clawd";
+    next.className = "gitanimals-img";
+    next.id = "gitanimals";
     next.style.opacity = "0";
     applyObjectScaleStyle(next, file);
     applyMiniFlip(next);
@@ -428,7 +428,7 @@ function swapToFile(file, state, useObjectChannel) {
       }
       next.style.opacity = "1";
 
-      for (const child of [...container.querySelectorAll("object, img.clawd-img")]) {
+      for (const child of [...container.querySelectorAll("object, img.gitanimals-img")]) {
         if (child !== next) {
           if (fadeOutMs > 0) fadeOutAndRemove(child, fadeOutMs);
           else if (child.tagName === "OBJECT") releaseObject(child);
@@ -437,7 +437,7 @@ function swapToFile(file, state, useObjectChannel) {
       }
       pendingNext = null;
       pendingSvgFile = null;
-      clawdEl = next;
+      petEl = next;
       currentDisplayedSvg = file;
       applyDebugOutline(next);
     };
@@ -459,13 +459,13 @@ window.electronAPI.onStateChange((state, svg) => {
   cancelReaction();
 
   // Dedup: same file already displayed OR currently loading → don't re-swap
-  const alreadyDisplayed = clawdEl && clawdEl.isConnected && currentDisplayedSvg === svg;
+  const alreadyDisplayed = petEl && petEl.isConnected && currentDisplayedSvg === svg;
   const alreadyPending = pendingSvgFile === svg && pendingNext;
 
   if (alreadyDisplayed || alreadyPending) {
     if (alreadyDisplayed) {
       if (needsObjectChannel(state, svg) && !eyeTarget && !_trackingLayers) {
-        if (clawdEl.tagName === "OBJECT") attachEyeTracking(clawdEl);
+        if (petEl.tagName === "OBJECT") attachEyeTracking(petEl);
       } else if (!needsObjectChannel(state, svg)) {
         detachEyeTracking();
       }
@@ -490,7 +490,7 @@ window.electronAPI.onStateChange((state, svg) => {
 // --- Eye tracking (idle state only) ---
 // Two systems coexist:
 //   1. Single-target (legacy): eyeTarget/bodyTarget/shadowTarget + applyEyeMove
-//      Used by default clawd theme (tc.eyeTracking.ids config)
+//      Used by default theme (tc.eyeTracking.ids config)
 //   2. Layered tracking: per-element <g> wrappers + independent easing per layer
 //      Used when tc.eyeTracking.trackingLayers is defined (e.g. calico theme)
 
@@ -665,9 +665,9 @@ function _cleanupLayeredTracking() {
   }
 
   // Unwrap elements in the current SVG if still accessible
-  if (_trackingLayers && clawdEl && clawdEl.tagName === "OBJECT") {
+  if (_trackingLayers && petEl && petEl.tagName === "OBJECT") {
     try {
-      _unwrapAll(clawdEl.contentDocument);
+      _unwrapAll(petEl.contentDocument);
     } catch {}
   }
 
@@ -758,7 +758,7 @@ window.electronAPI.onEyeMove((dx, dy) => {
     eyeTarget = null;
     bodyTarget = null;
     shadowTarget = null;
-    if (clawdEl && clawdEl.isConnected && clawdEl.tagName === "OBJECT") attachEyeTracking(clawdEl);
+    if (petEl && petEl.isConnected && petEl.tagName === "OBJECT") attachEyeTracking(petEl);
     return;
   }
   applyEyeMove(effectiveDx, dy);
@@ -778,9 +778,9 @@ window.electronAPI.onPlaySound((url) => {
 
 // --- Wake from doze (smooth eye opening) ---
 window.electronAPI.onWakeFromDoze(() => {
-  if (clawdEl && clawdEl.tagName === "OBJECT" && clawdEl.contentDocument) {
+  if (petEl && petEl.tagName === "OBJECT" && petEl.contentDocument) {
     try {
-      const eyes = clawdEl.contentDocument.getElementById(_eyeIds.dozeEyes || "eyes-doze");
+      const eyes = petEl.contentDocument.getElementById(_eyeIds.dozeEyes || "eyes-doze");
       if (eyes) eyes.style.transform = "scaleY(1)";
     } catch (e) {}
   }

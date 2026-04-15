@@ -72,7 +72,7 @@ describe("updater visual flow", () => {
       },
       applyState: (state, svgOverride) => applied.push({ state, svgOverride }),
       resolveDisplayState: () => overlayState ? "sweeping" : "idle",
-      getSvgOverride: (state) => state === "sweeping" ? "clawd-working-debugger.svg" : null,
+      getSvgOverride: (state) => state === "sweeping" ? "gitanimals-working-debugger.svg" : null,
       showUpdateBubble: (payload) => bubbles.push(payload),
     });
     const updater = initUpdater(ctx, makeDeps({
@@ -95,7 +95,7 @@ describe("updater visual flow", () => {
     assert.deepStrictEqual(visualStates, ["checking", null]);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "up-to-date"]);
     assert.ok(
-      applied.some((entry) => entry.state === "sweeping" && entry.svgOverride === "clawd-working-debugger.svg")
+      applied.some((entry) => entry.state === "sweeping" && entry.svgOverride === "gitanimals-working-debugger.svg")
     );
   });
 
@@ -134,6 +134,10 @@ describe("updater visual flow", () => {
   });
 
   it("shows a real error bubble when packaged download fails after user starts it", async () => {
+    const originalPlatform = process.platform;
+    Object.defineProperty(process, "platform", { value: "win32" });
+    delete require.cache[require.resolve("../src/updater")];
+    initUpdater = require("../src/updater");
     const bubbles = [];
     const handlers = {};
     const ctx = makeCtx({
@@ -177,6 +181,7 @@ describe("updater visual flow", () => {
 
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available", "downloading", "error"]);
     assert.match(bubbles[3].detail, /download exploded/);
+    Object.defineProperty(process, "platform", { value: originalPlatform });
   });
 
   it("uses the macOS packaged-update path by opening the releases page and showing a success bubble", async () => {
@@ -231,7 +236,7 @@ describe("updater visual flow", () => {
       await handlers["update-available"]({ version: "0.5.11" });
 
       assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available", "ready"]);
-      assert.strictEqual(openedUrls[0], "https://github.com/rullerzhou-afk/clawd-on-desk/releases/latest");
+      assert.strictEqual(openedUrls[0], "https://github.com/git-goods/gitanimals-on-desk/releases/latest");
       assert.match(bubbles[2].message, /opened/i);
     } finally {
       Object.defineProperty(process, "platform", { value: originalPlatform });

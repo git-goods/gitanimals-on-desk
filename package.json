@@ -1,6 +1,6 @@
 {
-  "name": "clawd-on-desk",
-  "version": "0.5.10",
+  "name": "gitanimals-on-desk",
+  "version": "0.0.1",
   "description": "A desktop pet that reacts to your Claude Code sessions in real-time.",
   "main": "src/main.js",
   "scripts": {
@@ -19,7 +19,7 @@
     "install:kiro-hooks": "node hooks/kiro-install.js"
   },
   "keywords": [
-    "clawd",
+    "gitanimals",
     "desktop-pet",
     "electron",
     "claude-code"
@@ -28,8 +28,8 @@
   "license": "MIT",
   "type": "commonjs",
   "build": {
-    "appId": "com.clawd.on-desk",
-    "productName": "Clawd on Desk",
+    "appId": "com.gitanimals.on-desk",
+    "productName": "GitAnimals on Desk",
     "mac": {
       "icon": "assets/icon.png",
       "target": [
@@ -49,7 +49,7 @@
     "win": {
       "icon": "assets/icon.ico",
       "signAndEditExecutable": false,
-      "artifactName": "Clawd-on-Desk-Setup-${version}.${ext}",
+      "artifactName": "GitAnimals-on-Desk-Setup-${version}.${ext}",
       "target": [
         {
           "target": "nsis",
@@ -108,8 +108,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "rullerzhou-afk",
-        "repo": "clawd-on-desk"
+        "owner": "git-goods",
+        "repo": "gitanimals-on-desk"
       }
     ]
   },

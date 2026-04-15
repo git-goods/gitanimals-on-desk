@@ -30,7 +30,7 @@ detect_port() {
   done
 
   for port in "${candidates[@]}"; do
-    if curl -s -D - -o /dev/null --connect-timeout 1 "http://127.0.0.1:$port/state" 2>/dev/null | tr -d '\r' | grep -iq '^x-clawd-server: clawd-on-desk$'; then
+    if curl -s -D - -o /dev/null --connect-timeout 1 "http://127.0.0.1:$port/state" 2>/dev/null | tr -d '\r' | grep -iq '^x-clawd-server: gitanimals-on-desk$'; then
       echo "$port"
       return 0
     fi
@@ -41,7 +41,7 @@ detect_port() {
 
 PORT="$(detect_port || true)"
 BASE="http://127.0.0.1:$PORT"
-HOOK="hooks/clawd-hook.js"
+HOOK="hooks/gitanimals-hook.js"
 BOLD='\033[1m'
 DIM='\033[2m'
 GREEN='\033[32m'
@@ -59,10 +59,10 @@ header() { echo -e "\n${BOLD}${CYAN}[$1]${RESET} $2"; }
 header "0" "Pre-flight checks"
 
 if [ -z "$PORT" ]; then
-  fail "Clawd not found on ports 23333-23337. Start the app first: npm start"
+  fail "GitAnimals not found on ports 23333-23337. Start the app first: npm start"
   exit 1
 fi
-pass "Clawd HTTP server is reachable on port $PORT"
+pass "GitAnimals HTTP server is reachable on port $PORT"
 
 if [ "$(uname)" != "Darwin" ]; then
   fail "This script is for macOS only"

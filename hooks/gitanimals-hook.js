@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Clawd Desktop Pet — Claude Code Hook Script
-// Usage: node clawd-hook.js <event_name>
+// GitAnimals Desktop Pet — Claude Code Hook Script
+// Usage: node gitanimals-hook.js <event_name>
 // Reads stdin JSON from Claude Code for session_id
 
 const { postStateToRunningServer, readHostPrefix } = require("./server-config");
@@ -38,7 +38,7 @@ const resolve = createPidResolver({
 
 // Pre-resolve on SessionStart (runs during stdin buffering, not after)
 // Remote mode: skip PID collection — remote PIDs are meaningless on the local machine
-if (event === "SessionStart" && !process.env.CLAWD_REMOTE) resolve();
+if (event === "SessionStart" && !process.env.GITANIMALS_REMOTE) resolve();
 
 readStdinJson().then((payload) => {
   const sessionId = payload.session_id || "default";
@@ -52,7 +52,7 @@ readStdinJson().then((payload) => {
   const body = { state: resolvedState, session_id: sessionId, event };
   body.agent_id = "claude-code";
   if (cwd) body.cwd = cwd;
-  if (process.env.CLAWD_REMOTE) {
+  if (process.env.GITANIMALS_REMOTE) {
     body.host = readHostPrefix();
   } else {
     const { stablePid, agentPid, detectedEditor, pidChain } = resolve();
@@ -60,7 +60,7 @@ readStdinJson().then((payload) => {
     if (detectedEditor) body.editor = detectedEditor;
     if (agentPid) {
       body.agent_pid = agentPid;
-      body.claude_pid = agentPid; // backward compat with older Clawd versions
+      body.claude_pid = agentPid; // backward compat with older GitAnimals versions
       // Check if claude process is running in non-interactive (-p/--print) mode
       try {
         const { execSync } = require("child_process");

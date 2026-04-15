@@ -23,7 +23,7 @@ if (isWin) {
     const user32 = koffi.load("user32.dll");
     _allowSetForeground = user32.func("bool __stdcall AllowSetForegroundWindow(int dwProcessId)");
   } catch (err) {
-    console.warn("Clawd: koffi/AllowSetForegroundWindow not available:", err.message);
+    console.warn("GitAnimals: koffi/AllowSetForegroundWindow not available:", err.message);
   }
 }
 
@@ -45,7 +45,7 @@ const SIZES = {
 const prefsModule = require("./prefs");
 const { createSettingsController } = require("./settings-controller");
 const loginItemHelpers = require("./login-item");
-const PREFS_PATH = path.join(app.getPath("userData"), "clawd-prefs.json");
+const PREFS_PATH = path.join(app.getPath("userData"), "gitanimals-prefs.json");
 const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
 
 // Lazy helpers — these run inside the action `effect` callbacks at click time,
@@ -146,14 +146,14 @@ function hydrateSystemBackedSettings() {
   try {
     systemValue = !!_readSystemOpenAtLogin();
   } catch (err) {
-    console.warn("Clawd: failed to read system openAtLogin during hydration:", err && err.message);
+    console.warn("GitAnimals: failed to read system openAtLogin during hydration:", err && err.message);
   }
   const result = _settingsController.hydrate({
     openAtLogin: systemValue,
     openAtLoginHydrated: true,
   });
   if (result && result.status === "error") {
-    console.warn("Clawd: openAtLogin hydration failed:", result.message);
+    console.warn("GitAnimals: openAtLogin hydration failed:", result.message);
   }
 }
 
@@ -294,7 +294,7 @@ function registerToggleShortcut() {
   try {
     globalShortcut.register(DEFAULT_TOGGLE_SHORTCUT, togglePetVisibility);
   } catch (err) {
-    console.warn("Clawd: failed to register global shortcut:", err.message);
+    console.warn("GitAnimals: failed to register global shortcut:", err.message);
   }
 }
 
@@ -816,13 +816,13 @@ function wireSettingsSubscribers() {
     if ("showTray" in changes) {
       showTray = changes.showTray;
       try { changes.showTray ? createTray() : destroyTray(); } catch (err) {
-        console.warn("Clawd: tray toggle failed:", err && err.message);
+        console.warn("GitAnimals: tray toggle failed:", err && err.message);
       }
     }
     if ("showDock" in changes) {
       showDock = changes.showDock;
       try { applyDockVisibility(); } catch (err) {
-        console.warn("Clawd: applyDockVisibility failed:", err && err.message);
+        console.warn("GitAnimals: applyDockVisibility failed:", err && err.message);
       }
     }
     // autoStartWithClaude / openAtLogin are object-form pre-commit gates in
@@ -844,12 +844,12 @@ function wireSettingsSubscribers() {
     // 2. Reactive side effects (mirror what the legacy setters / click handlers used to do).
     if ("hideBubbles" in changes) {
       try { syncPermissionShortcuts(); } catch (err) {
-        console.warn("Clawd: syncPermissionShortcuts failed:", err && err.message);
+        console.warn("GitAnimals: syncPermissionShortcuts failed:", err && err.message);
       }
     }
     if ("bubbleFollowPet" in changes) {
       try { repositionFloatingBubbles(); } catch (err) {
-        console.warn("Clawd: repositionFloatingBubbles failed:", err && err.message);
+        console.warn("GitAnimals: repositionFloatingBubbles failed:", err && err.message);
       }
     }
 
@@ -858,7 +858,7 @@ function wireSettingsSubscribers() {
     for (const key of Object.keys(changes)) {
       if (MENU_AFFECTING_KEYS.has(key)) {
         try { rebuildAllMenus(); } catch (err) {
-          console.warn("Clawd: rebuildAllMenus failed:", err && err.message);
+          console.warn("GitAnimals: rebuildAllMenus failed:", err && err.message);
         }
         break;
       }
@@ -872,7 +872,7 @@ function wireSettingsSubscribers() {
         }
       }
     } catch (err) {
-      console.warn("Clawd: settings-changed broadcast failed:", err && err.message);
+      console.warn("GitAnimals: settings-changed broadcast failed:", err && err.message);
     }
   });
 }
@@ -910,7 +910,7 @@ ipcMain.handle("settings:list-agents", () => {
       capabilities: a.capabilities || {},
     }));
   } catch (err) {
-    console.warn("Clawd: settings:list-agents failed:", err && err.message);
+    console.warn("GitAnimals: settings:list-agents failed:", err && err.message);
     return [];
   }
 });
@@ -978,7 +978,7 @@ function openSettingsWindow() {
     maximizable: true,
     skipTaskbar: false,
     alwaysOnTop: false,
-    title: "Clawd Settings",
+    title: "GitAnimals Settings",
     // Match settings.html's dark-mode palette to avoid a white flash before
     // CSS media query kicks in. Hex values must stay in sync with the
     // `--bg` CSS variable in settings.html for each theme.
@@ -1080,7 +1080,7 @@ function createWindow() {
     });
     win.on("unresponsive", () => {
       if (isQuitting) return;
-      console.warn("Clawd: renderer unresponsive — reloading");
+      console.warn("GitAnimals: renderer unresponsive — reloading");
       win.webContents.reload();
     });
   }
@@ -1455,7 +1455,7 @@ function switchTheme(themeId) {
 }
 
 // ── Auto-install VS Code / Cursor terminal-focus extension ──
-const EXT_ID = "clawd.clawd-terminal-focus";
+const EXT_ID = "gitanimals.gitanimals-terminal-focus";
 const EXT_VERSION = "0.1.0";
 const EXT_DIR_NAME = `${EXT_ID}-${EXT_VERSION}`;
 
@@ -1468,7 +1468,7 @@ function installTerminalFocusExtension() {
   extSrc = extSrc.replace("app.asar" + path.sep, "app.asar.unpacked" + path.sep);
 
   if (!fs.existsSync(extSrc)) {
-    console.log("Clawd: terminal-focus extension source not found, skipping auto-install");
+    console.log("GitAnimals: terminal-focus extension source not found, skipping auto-install");
     return;
   }
 
@@ -1491,13 +1491,13 @@ function installTerminalFocusExtension() {
         fs.copyFileSync(path.join(extSrc, file), path.join(dest, file));
       }
       installed++;
-      console.log(`Clawd: installed terminal-focus extension to ${dest}`);
+      console.log(`GitAnimals: installed terminal-focus extension to ${dest}`);
     } catch (err) {
-      console.warn(`Clawd: failed to install extension to ${dest}:`, err.message);
+      console.warn(`GitAnimals: failed to install extension to ${dest}:`, err.message);
     }
   }
   if (installed > 0) {
-    console.log(`Clawd: terminal-focus extension installed to ${installed} editor(s). Restart VS Code/Cursor to activate.`);
+    console.log(`GitAnimals: terminal-focus extension installed to ${installed} editor(s). Restart VS Code/Cursor to activate.`);
   }
 }
 
@@ -1543,7 +1543,7 @@ if (!gotTheLock) {
     // Menu is rebuilt on each successful theme sync so new themes appear.
     remoteThemeSync.onSyncComplete(() => {
       try { rebuildAllMenus(); } catch (err) {
-        console.warn("Clawd: rebuildAllMenus after remote sync failed:", err && err.message);
+        console.warn("GitAnimals: rebuildAllMenus after remote sync failed:", err && err.message);
       }
     });
     remoteThemeSync.syncAll();
@@ -1572,7 +1572,7 @@ if (!gotTheLock) {
         _codexMonitor.start();
       }
     } catch (err) {
-      console.warn("Clawd: Codex log monitor not started:", err.message);
+      console.warn("GitAnimals: Codex log monitor not started:", err.message);
     }
 
     try {
@@ -1585,12 +1585,12 @@ if (!gotTheLock) {
         _geminiMonitor.start();
       }
     } catch (err) {
-      console.warn("Clawd: Gemini log monitor not started:", err.message);
+      console.warn("GitAnimals: Gemini log monitor not started:", err.message);
     }
 
     // Auto-install VS Code/Cursor terminal-focus extension
     try { installTerminalFocusExtension(); } catch (err) {
-      console.warn("Clawd: failed to auto-install terminal-focus extension:", err.message);
+      console.warn("GitAnimals: failed to auto-install terminal-focus extension:", err.message);
     }
 
     // Auto-updater: setup event handlers (user triggers check via tray menu)

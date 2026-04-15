@@ -9,7 +9,7 @@ const MARKER = "cursor-hook.js";
 const tempDirs = [];
 
 function makeTempHooksFile(initial = {}) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-cursor-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-cursor-"));
   const hooksPath = path.join(tmpDir, "hooks.json");
   fs.writeFileSync(hooksPath, JSON.stringify(initial, null, 2), "utf8");
   tempDirs.push(tmpDir);

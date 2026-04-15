@@ -6,8 +6,8 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const {
-  CLAWD_SERVER_HEADER,
-  CLAWD_SERVER_ID,
+  GITANIMALS_SERVER_HEADER,
+  GITANIMALS_SERVER_ID,
   DEFAULT_SERVER_PORT,
   clearRuntimeConfig,
   getPortCandidates,
@@ -39,7 +39,7 @@ function getHookServerPort() {
   return activeServerPort || readRuntimePort() || DEFAULT_SERVER_PORT;
 }
 
-function syncClawdHooks() {
+function syncGitAnimalsHooks() {
   try {
     const { registerHooks } = require("../hooks/install.js");
     const { added, updated, removed } = registerHooks({
@@ -48,10 +48,10 @@ function syncClawdHooks() {
       port: getHookServerPort(),
     });
     if (added > 0 || updated > 0 || removed > 0) {
-      console.log(`Clawd: synced hooks (added ${added}, updated ${updated}, removed ${removed})`);
+      console.log(`GitAnimals: synced hooks (added ${added}, updated ${updated}, removed ${removed})`);
     }
   } catch (err) {
-    console.warn("Clawd: failed to sync hooks:", err.message);
+    console.warn("GitAnimals: failed to sync hooks:", err.message);
   }
 }
 
@@ -60,10 +60,10 @@ function syncGeminiHooks() {
     const { registerGeminiHooks } = require("../hooks/gemini-install.js");
     const { added, updated } = registerGeminiHooks({ silent: true });
     if (added > 0 || updated > 0) {
-      console.log(`Clawd: synced Gemini hooks (added ${added}, updated ${updated})`);
+      console.log(`GitAnimals: synced Gemini hooks (added ${added}, updated ${updated})`);
     }
   } catch (err) {
-    console.warn("Clawd: failed to sync Gemini hooks:", err.message);
+    console.warn("GitAnimals: failed to sync Gemini hooks:", err.message);
   }
 }
 
@@ -72,10 +72,10 @@ function syncCodeBuddyHooks() {
     const { registerCodeBuddyHooks } = require("../hooks/codebuddy-install.js");
     const { added, updated } = registerCodeBuddyHooks({ silent: true });
     if (added > 0 || updated > 0) {
-      console.log(`Clawd: synced CodeBuddy hooks (added ${added}, updated ${updated})`);
+      console.log(`GitAnimals: synced CodeBuddy hooks (added ${added}, updated ${updated})`);
     }
   } catch (err) {
-    console.warn("Clawd: failed to sync CodeBuddy hooks:", err.message);
+    console.warn("GitAnimals: failed to sync CodeBuddy hooks:", err.message);
   }
 }
 
@@ -84,10 +84,10 @@ function syncKiroHooks() {
     const { registerKiroHooks } = require("../hooks/kiro-install.js");
     const { added, updated } = registerKiroHooks({ silent: true });
     if (added > 0 || updated > 0) {
-      console.log(`Clawd: synced Kiro hooks (added ${added}, updated ${updated})`);
+      console.log(`GitAnimals: synced Kiro hooks (added ${added}, updated ${updated})`);
     }
   } catch (err) {
-    console.warn("Clawd: failed to sync Kiro hooks:", err.message);
+    console.warn("GitAnimals: failed to sync Kiro hooks:", err.message);
   }
 }
 
@@ -96,10 +96,10 @@ function syncCursorHooks() {
     const { registerCursorHooks } = require("../hooks/cursor-install.js");
     const { added, updated } = registerCursorHooks({ silent: true });
     if (added > 0 || updated > 0) {
-      console.log(`Clawd: synced Cursor hooks (added ${added}, updated ${updated})`);
+      console.log(`GitAnimals: synced Cursor hooks (added ${added}, updated ${updated})`);
     }
   } catch (err) {
-    console.warn("Clawd: failed to sync Cursor hooks:", err.message);
+    console.warn("GitAnimals: failed to sync Cursor hooks:", err.message);
   }
 }
 
@@ -108,18 +108,18 @@ function syncOpencodePlugin() {
     const { registerOpencodePlugin } = require("../hooks/opencode-install.js");
     const { added, created } = registerOpencodePlugin({ silent: true });
     if (added || created) {
-      console.log(`Clawd: synced opencode plugin (added=${added}, created=${created})`);
+      console.log(`GitAnimals: synced opencode plugin (added=${added}, created=${created})`);
     }
   } catch (err) {
-    console.warn("Clawd: failed to sync opencode plugin:", err.message);
+    console.warn("GitAnimals: failed to sync opencode plugin:", err.message);
   }
 }
 
 function sendStateHealthResponse(res) {
-  const body = JSON.stringify({ ok: true, app: CLAWD_SERVER_ID, port: getHookServerPort() });
+  const body = JSON.stringify({ ok: true, app: GITANIMALS_SERVER_ID, port: getHookServerPort() });
   res.writeHead(200, {
     "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
+    [GITANIMALS_SERVER_HEADER]: GITANIMALS_SERVER_ID,
   });
   res.end(body);
 }
@@ -143,7 +143,7 @@ function truncateDeep(obj, depth) {
 // Watch the directory (not the file) because atomic rename replaces the inode
 // and fs.watch on the old file silently stops firing on Windows.
 let settingsWatcher = null;
-const HOOK_MARKER = "clawd-hook.js";
+const HOOK_MARKER = "gitanimals-hook.js";
 const SETTINGS_FILENAME = "settings.json";
 function watchSettingsForHookLoss() {
   const settingsDir = path.join(os.homedir(), ".claude");
@@ -161,18 +161,18 @@ function watchSettingsForHookLoss() {
         try {
           const raw = fs.readFileSync(settingsPath, "utf-8");
           if (!raw.includes(HOOK_MARKER)) {
-            console.log("Clawd: hooks wiped from settings.json — re-registering");
+            console.log("GitAnimals: hooks wiped from settings.json — re-registering");
             lastSyncTime = Date.now();
-            syncClawdHooks();
+            syncGitAnimalsHooks();
           }
         } catch {}
       }, 1000);
     });
     settingsWatcher.on("error", (err) => {
-      console.warn("Clawd: settings watcher error:", err.message);
+      console.warn("GitAnimals: settings watcher error:", err.message);
     });
   } catch (err) {
-    console.warn("Clawd: failed to watch settings directory:", err.message);
+    console.warn("GitAnimals: failed to watch settings directory:", err.message);
   }
 }
 
@@ -217,7 +217,7 @@ function startHttpServer() {
           // hanging on our HTTP connection. Still surfaces as a success code
           // so hook exit behavior is unchanged.
           if (typeof ctx.isAgentEnabled === "function" && !ctx.isAgentEnabled(agentId)) {
-            res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+            res.writeHead(204, { [GITANIMALS_SERVER_HEADER]: GITANIMALS_SERVER_ID });
             res.end();
             return;
           }
@@ -241,7 +241,7 @@ function startHttpServer() {
             } else {
               ctx.updateSession(sid, state, event, source_pid, cwd, editor, pidChain, agentPid, agentId, host, headless, display_svg);
             }
-            res.writeHead(200, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+            res.writeHead(200, { [GITANIMALS_SERVER_HEADER]: GITANIMALS_SERVER_ID });
             res.end("ok");
           } else {
             res.writeHead(400);
@@ -266,7 +266,7 @@ function startHttpServer() {
       req.on("end", () => {
         if (tooLarge) {
           ctx.permLog("SKIPPED: permission payload too large");
-          ctx.sendPermissionResponse(res, "deny", "Permission request too large for Clawd bubble; answer in terminal");
+          ctx.sendPermissionResponse(res, "deny", "Permission request too large for permission bubble; answer in terminal");
           return;
         }
 
@@ -293,7 +293,7 @@ function startHttpServer() {
           // leave the TUI hanging until timeout. Instead we route DND
           // through the same reverse bridge the plugin uses for replies.
           if (data.agent_id === "opencode") {
-            res.writeHead(200, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+            res.writeHead(200, { [GITANIMALS_SERVER_HEADER]: GITANIMALS_SERVER_ID });
             res.end("ok");
 
             // Agent gate: same silent-drop semantics as DND — plugin is
@@ -317,7 +317,7 @@ function startHttpServer() {
             ctx.permLog(`opencode perm: tool=${toolName} session=${sessionId} req=${requestId} bridge=${bridgeUrl} always=${alwaysCandidates.length}`);
 
             // bridge_url/bridge_token are required — this is the reverse
-            // channel Clawd uses to send the decision back to the plugin,
+            // channel GitAnimals uses to send the decision back to the plugin,
             // which then calls opencode's in-process Hono route. Without it
             // we have no way to resolve the pending permission.
             if (!requestId || !bridgeUrl || !bridgeToken) {
@@ -409,7 +409,7 @@ function startHttpServer() {
           const rawInput = data.tool_input && typeof data.tool_input === "object" ? data.tool_input : {};
           const toolInput = truncateDeep(rawInput);
           const sessionId = data.session_id || "default";
-          // Tag the permEntry with the source agent. Clawd's HTTP permission
+          // Tag the permEntry with the source agent. GitAnimals's HTTP permission
           // path is shared between Claude Code and codebuddy (both set
           // capabilities.permissionApproval=true and POST here). Stamping lets
           // dismissPermissionsByAgent() clean up the right ones when the user
@@ -523,13 +523,13 @@ function startHttpServer() {
   httpServer.on("listening", () => {
     activeServerPort = listenPorts[listenIndex];
     writeRuntimeConfig(activeServerPort);
-    console.log(`Clawd state server listening on 127.0.0.1:${activeServerPort}`);
+    console.log(`GitAnimals state server listening on 127.0.0.1:${activeServerPort}`);
     // Defer hook/plugin registration off the startup path. Each sync call
     // reads+parses+writes a config JSON (50-150ms cumulative on slow disks),
     // and all five operate on independent files for independent agents, so
     // none of them need to block the HTTP server from accepting traffic.
     setImmediate(() => {
-      syncClawdHooks();
+      syncGitAnimalsHooks();
       syncGeminiHooks();
       syncCursorHooks();
       syncCodeBuddyHooks();
@@ -548,7 +548,7 @@ function cleanup() {
   if (httpServer) httpServer.close();
 }
 
-return { startHttpServer, getHookServerPort, syncClawdHooks, syncGeminiHooks, syncCursorHooks, syncCodeBuddyHooks, syncKiroHooks, syncOpencodePlugin, cleanup };
+return { startHttpServer, getHookServerPort, syncGitAnimalsHooks, syncGeminiHooks, syncCursorHooks, syncCodeBuddyHooks, syncKiroHooks, syncOpencodePlugin, cleanup };
 
 };
 

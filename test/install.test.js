@@ -8,7 +8,7 @@ const { registerHooks, __test } = require("../hooks/install");
 const tempDirs = [];
 
 function makeTempSettings(initialSettings = {}) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-install-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-install-"));
   const settingsPath = path.join(tmpDir, "settings.json");
   fs.writeFileSync(settingsPath, JSON.stringify(initialSettings, null, 2), "utf8");
   tempDirs.push(tmpDir);
@@ -19,18 +19,18 @@ function readSettings(settingsPath) {
   return JSON.parse(fs.readFileSync(settingsPath, "utf8"));
 }
 
-function getClawdCommands(settings, event) {
+function getGitAnimalsCommands(settings, event) {
   const entries = settings.hooks?.[event];
   if (!Array.isArray(entries)) return [];
   const commands = [];
   for (const entry of entries) {
     if (!entry || typeof entry !== "object") continue;
-    if (typeof entry.command === "string" && entry.command.includes("clawd-hook.js")) {
+    if (typeof entry.command === "string" && entry.command.includes("gitanimals-hook.js")) {
       commands.push(entry.command);
     }
     if (!Array.isArray(entry.hooks)) continue;
     for (const hook of entry.hooks) {
-      if (hook && typeof hook.command === "string" && hook.command.includes("clawd-hook.js")) {
+      if (hook && typeof hook.command === "string" && hook.command.includes("gitanimals-hook.js")) {
         commands.push(hook.command);
       }
     }
@@ -55,7 +55,7 @@ describe("Hook installer version compatibility", () => {
 
     const settings = readSettings(settingsPath);
     assert.ok(Array.isArray(settings.hooks.StopFailure));
-    assert.deepStrictEqual(getClawdCommands(settings, "StopFailure").length, 1);
+    assert.deepStrictEqual(getGitAnimalsCommands(settings, "StopFailure").length, 1);
     assert.strictEqual(result.versionStatus, "known");
     assert.strictEqual(result.version, "2.1.78");
   });
@@ -89,13 +89,13 @@ describe("Hook installer version compatibility", () => {
     assert.strictEqual(result.versionStatus, "unknown");
   });
 
-  it("removes stale Clawd StopFailure hooks while preserving third-party entries when version is known too old", () => {
+  it("removes stale GitAnimals StopFailure hooks while preserving third-party entries when version is known too old", () => {
     const settingsPath = makeTempSettings({
       hooks: {
         StopFailure: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/tmp/clawd-hook.js" StopFailure' }],
+            hooks: [{ type: "command", command: 'node "/tmp/gitanimals-hook.js" StopFailure' }],
           },
         ],
         PostCompact: [],
@@ -128,7 +128,7 @@ describe("Hook installer version compatibility", () => {
         StopFailure: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/tmp/clawd-hook.js" StopFailure' }],
+            hooks: [{ type: "command", command: 'node "/tmp/gitanimals-hook.js" StopFailure' }],
           },
         ],
       },
@@ -142,7 +142,7 @@ describe("Hook installer version compatibility", () => {
 
     const settings = readSettings(settingsPath);
     assert.ok(Array.isArray(settings.hooks.StopFailure));
-    assert.strictEqual(getClawdCommands(settings, "StopFailure").length, 1);
+    assert.strictEqual(getGitAnimalsCommands(settings, "StopFailure").length, 1);
     assert.strictEqual(result.removed, 0);
   });
 
@@ -152,7 +152,7 @@ describe("Hook installer version compatibility", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/old/path/clawd-hook.js" Stop' }],
+            hooks: [{ type: "command", command: 'node "/old/path/gitanimals-hook.js" Stop' }],
           },
         ],
       },
@@ -165,10 +165,10 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const commands = getClawdCommands(settings, "Stop");
+    const commands = getGitAnimalsCommands(settings, "Stop");
     assert.strictEqual(result.updated, 1);
     assert.strictEqual(commands.length, 1);
-    assert.ok(commands[0].includes('hooks/clawd-hook.js'));
+    assert.ok(commands[0].includes('hooks/gitanimals-hook.js'));
     assert.ok(!commands[0].includes('/old/path/'));
   });
 
@@ -197,7 +197,7 @@ describe("Hook installer version compatibility", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: `"${existingAbsPath}" "/app/hooks/clawd-hook.js" Stop` }],
+            hooks: [{ type: "command", command: `"${existingAbsPath}" "/app/hooks/gitanimals-hook.js" Stop` }],
           },
         ],
       },
@@ -212,7 +212,7 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const commands = getClawdCommands(settings, "Stop");
+    const commands = getGitAnimalsCommands(settings, "Stop");
     assert.strictEqual(commands.length, 1);
     // Must still contain the original absolute nvm path, NOT bare "node"
     assert.ok(commands[0].includes(existingAbsPath), `expected ${existingAbsPath} in: ${commands[0]}`);

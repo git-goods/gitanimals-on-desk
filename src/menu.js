@@ -69,7 +69,7 @@ module.exports = function initMenu(ctx) {
       icon = nativeImage.createFromPath(path.join(__dirname, "../assets/tray-icon.png")).resize({ width: 32, height: 32 });
     }
     ctx.tray = new Tray(icon);
-    ctx.tray.setToolTip("Clawd Desktop Pet");
+    ctx.tray.setToolTip("GitAnimals Desktop Pet");
     buildTrayMenu();
   }
 
@@ -464,7 +464,7 @@ module.exports = function initMenu(ctx) {
       { type: "separator" },
       { label: t("quit"), click: () => requestAppQuit() },
     );
-    if (process.env.CLAWD_DEBUG) {
+    if (process.env.GITANIMALS_DEBUG) {
       template.push(
         { type: "separator" },
         {

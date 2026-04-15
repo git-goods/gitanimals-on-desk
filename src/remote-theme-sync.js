@@ -19,7 +19,7 @@ const MAX_REDIRECTS = 1;
 const THEME_ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 // TODO: set to real CDN URL before production release
-const DEFAULT_REGISTRY_BASE_URL = "https://clawd-themes.example.com";
+const DEFAULT_REGISTRY_BASE_URL = "https://gitanimals-themes.example.com";
 
 // ── Module state ──
 
@@ -263,7 +263,7 @@ function _httpsGetBuffer(url, timeoutMs = FETCH_TIMEOUT_MS, redirectsLeft = MAX_
         hostname: parsed.hostname,
         port: parsed.port || (isHttps ? 443 : 80),
         path: parsed.pathname + parsed.search,
-        headers: { "User-Agent": "Clawd-on-Desk" },
+        headers: { "User-Agent": "GitAnimals-on-Desk" },
       },
       (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {

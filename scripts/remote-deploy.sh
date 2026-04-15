@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Clawd Desktop Pet — Remote Hook Deployment
+# GitAnimals Desktop Pet — Remote Hook Deployment
 # Deploys hook files to a remote server and registers Claude Code hooks.
 #
 # Usage:
@@ -45,7 +45,7 @@ FILES=(
   "$HOOKS_DIR/server-config.js"
   "$HOOKS_DIR/json-utils.js"
   "$HOOKS_DIR/shared-process.js"
-  "$HOOKS_DIR/clawd-hook.js"
+  "$HOOKS_DIR/gitanimals-hook.js"
   "$HOOKS_DIR/install.js"
   "$HOOKS_DIR/codex-remote-monitor.js"
 )

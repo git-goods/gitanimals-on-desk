@@ -1,5 +1,5 @@
 // hooks/shared-process.js — Shared process tree walk, stdin reader, platform config
-// Used by hook scripts (clawd, copilot, cursor, gemini, kiro, codebuddy).
+// Used by hook scripts (gitanimals, copilot, cursor, gemini, kiro, codebuddy).
 // Zero third-party dependencies — only Node built-ins.
 
 // ── Base platform constants ──────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Merge Clawd CodeBuddy hooks into ~/.codebuddy/settings.json (append-only, idempotent)
+// Merge GitAnimals CodeBuddy hooks into ~/.codebuddy/settings.json (append-only, idempotent)
 // CodeBuddy uses Claude Code-compatible hook format: { matcher, hooks: [{ type, command }] }
 
 const fs = require("fs");
@@ -23,7 +23,7 @@ const CODEBUDDY_HOOK_EVENTS = [
 ];
 
 /**
- * Register Clawd hooks into ~/.codebuddy/settings.json
+ * Register GitAnimals hooks into ~/.codebuddy/settings.json
  * Uses Claude Code-compatible nested format: { matcher, hooks: [{ type, command }] }
  * @param {object} [options]
  * @param {boolean} [options.silent]
@@ -36,7 +36,7 @@ function registerCodeBuddyHooks(options = {}) {
   // Skip if ~/.codebuddy/ doesn't exist (CodeBuddy not installed)
   const codebuddyDir = path.dirname(settingsPath);
   if (!options.settingsPath && !fs.existsSync(codebuddyDir)) {
-    if (!options.silent) console.log("Clawd: ~/.codebuddy/ not found — skipping CodeBuddy hook registration");
+    if (!options.silent) console.log("GitAnimals: ~/.codebuddy/ not found — skipping CodeBuddy hook registration");
     return { added: 0, skipped: 0, updated: 0 };
   }
 
@@ -162,7 +162,7 @@ function registerCodeBuddyHooks(options = {}) {
   }
 
   if (!options.silent) {
-    console.log(`Clawd CodeBuddy hooks → ${settingsPath}`);
+    console.log(`GitAnimals CodeBuddy hooks → ${settingsPath}`);
     console.log(`  Added: ${added}, updated: ${updated}, skipped: ${skipped}`);
   }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Register Clawd's opencode plugin in the user's global opencode config.
+// Register GitAnimals's opencode plugin in the user's global opencode config.
 //
 // Strategy: append the absolute path of hooks/opencode-plugin/ into
 // ~/.config/opencode/opencode.json under the "plugin" array. Idempotent.
@@ -20,7 +20,7 @@ const PLUGIN_DIR_NAME = "opencode-plugin";
 
 /**
  * Resolve the absolute path to hooks/opencode-plugin/ as seen from a running
- * opencode (Bun) process. When Clawd is packaged into app.asar, hooks/** is
+ * opencode (Bun) process. When GitAnimals is packaged into app.asar, hooks/** is
  * unpacked to app.asar.unpacked/ (see package.json "asarUnpack"). opencode
  * cannot require files inside asar, so we must point it at the unpacked copy.
  *
@@ -33,7 +33,7 @@ function resolvePluginDir(baseDir) {
 }
 
 /**
- * Register the Clawd opencode plugin in ~/.config/opencode/opencode.json.
+ * Register the GitAnimals opencode plugin in ~/.config/opencode/opencode.json.
  *
  * @param {object} [options]
  * @param {boolean} [options.silent]   suppress console output
@@ -52,7 +52,7 @@ function registerOpencodePlugin(options = {}) {
     try { exists = fs.statSync(configDir).isDirectory(); } catch {}
     if (!exists) {
       if (!options.silent) {
-        console.log("Clawd: ~/.config/opencode/ not found — skipping opencode plugin registration");
+        console.log("GitAnimals: ~/.config/opencode/ not found — skipping opencode plugin registration");
       }
       return { added: false, skipped: true, created: false, configPath, pluginDir };
     }
@@ -84,7 +84,7 @@ function registerOpencodePlugin(options = {}) {
   // "@vendor/opencode-plugin"), and path.basename of a scoped package name
   // happens to return the segment after the slash — so a naive basename
   // equality would stomp any third-party scoped package ending in
-  // "/opencode-plugin". Clawd itself only ever writes absolute paths, so
+  // "/opencode-plugin". GitAnimals itself only ever writes absolute paths, so
   // restricting the match to absolute entries is safe.
   let matchIndex = -1;
   for (let i = 0; i < settings.plugin.length; i++) {
@@ -122,7 +122,7 @@ function registerOpencodePlugin(options = {}) {
   }
 
   if (!options.silent) {
-    console.log(`Clawd opencode plugin → ${configPath}`);
+    console.log(`GitAnimals opencode plugin → ${configPath}`);
     if (created) console.log("  Created opencode.json");
     if (added) console.log(`  Registered: ${pluginDir}`);
     if (skipped) console.log(`  Already registered: ${pluginDir}`);

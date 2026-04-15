@@ -53,7 +53,7 @@ function stopServer(s) {
 }
 
 function makeTempUserData() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "clawd-remote-sync-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-remote-sync-"));
 }
 
 // ── Tests ──

@@ -44,7 +44,7 @@ bash test-macos.sh     # macOS 适配测试（需先 npm start）
 ```
 Claude Code 状态同步（command hook，非阻塞）：
   Claude Code 触发事件
-    → hooks/clawd-hook.js（零依赖 Node 脚本，stdin 读 JSON 取 session_id + source_pid）
+    → hooks/gitanimals-hook.js（零依赖 Node 脚本，stdin 读 JSON 取 session_id + source_pid）
     → HTTP POST 127.0.0.1:23333/state { state, session_id, event, source_pid, cwd }
     → src/server.js 路由 → src/state.js 状态机（多会话追踪 + 优先级 + 最小显示时长 + 睡眠序列）
     → IPC state-change 事件
@@ -87,7 +87,7 @@ opencode 权限气泡（event hook + 反向 bridge，非阻塞）：
 远程 SSH 状态同步（反向端口转发）：
   远程服务器上的 Claude Code / Codex CLI
     → hooks 通过 SSH 隧道 POST 到本地 127.0.0.1:23333
-    → 同上状态机（CLAWD_REMOTE=1 模式跳过 PID 收集）
+    → 同上状态机（GITANIMALS_REMOTE=1 模式跳过 PID 收集）
 
 权限决策流（Claude Code HTTP hook，阻塞）：
   Claude Code PermissionRequest
@@ -140,11 +140,11 @@ opencode 权限气泡（event hook + 反向 bridge，非阻塞）：
 | `src/preload.js` | 渲染窗口 contextBridge（onStateChange、onEyeMove、reaction 接收、pauseCursorPolling） |
 | `src/bubble.html` | 权限气泡 UI：工具名 pill + 命令预览 + Allow/Deny 按钮 + suggestion 按钮，支持 light/dark 主题 |
 | `src/preload-bubble.js` | bubble 窗口的 contextBridge（permission-show、permission-decide、bubble-height） |
-| `hooks/clawd-hook.js` | Claude Code command hook：事件名 → 状态映射 → HTTP POST，零依赖 |
-| `hooks/copilot-hook.js` | Copilot CLI command hook：camelCase 事件名，与 clawd-hook.js 相同架构 |
-| `hooks/gemini-hook.js` | Gemini CLI command hook：事件名 → 状态映射 → HTTP POST，与 clawd-hook.js 相同架构 |
+| `hooks/gitanimals-hook.js` | Claude Code command hook：事件名 → 状态映射 → HTTP POST，零依赖 |
+| `hooks/copilot-hook.js` | Copilot CLI command hook：camelCase 事件名，与 gitanimals-hook.js 相同架构 |
+| `hooks/gemini-hook.js` | Gemini CLI command hook：事件名 → 状态映射 → HTTP POST，与 gitanimals-hook.js 相同架构 |
 | `hooks/gemini-install.js` | 安全注册 Gemini hooks 到 ~/.gemini/settings.json，导出 `registerGeminiHooks()` |
-| `hooks/gemini-hook.js` | Gemini CLI command hook：事件名 → 状态映射 → HTTP POST，与 clawd-hook.js 相同架构 |
+| `hooks/gemini-hook.js` | Gemini CLI command hook：事件名 → 状态映射 → HTTP POST，与 gitanimals-hook.js 相同架构 |
 | `hooks/gemini-install.js` | 安全注册 Gemini hooks 到 ~/.gemini/settings.json，导出 `registerGeminiHooks()` |
 | `hooks/cursor-hook.js` | Cursor Agent hook：stdin JSON 读取 → 状态映射 → HTTP POST，stdout 返回 JSON；支持 display_svg 工具提示 |
 | `hooks/cursor-install.js` | 安全注册 Cursor hooks 到 ~/.cursor/hooks.json（append-only，幂等），导出 `registerCursorHooks()` |
@@ -206,7 +206,7 @@ opencode 是唯一**以 plugin 形式集成**的 agent，其他 agent 都是 hoo
 ### i18n 国际化
 
 - 支持英文（en）和中文（zh），通过右键菜单 / 托盘菜单 Language 切换
-- 语言偏好持久化到 `clawd-prefs.json`
+- 语言偏好持久化到 `gitanimals-prefs.json`
 - 权限气泡的按钮文案跟随语言设置
 
 ### 自动更新
@@ -221,7 +221,7 @@ opencode 是唯一**以 plugin 形式集成**的 agent，其他 agent 都是 hoo
 - `playSound(name)` 在 main.js 中定义，检查 `soundMuted`、`doNotDisturb`、10 秒 cooldown 后通过 IPC `play-sound` 发送到渲染窗口
 - renderer.js 用 `_audioCache` 缓存 Audio 对象，避免重复创建
 - state.js `applyState()` 中触发：attention/mini-happy → complete 音效，notification/mini-alert → confirm 音效
-- 菜单"音效"checkbox 控制 `soundMuted`，持久化到 `clawd-prefs.json`
+- 菜单"音效"checkbox 控制 `soundMuted`，持久化到 `gitanimals-prefs.json`
 - 音效素材：`assets/sounds/complete.mp3`、`assets/sounds/confirm.mp3`（≤50KB）
 
 ### 眼球追踪系统（tick.js 计算 → renderer.js 渲染）
@@ -311,7 +311,7 @@ opencode 是唯一**以 plugin 形式集成**的 agent，其他 agent 都是 hoo
 - 资源路径始终用 `path.join(__dirname, ...)` — 确保打包后不丢文件
 - 透明无边框浮窗：`frame: false`, `transparent: true`, `alwaysOnTop: true`
 - 单实例锁：`app.requestSingleInstanceLock()` 防止重复启动
-- 位置持久化：窗口坐标 + 尺寸存入 `clawd-prefs.json`
+- 位置持久化：窗口坐标 + 尺寸存入 `gitanimals-prefs.json`
 - 多显示器边界钳制：`clampToScreen()` 用 `getNearestWorkArea()` 查找最近显示器工作区
 
 ## 开发规范

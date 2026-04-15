@@ -80,7 +80,7 @@ const UPDATE_VISUAL_STATE_MAP = {
   downloading: "carrying",
 };
 const UPDATE_VISUAL_SVG_MAP = {
-  checking: "clawd-working-debugger.svg",
+  checking: "gitanimals-working-debugger.svg",
 };
 
 // ── Wake poll ──

@@ -132,7 +132,7 @@ function delegateWindowToStationarySpace(nsWindow) {
     return true;
   } catch (err) {
     if (!warnedSkyLightFailure) {
-      console.warn("Clawd: failed to move macOS window into stationary SkyLight space:", err.message);
+      console.warn("GitAnimals: failed to move macOS window into stationary SkyLight space:", err.message);
       warnedSkyLightFailure = true;
     }
     return false;
@@ -183,7 +183,7 @@ function applyStationaryCollectionBehavior(browserWindow) {
     return true;
   } catch (err) {
     if (!warnedApplyFailure) {
-      console.warn("Clawd: failed to apply macOS stationary window behavior:", err.message);
+      console.warn("GitAnimals: failed to apply macOS stationary window behavior:", err.message);
       warnedApplyFailure = true;
     }
     return false;
