@@ -1,5 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+try { require("@sentry/electron/renderer").init({}); } catch (_e) { /* telemetry disabled */ }
+
 // Parse hit-renderer theme config from additionalArguments (synchronous, available on first load)
 const hitThemeArg = process.argv.find(a => a.startsWith("--hit-theme-config="));
 const hitThemeConfig = hitThemeArg ? JSON.parse(hitThemeArg.slice("--hit-theme-config=".length)) : null;
