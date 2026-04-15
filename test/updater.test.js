@@ -184,11 +184,11 @@ describe("updater visual flow", () => {
     Object.defineProperty(process, "platform", { value: originalPlatform });
   });
 
-  it("uses the macOS packaged-update path by opening the releases page and showing a success bubble", async () => {
+  it("uses the same autoUpdater download path on macOS as on Windows (signed + notarized)", async () => {
     const originalPlatform = process.platform;
     const bubbles = [];
     const handlers = {};
-    const openedUrls = [];
+    let downloadCalled = false;
     Object.defineProperty(process, "platform", { value: "darwin" });
     try {
       delete require.cache[require.resolve("../src/updater")];
@@ -202,11 +202,6 @@ describe("updater visual flow", () => {
         },
       });
       const updater = initUpdater(ctx, makeDeps({
-        shell: {
-          openExternal(url) {
-            openedUrls.push(url);
-          },
-        },
         autoUpdaterFactory: () => ({
           autoDownload: false,
           autoInstallOnAppQuit: true,
@@ -214,7 +209,7 @@ describe("updater visual flow", () => {
           checkForUpdates: async () => ({ updateInfo: { version: "0.5.11" } }),
           quitAndInstall() {},
           downloadUpdate() {
-            throw new Error("downloadUpdate should not run on macOS");
+            downloadCalled = true;
           },
         }),
         httpsGetImpl: (options, cb) => {
@@ -235,9 +230,8 @@ describe("updater visual flow", () => {
       await updater.checkForUpdates(true);
       await handlers["update-available"]({ version: "0.5.11" });
 
-      assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available", "ready"]);
-      assert.strictEqual(openedUrls[0], "https://github.com/git-goods/gitanimals-on-desk/releases/latest");
-      assert.match(bubbles[2].message, /opened/i);
+      assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available", "downloading"]);
+      assert.strictEqual(downloadCalled, true);
     } finally {
       Object.defineProperty(process, "platform", { value: originalPlatform });
     }

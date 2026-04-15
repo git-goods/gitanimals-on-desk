@@ -20,6 +20,7 @@ docs/*
 !docs/copilot-setup.md
 !docs/release-v0.5.5.md
 !docs/release-and-signing.md
+!docs/macos-signing-setup.md
 !docs/guide-theme-creation.md
 !docs/permission-hook-fail-deny-investigation.md
 !docs/state-mapping.md

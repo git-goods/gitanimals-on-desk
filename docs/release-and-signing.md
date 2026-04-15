@@ -49,9 +49,12 @@ git push origin main --follow-tags
 
 ---
 
-## 2. 코드 서명 & 공증 (나중에 할 일)
+## 2. 코드 서명 & 공증
 
-> **지금 하지 않는 이유**: 인증서 비용 + Apple Developer 가입 등 선행 비용이 있고, 서명 없이도 릴리스는 잘 동작합니다. 다만 사용자 경험 측면에서 아래 제약이 있습니다.
+> **macOS**: ✅ 서명 + 공증 적용 완료 (Apple Developer ID). 다음 릴리스부터 Gatekeeper 경고 없이 설치 + 자동 업데이트 동작.
+> **Windows**: 아직 미적용. SmartScreen "알 수 없는 게시자" 경고 유지.
+>
+> macOS 설정 단계별 가이드: [`docs/macos-signing-setup.md`](./macos-signing-setup.md)
 
 ### 2.1 서명 없을 때 영향
 
@@ -238,18 +241,9 @@ signtool verify /pa /v "C:\path\to\Clawd-on-Desk-Setup-X.Y.Z.exe"
 
 ### 2.4 서명 완료 후 후속 작업
 
-#### macOS 자동 업데이트 활성화
+#### macOS 자동 업데이트 활성화 ✅
 
-현재 `src/updater.js:489-506` 의 macOS 분기는 GitHub 릴리스 페이지를 여는 것으로 대체되어 있습니다:
-
-```js
-if (isMac) {
-  shell.openExternal("https://github.com/rullerzhou-afk/clawd-on-desk/releases/latest");
-  // ...
-}
-```
-
-서명 + 공증 완료 후에는 Windows 분기와 동일하게 `autoUpdater.downloadUpdate()` 를 호출하도록 바꿉니다. 구체적으로는 `isMac` 분기를 제거하고 통합 경로로 합치면 됩니다.
+완료됨. `src/updater.js` 의 macOS 분기를 제거하고 Windows와 동일하게 `autoUpdater.downloadUpdate()` 를 사용하도록 통합했습니다. 테스트: `test/updater.test.js` "uses the same autoUpdater download path on macOS as on Windows".
 
 ---
 

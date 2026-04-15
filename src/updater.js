@@ -4,8 +4,6 @@ const path = require("path");
 const fs = require("fs");
 const electron = require("electron");
 
-const isMac = process.platform === "darwin";
-
 function makeTranslate(ctx) {
   return (key, fallback) => {
     const value = typeof ctx.t === "function" ? ctx.t(key) : key;
@@ -67,7 +65,6 @@ function buildErrorDetail({ failureType, operation, reason, nextStep, detail }) 
 
 function initUpdater(ctx, deps = {}) {
   const app = deps.app || electron.app;
-  const shell = deps.shell || electron.shell;
   const httpsGet = deps.httpsGetImpl || https.get;
   const execFileFn = deps.execFileImpl || execFile;
   const fsApi = deps.fsImpl || fs;
@@ -288,9 +285,7 @@ function initUpdater(ctx, deps = {}) {
     const action = await showBubble({
       mode: "available",
       title: t("updateAvailable", "Update Available"),
-      message: (mode === "mac"
-        ? t("updateAvailableMacMsg", "v{version} is available. Open the download page?")
-        : t("updateAvailableMsg", "v{version} is available. Download and install now?"))
+      message: t("updateAvailableMsg", "v{version} is available. Download and install now?")
         .replace("{version}", version),
       version,
       actions: [
@@ -484,28 +479,9 @@ function initUpdater(ctx, deps = {}) {
       }
 
       await promptAvailableUpdate({
-        mode: isMac ? "mac" : "win",
+        mode: "win",
         version: info.version,
         onPrimary: async () => {
-          if (isMac) {
-            shell.openExternal("https://github.com/git-goods/gitanimals-on-desk/releases/latest");
-            updateStatus = "idle";
-            manualUpdateCheck = false;
-            rebuildMenus();
-            await showSuccessBubble({
-              title: t("updateReady", "Update Ready"),
-              message: t("macUpdateOpened", "Opened the latest download page in your browser."),
-              version: info.version,
-              actions: [
-                { id: "dismiss", label: t("dismiss", "Dismiss"), variant: "secondary" },
-              ],
-              defaultAction: "dismiss",
-              requireAction: true,
-            });
-            dismissToResolvedState();
-            return;
-          }
-
           updateStatus = "downloading";
           setOverlay("downloading");
           rebuildMenus();
