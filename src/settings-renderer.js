@@ -51,6 +51,9 @@ const STRINGS = {
     rowHideBubblesDesc: "Suppress permission, notification, and update bubbles entirely.",
     rowShowSessionId: "Show session ID",
     rowShowSessionIdDesc: "Append the short session ID to bubble headers and the Sessions menu.",
+    sectionPrivacy: "Privacy",
+    rowSendDiagnostics: "Send anonymous diagnostics",
+    rowSendDiagnosticsDesc: "Share crash reports and anonymised event breadcrumbs so the maintainers can diagnose issues like the pet disappearing. No personal data.",
     placeholderTitle: "Coming soon",
     placeholderDesc: "This panel will land in a future GitAnimals release. The plan lives in docs/plan-settings-panel.md.",
     toastSaveFailed: "Couldn't save: ",
@@ -93,6 +96,9 @@ const STRINGS = {
     rowHideBubblesDesc: "完全屏蔽权限、通知和更新气泡。",
     rowShowSessionId: "显示会话 ID",
     rowShowSessionIdDesc: "在气泡标题和会话菜单后追加短会话 ID。",
+    sectionPrivacy: "隐私",
+    rowSendDiagnostics: "发送匿名诊断数据",
+    rowSendDiagnosticsDesc: "共享崩溃报告和匿名化事件面包屑，帮助维护者诊断诸如桌宠消失之类的问题。不包含任何个人信息。",
     placeholderTitle: "即将推出",
     placeholderDesc: "此面板将在 GitAnimals 后续版本中加入，规划见 docs/plan-settings-panel.md。",
     toastSaveFailed: "保存失败：",
@@ -346,6 +352,15 @@ function renderGeneralTab(parent) {
       key: "showSessionId",
       labelKey: "rowShowSessionId",
       descKey: "rowShowSessionIdDesc",
+    }),
+  ]));
+
+  // Section: Privacy — diagnostic telemetry opt-out.
+  parent.appendChild(buildSection(t("sectionPrivacy"), [
+    buildSwitchRow({
+      key: "sendDiagnostics",
+      labelKey: "rowSendDiagnostics",
+      descKey: "rowSendDiagnosticsDesc",
     }),
   ]));
 }
