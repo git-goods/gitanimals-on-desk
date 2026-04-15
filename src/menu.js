@@ -33,7 +33,7 @@ module.exports = function initMenu(ctx) {
   // ── Theme submenu builder ──
   function buildThemeSubmenu() {
     const themes = ctx.discoverThemes ? ctx.discoverThemes() : [];
-    const activeId = ctx.getActiveThemeId ? ctx.getActiveThemeId() : "clawd";
+    const activeId = ctx.getActiveThemeId ? ctx.getActiveThemeId() : "fox";
 
     const items = themes.map(theme => ({
       label: theme.name + (theme.builtin ? "" : " ✦"),

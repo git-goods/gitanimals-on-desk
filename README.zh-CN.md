@@ -112,7 +112,7 @@ npm start
 Clawd 支持自定义主题——用你自己的角色和动画替换默认的螃蟹。
 
 **快速开始：**
-1. 将 `themes/template/` 复制到主题目录：
+1. 将 `reference/themes/template/` 复制到主题目录：
    - Windows: `%APPDATA%/clawd-on-desk/themes/my-theme/`
    - macOS: `~/Library/Application Support/clawd-on-desk/themes/my-theme/`
    - Linux: `~/.config/clawd-on-desk/themes/my-theme/`

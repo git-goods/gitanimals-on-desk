@@ -112,7 +112,7 @@ Some agents have feature gaps (no permission bubble, polling latency, no termina
 Clawd supports custom themes — replace the default crab with your own character and animations.
 
 **Quick start:**
-1. Copy `themes/template/` to your themes directory:
+1. Copy `reference/themes/template/` to your themes directory:
    - Windows: `%APPDATA%/clawd-on-desk/themes/my-theme/`
    - macOS: `~/Library/Application Support/clawd-on-desk/themes/my-theme/`
    - Linux: `~/.config/clawd-on-desk/themes/my-theme/`

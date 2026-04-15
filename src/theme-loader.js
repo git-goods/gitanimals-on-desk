@@ -155,14 +155,14 @@ function loadTheme(themeId) {
 
   if (!raw) {
     console.error(`[theme-loader] Theme "${themeId}" not found`);
-    if (themeId !== "clawd") return loadTheme("clawd");
-    throw new Error("Default theme 'clawd' not found");
+    if (themeId !== "fox") return loadTheme("fox");
+    throw new Error("Default theme 'fox' not found");
   }
 
   const errors = validateTheme(raw);
   if (errors.length > 0) {
     console.error(`[theme-loader] Theme "${themeId}" validation errors:`, errors);
-    if (themeId !== "clawd") return loadTheme("clawd");
+    if (themeId !== "fox") return loadTheme("fox");
   }
 
   // Merge defaults for optional fields
@@ -424,11 +424,9 @@ function getAssetPath(filename) {
   if (!activeTheme) return path.join(assetsSvgDir, filename);
 
   if (activeTheme._builtin) {
-    // Built-in theme with own assets dir (e.g., calico with APNGs)
-    if (!filename.endsWith(".svg")) {
-      const themeAsset = path.join(activeTheme._themeDir, "assets", filename);
-      if (fs.existsSync(themeAsset)) return themeAsset;
-    }
+    // Built-in theme with own assets dir (fox, calico) — check theme's own assets first
+    const themeAsset = path.join(activeTheme._themeDir, "assets", filename);
+    if (fs.existsSync(themeAsset)) return themeAsset;
     return path.join(assetsSvgDir, filename);
   }
 
