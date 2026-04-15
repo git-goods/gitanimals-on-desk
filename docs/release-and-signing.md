@@ -10,27 +10,27 @@
 
 ### 절차
 
-1. GitHub 저장소 → **Actions** 탭
-2. 좌측에서 **Release** 워크플로우 선택
-3. 우측 상단 **Run workflow** 버튼 클릭
-4. 드롭다운에서 릴리스 타입 선택:
-   - `patch` — 0.5.10 → 0.5.11 (버그 수정)
-   - `minor` — 0.5.10 → 0.6.0 (기능 추가)
-   - `major` — 0.5.10 → 1.0.0 (큰 변경)
-5. 초록 **Run workflow** 버튼 클릭 → 끝
+```bash
+npm version patch   # 0.0.1 → 0.0.2 (버그 수정)
+# npm version minor # 0.0.1 → 0.1.0 (기능 추가)
+# npm version major # 0.0.1 → 1.0.0 (큰 변경)
+git push origin main --follow-tags
+```
+
+`npm version`이 package.json/package-lock.json bump + commit + annotated tag를 한 번에 처리합니다.
+태그가 push되면 `Build & Release` 워크플로우가 자동 트리거됩니다.
 
 ### 내부 동작
 
 ```
-[Release 워크플로우]
-  ├ ① npm test  ← 실패 시 여기서 중단 (태그 안 찍힘)
-  └ ② npm version <type>
-      → package.json / package-lock.json bump
-      → commit "release: vX.Y.Z"
-      → annotated tag vX.Y.Z
-      → push
+[로컬]
+  npm version <type>
+    → package.json / package-lock.json bump
+    → commit "vX.Y.Z"
+    → annotated tag vX.Y.Z
+  git push origin main --follow-tags
               │
-              ▼ 태그 push 가 아래 워크플로우 자동 트리거
+              ▼ 태그 push 가 워크플로우 자동 트리거
 [Build & Release 워크플로우]
   ├ npm test (안전장치)
   ├ Windows / macOS / Linux 병렬 빌드
@@ -41,13 +41,10 @@
 
 | 실패 지점 | 상태 | 복구 |
 |---|---|---|
-| `Release.test` | 태그 없음, 변경 없음 | 테스트 고치고 다시 Run workflow |
-| `Release.bump-and-tag` push 직전 | 원격에 아무것도 안 올라감 | 재시도 |
 | `Build.*` (빌드 실패) | 태그는 이미 push 됨 | 태그 삭제 후 재시도: `git push origin :vX.Y.Z && git tag -d vX.Y.Z` |
 
 ### 파일
 
-- `.github/workflows/release.yml` — 버튼 트리거 워크플로우 (test → bump → tag push)
 - `.github/workflows/build.yml` — 태그 감지 워크플로우 (test → 3-OS 빌드 → Releases)
 
 ---
