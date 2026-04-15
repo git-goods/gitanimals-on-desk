@@ -5,8 +5,8 @@ const { BrowserWindow, globalShortcut } = require("electron");
 const path = require("path");
 const http = require("http");
 const {
-  CLAWD_SERVER_HEADER,
-  CLAWD_SERVER_ID,
+  GITANIMALS_SERVER_HEADER,
+  GITANIMALS_SERVER_ID,
 } = require("../hooks/server-config");
 
 const isMac = process.platform === "darwin";
@@ -57,7 +57,7 @@ function shouldSuppressCodexNotifyBubble(ctx) {
 //   3. corner fallback — only when neither side has bw of clearance, fall
 //                         back to the work area's bottom-right corner
 //
-// followPet=false → bottom-right of the work area (default Clawd behavior).
+// followPet=false → bottom-right of the work area (default behavior).
 //
 // Visual invariant across ALL branches: bubbles[0] (oldest) ends up at the
 // highest y, bubbles[N-1] (newest) at the lowest y. Crossing a layout
@@ -493,7 +493,7 @@ function sendPermissionResponse(res, decisionOrBehavior, message, hookEventName 
   permLog(`response: ${responseBody}`);
   res.writeHead(200, {
     "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
+    [GITANIMALS_SERVER_HEADER]: GITANIMALS_SERVER_ID,
   });
   res.end(responseBody);
 }
@@ -662,7 +662,7 @@ function cleanup() {
   // Clean up all pending permission requests — send explicit deny so Claude Code doesn't hang
   for (const perm of [...pendingPermissions]) {
     if (perm._delayTimer) clearTimeout(perm._delayTimer);
-    resolvePermissionEntry(perm, "deny", "Clawd is quitting");
+    resolvePermissionEntry(perm, "deny", "GitAnimals is quitting");
   }
 }
 

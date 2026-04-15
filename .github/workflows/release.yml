@@ -1,0 +1,62 @@
+name: Release
+
+# 버튼 클릭 릴리스 워크플로우
+#
+# 사용법:
+#   GitHub → Actions → Release → "Run workflow" → release_type 선택 → 실행
+#
+# 동작:
+#   1. npm test 통과 확인 (게이트 — 실패 시 태그 안 찍힘)
+#   2. npm version 으로 package.json/package-lock.json bump + commit + tag
+#   3. commit + tag push → 이어서 build.yml 이 자동 트리거되어 빌드+배포
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Release type"
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm test
+
+  bump-and-tag:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version & create tag
+        # npm version 이 package.json/package-lock.json bump + commit + annotated tag 생성
+        run: npm version ${{ inputs.release_type }} -m "release: v%s"
+
+      - name: Push commit & tag
+        run: git push origin HEAD --follow-tags

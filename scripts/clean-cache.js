@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const APP_NAME = "clawd-on-desk";
+const APP_NAME = "gitanimals-on-desk";
 
 function userDataDir() {
   if (process.platform === "darwin") {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Merge Clawd Cursor Agent hooks into ~/.cursor/hooks.json (append-only, idempotent)
+// Merge GitAnimals Cursor Agent hooks into ~/.cursor/hooks.json (append-only, idempotent)
 
 const fs = require("fs");
 const path = require("path");
@@ -23,7 +23,7 @@ const CURSOR_HOOK_EVENTS = [
 ];
 
 /**
- * Register Clawd hooks into ~/.cursor/hooks.json
+ * Register GitAnimals hooks into ~/.cursor/hooks.json
  * @param {object} [options]
  * @param {boolean} [options.silent]
  * @param {string} [options.hooksPath]
@@ -108,7 +108,7 @@ function registerCursorHooks(options = {}) {
   }
 
   if (!options.silent) {
-    console.log(`Clawd Cursor hooks → ${hooksPath}`);
+    console.log(`GitAnimals Cursor hooks → ${hooksPath}`);
     console.log(`  Added: ${added}, updated: ${updated}, skipped: ${skipped}`);
   }
 

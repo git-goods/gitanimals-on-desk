@@ -8,7 +8,7 @@ const serverConfig = require("../hooks/server-config");
 const tempDirs = [];
 
 function makeTempHome() {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-server-config-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-server-config-"));
   tempDirs.push(tmpDir);
   return tmpDir;
 }
@@ -22,10 +22,10 @@ afterEach(() => {
 describe("server-config helpers", () => {
   it("clearRuntimeConfig removes runtime.json when present", () => {
     const tmpHome = makeTempHome();
-    const runtimeDir = path.join(tmpHome, ".clawd");
+    const runtimeDir = path.join(tmpHome, ".gitanimals");
     fs.mkdirSync(runtimeDir, { recursive: true });
     const runtimePath = path.join(runtimeDir, "runtime.json");
-    fs.writeFileSync(runtimePath, JSON.stringify({ app: "clawd-on-desk", port: 23333 }));
+    fs.writeFileSync(runtimePath, JSON.stringify({ app: "gitanimals-on-desk", port: 23333 }));
 
     assert.strictEqual(serverConfig.clearRuntimeConfig(runtimePath), true);
     assert.strictEqual(fs.existsSync(runtimePath), false);
@@ -39,7 +39,7 @@ describe("server-config helpers", () => {
     assert.ok(!result.fallback.includes(23335));
   });
 
-  it("probePort recognizes signed Clawd responses", async () => {
+  it("probePort recognizes signed GitAnimals responses", async () => {
     await new Promise((resolve, reject) => {
       const req = {
         on(event, handler) {
@@ -58,7 +58,7 @@ describe("server-config helpers", () => {
       }, {
         httpGet(_options, onResponse) {
           const res = {
-            headers: { "x-clawd-server": "clawd-on-desk" },
+            headers: { "x-gitanimals-server": "gitanimals-on-desk" },
             setEncoding() {},
             on(event, handler) {
               if (event === "data") handler("");

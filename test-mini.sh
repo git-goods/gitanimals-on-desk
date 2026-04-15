@@ -38,6 +38,6 @@ echo ""
 echo "Returning to idle..."
 curl -s -X POST http://127.0.0.1:23333/state \
   -H "Content-Type: application/json" \
-  -d '{"state":"idle","svg":"clawd-idle-follow.svg"}'
+  -d '{"state":"idle","svg":"idle-follow.svg"}'
 echo ""
 echo "=== DONE ==="

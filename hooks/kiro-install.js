@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Merge Clawd hooks into Kiro agent configs under ~/.kiro/agents/
+// Merge GitAnimals hooks into Kiro agent configs under ~/.kiro/agents/
 // Kiro hooks are per-agent (no global hooks yet), so we inject into every
-// custom agent config file and maintain a dedicated "clawd" agent config.
+// custom agent config file and maintain a dedicated "gitanimals" agent config.
 // Built-in agents are not backed by editable JSON files, so we cannot
 // "override" kiro_default by creating ~/.kiro/agents/kiro_default.json.
-// Users who want hooks must explicitly use the generated "clawd" agent.
+// Users who want hooks must explicitly use the generated "gitanimals" agent.
 // Docs: https://kiro.dev/docs/cli/hooks/
 // Config reference: https://kiro.dev/docs/cli/custom-agents/configuration-reference/
 
@@ -15,8 +15,8 @@ const { execFileSync } = require("child_process");
 const { resolveNodeBin } = require("./server-config");
 const { writeJsonAtomic, extractExistingNodeBin } = require("./json-utils");
 const MARKER = "kiro-hook.js";
-const CLAWD_AGENT_NAME = "clawd";
-const CLAWD_AGENT_DESCRIPTION = "Clawd desktop pet hook integration";
+const GITANIMALS_AGENT_NAME = "gitanimals";
+const GITANIMALS_AGENT_DESCRIPTION = "GitAnimals desktop pet hook integration";
 const BUILTIN_DEFAULT_AGENT = "kiro_default";
 
 const KIRO_HOOK_EVENTS = [
@@ -28,7 +28,7 @@ const KIRO_HOOK_EVENTS = [
 ];
 
 /**
- * Inject Clawd hooks into a single agent config file.
+ * Inject GitAnimals hooks into a single agent config file.
  * @param {string} filePath
  * @param {object} [options]
  * @returns {{ added: number, skipped: number, updated: number, created: boolean }}
@@ -54,9 +54,9 @@ function injectHooksIntoFile(filePath, options = {}) {
     changed = true;
   }
   if (created) {
-    settings.description = baseName === CLAWD_AGENT_NAME
-      ? CLAWD_AGENT_DESCRIPTION
-      : `${baseName} agent with Clawd desktop pet hooks`;
+    settings.description = baseName === GITANIMALS_AGENT_NAME
+      ? GITANIMALS_AGENT_DESCRIPTION
+      : `${baseName} agent with GitAnimals desktop pet hooks`;
   }
 
   // Resolve node path; if detection fails, preserve existing absolute path
@@ -132,12 +132,12 @@ function getKiroCliCandidates(homeDir = os.homedir()) {
 // Properties excluded from kiro_default template.
 const EXCLUDED_KEYS = new Set(["model", "includeMcpJson", "description", "hooks", "name"]);
 
-function generateClawdTemplateFromBuiltin(options = {}) {
+function generateGitAnimalsTemplateFromBuiltin(options = {}) {
   const homeDir = options.homeDir || os.homedir();
   const kiroCliCandidates = options.kiroCliCandidates || getKiroCliCandidates(homeDir);
   let lastError = null;
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-kiro-seed-"));
-  const tempName = `clawd-seed-${process.pid}-${Date.now()}`;
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-kiro-seed-"));
+  const tempName = `gitanimals-seed-${process.pid}-${Date.now()}`;
 
   try {
     for (const candidate of kiroCliCandidates) {
@@ -173,7 +173,7 @@ function generateClawdTemplateFromBuiltin(options = {}) {
   return { template: null, error: lastError };
 }
 
-function syncClawdAgentFromBuiltin(filePath, options = {}) {
+function syncGitAnimalsAgentFromBuiltin(filePath, options = {}) {
   let current = null;
   try {
     current = JSON.parse(fs.readFileSync(filePath, "utf-8"));
@@ -181,20 +181,20 @@ function syncClawdAgentFromBuiltin(filePath, options = {}) {
     if (err.code !== "ENOENT") throw err;
   }
 
-  const result = generateClawdTemplateFromBuiltin(options);
+  const result = generateGitAnimalsTemplateFromBuiltin(options);
 
   if (!result.template) {
     // Preserve existing file — may have prompt/tools/resources from a prior successful sync.
     if (!options.silent) {
       const fate = current
         ? `preserving existing ${path.basename(filePath)}`
-        : "seeding minimal clawd agent (no prompt/tools/resources)";
-      console.warn(`Clawd: kiro-cli template generation failed — ${fate}. Reason: ${result.error?.message || "unknown"}`);
+        : "seeding minimal gitanimals agent (no prompt/tools/resources)";
+      console.warn(`GitAnimals: kiro-cli template generation failed — ${fate}. Reason: ${result.error?.message || "unknown"}`);
     }
     if (current) return { synced: true, changed: false };
     const minimal = {
-      name: CLAWD_AGENT_NAME,
-      description: CLAWD_AGENT_DESCRIPTION,
+      name: GITANIMALS_AGENT_NAME,
+      description: GITANIMALS_AGENT_DESCRIPTION,
       hooks: {},
     };
     writeJsonAtomic(filePath, minimal);
@@ -202,8 +202,8 @@ function syncClawdAgentFromBuiltin(filePath, options = {}) {
   }
 
   const desired = {
-    name: CLAWD_AGENT_NAME,
-    description: CLAWD_AGENT_DESCRIPTION,
+    name: GITANIMALS_AGENT_NAME,
+    description: GITANIMALS_AGENT_DESCRIPTION,
   };
   for (const key of Object.keys(result.template)) {
     if (!EXCLUDED_KEYS.has(key)) {
@@ -223,7 +223,7 @@ function syncClawdAgentFromBuiltin(filePath, options = {}) {
 }
 
 /**
- * Register Clawd hooks into Kiro agent configs under ~/.kiro/agents/
+ * Register GitAnimals hooks into Kiro agent configs under ~/.kiro/agents/
  * @param {object} [options]
  * @param {boolean} [options.silent]
  * @returns {{ added: number, skipped: number, updated: number, files: string[] }}
@@ -234,7 +234,7 @@ function registerKiroHooks(options = {}) {
 
   // Skip if ~/.kiro/ doesn't exist (Kiro CLI not installed)
   if (!fs.existsSync(agentsDir)) {
-    if (!options.silent) console.log("Clawd: ~/.kiro/ not found — skipping Kiro hook registration");
+    if (!options.silent) console.log("GitAnimals: ~/.kiro/ not found — skipping Kiro hook registration");
     return { added: 0, skipped: 0, updated: 0, files: [] };
   }
 
@@ -268,41 +268,41 @@ function registerKiroHooks(options = {}) {
         files.push(file);
       }
     } catch (err) {
-      if (!options.silent) console.warn(`Clawd: failed to process ${file}: ${err.message}`);
+      if (!options.silent) console.warn(`GitAnimals: failed to process ${file}: ${err.message}`);
     }
   }
 
-  const clawdPath = path.join(agentsDir, `${CLAWD_AGENT_NAME}.json`);
-  let clawdTemplateChanged = false;
+  const agentPath = path.join(agentsDir, `${GITANIMALS_AGENT_NAME}.json`);
+  let gitanimalsTemplateChanged = false;
   try {
-    const seedFn = typeof options.syncClawdAgent === "function"
-      ? options.syncClawdAgent
-      : syncClawdAgentFromBuiltin;
-    const syncResult = seedFn(clawdPath, options);
-    clawdTemplateChanged = !!(syncResult && syncResult.changed);
+    const seedFn = typeof options.syncGitAnimalsAgent === "function"
+      ? options.syncGitAnimalsAgent
+      : syncGitAnimalsAgentFromBuiltin;
+    const syncResult = seedFn(agentPath, options);
+    gitanimalsTemplateChanged = !!(syncResult && syncResult.changed);
   } catch (err) {
-    if (!options.silent) console.warn(`Clawd: failed to sync ${CLAWD_AGENT_NAME}.json from ${BUILTIN_DEFAULT_AGENT}: ${err.message}`);
+    if (!options.silent) console.warn(`GitAnimals: failed to sync ${GITANIMALS_AGENT_NAME}.json from ${BUILTIN_DEFAULT_AGENT}: ${err.message}`);
   }
   try {
-    const result = injectHooksIntoFile(clawdPath, options);
+    const result = injectHooksIntoFile(agentPath, options);
     totalAdded += result.added;
     totalSkipped += result.skipped;
-    totalUpdated += result.updated + (clawdTemplateChanged ? 1 : 0);
-    if (result.added > 0 || result.updated > 0 || clawdTemplateChanged) {
-      files.push(result.created ? `${CLAWD_AGENT_NAME}.json (created)` : `${CLAWD_AGENT_NAME}.json`);
+    totalUpdated += result.updated + (gitanimalsTemplateChanged ? 1 : 0);
+    if (result.added > 0 || result.updated > 0 || gitanimalsTemplateChanged) {
+      files.push(result.created ? `${GITANIMALS_AGENT_NAME}.json (created)` : `${GITANIMALS_AGENT_NAME}.json`);
     }
   } catch (err) {
-    if (!options.silent) console.warn(`Clawd: failed to sync ${CLAWD_AGENT_NAME}.json: ${err.message}`);
+    if (!options.silent) console.warn(`GitAnimals: failed to sync ${GITANIMALS_AGENT_NAME}.json: ${err.message}`);
   }
 
   if (!options.silent) {
     if (files.length > 0) {
-      console.log(`Clawd: Kiro hooks injected into ${files.length} agent config(s): ${files.join(", ")}`);
+      console.log(`GitAnimals: Kiro hooks injected into ${files.length} agent config(s): ${files.join(", ")}`);
       console.log(`  Added: ${totalAdded}, updated: ${totalUpdated}, skipped: ${totalSkipped}`);
     } else {
-      console.log("Clawd: all Kiro agent configs already up to date");
+      console.log("GitAnimals: all Kiro agent configs already up to date");
     }
-    console.log(`Clawd: use "kiro-cli --agent ${CLAWD_AGENT_NAME}" or run "/agent swap ${CLAWD_AGENT_NAME}" inside Kiro to enable hooks`);
+    console.log(`GitAnimals: use "kiro-cli --agent ${GITANIMALS_AGENT_NAME}" or run "/agent swap ${GITANIMALS_AGENT_NAME}" inside Kiro to enable hooks`);
   }
 
   return { added: totalAdded, skipped: totalSkipped, updated: totalUpdated, files };
@@ -312,10 +312,10 @@ module.exports = {
   registerKiroHooks,
   KIRO_HOOK_EVENTS,
   __test: {
-    generateClawdTemplateFromBuiltin,
+    generateGitAnimalsTemplateFromBuiltin,
     getKiroCliCandidates,
     injectHooksIntoFile,
-    syncClawdAgentFromBuiltin,
+    syncGitAnimalsAgentFromBuiltin,
   },
 };
 

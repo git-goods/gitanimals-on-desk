@@ -9,7 +9,7 @@ const MARKER = "codebuddy-hook.js";
 const tempDirs = [];
 
 function makeTempSettingsFile(initial = {}) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codebuddy-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-codebuddy-"));
   const settingsPath = path.join(tmpDir, "settings.json");
   fs.writeFileSync(settingsPath, JSON.stringify(initial, null, 2), "utf8");
   tempDirs.push(tmpDir);

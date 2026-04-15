@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Clawd Desktop Pet — Copilot CLI Hook Script
+// GitAnimals Desktop Pet — Copilot CLI Hook Script
 // Usage: node copilot-hook.js <event_name>
 // Reads stdin JSON from Copilot CLI for sessionId (camelCase)
 

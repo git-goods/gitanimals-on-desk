@@ -3,21 +3,21 @@ const http = require("http");
 const os = require("os");
 const path = require("path");
 
-const CLAWD_SERVER_ID = "clawd-on-desk";
-const CLAWD_SERVER_HEADER = "x-clawd-server";
+const GITANIMALS_SERVER_ID = "gitanimals-on-desk";
+const GITANIMALS_SERVER_HEADER = "x-gitanimals-server";
 const DEFAULT_SERVER_PORT = 23333;
 const SERVER_PORT_COUNT = 5;
 const SERVER_PORTS = Array.from({ length: SERVER_PORT_COUNT }, (_, i) => DEFAULT_SERVER_PORT + i);
 const STATE_PATH = "/state";
 const PERMISSION_PATH = "/permission";
-const RUNTIME_CONFIG_PATH = path.join(os.homedir(), ".clawd", "runtime.json");
+const RUNTIME_CONFIG_PATH = path.join(os.homedir(), ".gitanimals", "runtime.json");
 
 function normalizePort(value) {
   const port = Number(value);
   return Number.isInteger(port) && SERVER_PORTS.includes(port) ? port : null;
 }
 
-const HOST_PREFIX_PATH = path.join(os.homedir(), ".claude", "hooks", "clawd-host-prefix");
+const HOST_PREFIX_PATH = path.join(os.homedir(), ".claude", "hooks", "gitanimals-host-prefix");
 
 function readHostPrefix() {
   let prefix = null;
@@ -47,7 +47,7 @@ function writeRuntimeConfig(port) {
 
   const dir = path.dirname(RUNTIME_CONFIG_PATH);
   const tmpPath = path.join(dir, `.runtime.${process.pid}.${Date.now()}.tmp`);
-  const body = JSON.stringify({ app: CLAWD_SERVER_ID, port: safePort }, null, 2);
+  const body = JSON.stringify({ app: GITANIMALS_SERVER_ID, port: safePort }, null, 2);
   fs.mkdirSync(dir, { recursive: true });
   try {
     fs.writeFileSync(tmpPath, body, "utf8");
@@ -129,12 +129,12 @@ function readHeader(res, headerName) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function isClawdResponse(res, body) {
-  if (readHeader(res, CLAWD_SERVER_HEADER) === CLAWD_SERVER_ID) return true;
+function isGitAnimalsResponse(res, body) {
+  if (readHeader(res, GITANIMALS_SERVER_HEADER) === GITANIMALS_SERVER_ID) return true;
   if (!body) return false;
   try {
     const data = JSON.parse(body);
-    return data && data.app === CLAWD_SERVER_ID;
+    return data && data.app === GITANIMALS_SERVER_ID;
   } catch {
     return false;
   }
@@ -150,7 +150,7 @@ function probePort(port, timeoutMs, callback, options = {}) {
       res.on("data", (chunk) => {
         if (body.length < 256) body += chunk;
       });
-      res.on("end", () => callback(isClawdResponse(res, body)));
+      res.on("end", () => callback(isGitAnimalsResponse(res, body)));
     }
   );
 
@@ -176,7 +176,7 @@ function postStateToPort(port, payload, timeoutMs, callback, options = {}) {
       timeout: timeoutMs,
     },
     (res) => {
-      if (readHeader(res, CLAWD_SERVER_HEADER) === CLAWD_SERVER_ID) {
+      if (readHeader(res, GITANIMALS_SERVER_HEADER) === GITANIMALS_SERVER_ID) {
         res.resume();
         callback(true, port);
         return;
@@ -187,7 +187,7 @@ function postStateToPort(port, payload, timeoutMs, callback, options = {}) {
       res.on("data", (chunk) => {
         if (responseBody.length < 256) responseBody += chunk;
       });
-      res.on("end", () => callback(isClawdResponse(res, responseBody), port));
+      res.on("end", () => callback(isGitAnimalsResponse(res, responseBody), port));
     }
   );
 
@@ -199,7 +199,7 @@ function postStateToPort(port, payload, timeoutMs, callback, options = {}) {
   req.end(payload);
 }
 
-function discoverClawdPort(options, callback) {
+function discoverGitAnimalsPort(options, callback) {
   const timeoutMs = options && options.timeoutMs ? options.timeoutMs : 100;
   const ports = getPortCandidates(options && options.preferredPort, options);
   const probe = options && options.probePort ? options.probePort : probePort;
@@ -351,8 +351,8 @@ function resolveNodeBin(options = {}) {
 }
 
 module.exports = {
-  CLAWD_SERVER_HEADER,
-  CLAWD_SERVER_ID,
+  GITANIMALS_SERVER_HEADER,
+  GITANIMALS_SERVER_ID,
   DEFAULT_SERVER_PORT,
   PERMISSION_PATH,
   RUNTIME_CONFIG_PATH,
@@ -360,7 +360,7 @@ module.exports = {
   STATE_PATH,
   buildPermissionUrl,
   clearRuntimeConfig,
-  discoverClawdPort,
+  discoverGitAnimalsPort,
   getPortCandidates,
   postStateToRunningServer,
   probePort,

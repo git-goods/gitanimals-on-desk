@@ -9,7 +9,7 @@ const MARKER = "gemini-hook.js";
 const tempDirs = [];
 
 function makeTempSettingsFile(initial = {}) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-gemini-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-gemini-"));
   const settingsPath = path.join(tmpDir, "settings.json");
   fs.writeFileSync(settingsPath, JSON.stringify(initial, null, 2), "utf8");
   tempDirs.push(tmpDir);
@@ -45,7 +45,7 @@ describe("Gemini hook installer", () => {
       assert.strictEqual(settings.hooks[event].length, 1);
       const entry = settings.hooks[event][0];
       assert.strictEqual(entry.type, "command");
-      assert.strictEqual(entry.name, "clawd");
+      assert.strictEqual(entry.name, "gitanimals");
       assert.ok(entry.command.includes(MARKER));
       assert.ok(entry.command.includes("/usr/local/bin/node"));
     }
@@ -67,7 +67,7 @@ describe("Gemini hook installer", () => {
   it("updates stale hook paths", () => {
     const settingsPath = makeTempSettingsFile({
       hooks: {
-        AfterTool: [{ type: "command", command: '"/old/node" "/old/path/gemini-hook.js"', name: "clawd" }],
+        AfterTool: [{ type: "command", command: '"/old/node" "/old/path/gemini-hook.js"', name: "gitanimals" }],
       },
     });
 
@@ -87,7 +87,7 @@ describe("Gemini hook installer", () => {
   it("preserves existing node path when detection fails", () => {
     const settingsPath = makeTempSettingsFile({
       hooks: {
-        BeforeTool: [{ type: "command", command: '"/home/user/.nvm/versions/node/v20/bin/node" "/some/path/gemini-hook.js"', name: "clawd" }],
+        BeforeTool: [{ type: "command", command: '"/home/user/.nvm/versions/node/v20/bin/node" "/some/path/gemini-hook.js"', name: "gitanimals" }],
       },
     });
 

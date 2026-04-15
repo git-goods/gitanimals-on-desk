@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Codex CLI JSONL log monitor — standalone remote version
 // Polls ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl for state changes
-// and POSTs them via HTTP to the local Clawd desktop pet (through SSH tunnel).
+// and POSTs them via HTTP to the local GitAnimals desktop pet (through SSH tunnel).
 //
 // Zero external dependencies — Node.js built-ins + ./server-config.js only.
 //
@@ -207,7 +207,7 @@ function poll() {
 
 // ── Main ──
 
-console.log(`Clawd Codex remote monitor started`);
+console.log(`GitAnimals Codex remote monitor started`);
 console.log(`  Session dir: ${SESSION_DIR}`);
 console.log(`  Poll interval: ${POLL_INTERVAL_MS}ms`);
 if (preferredPort) console.log(`  Preferred port: ${preferredPort}`);

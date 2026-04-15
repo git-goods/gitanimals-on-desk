@@ -10,8 +10,8 @@ const prefs = require("../src/prefs");
 
 const tempDirs = [];
 
-function makeTempPath(name = "clawd-prefs.json") {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-prefs-"));
+function makeTempPath(name = "gitanimals-prefs.json") {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-prefs-"));
   tempDirs.push(dir);
   return path.join(dir, name);
 }

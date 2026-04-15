@@ -1,7 +1,7 @@
 {
-  "name": "clawd-opencode-plugin",
+  "name": "gitanimals-opencode-plugin",
   "version": "0.1.0",
-  "description": "Clawd on Desk plugin for opencode — reports session/tool events to the Clawd desktop pet",
+  "description": "GitAnimals on Desk plugin for opencode — reports session/tool events to the GitAnimals desktop pet",
   "type": "module",
   "main": "index.mjs",
   "private": true,

@@ -11,9 +11,9 @@ const { createSettingsController } = require("../src/settings-controller");
 
 const tempDirs = [];
 function makeTempPath() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-controller-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-controller-"));
   tempDirs.push(dir);
-  return path.join(dir, "clawd-prefs.json");
+  return path.join(dir, "gitanimals-prefs.json");
 }
 afterEach(() => {
   while (tempDirs.length) {

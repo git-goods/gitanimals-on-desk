@@ -640,13 +640,13 @@ left = artRect.x + (hitBox.x - viewBox.x) * (artRect.w / viewBox.width)
 
 ### 디버그 모드 사용법
 
-1. `.env` 에 `CLAWD_DEBUG=1` 설정 (launch.js 가 process.env 에 주입)
+1. `.env` 에 `GITANIMALS_DEBUG=1` 설정 (launch.js 가 process.env 에 주입)
 2. 앱 시작 → 우클릭 → **Debug** 서브메뉴 → **Show Hitbox** 체크
 3. 시각 확인:
    - **빨간 반투명** = hitWin (실제 클릭 영역)
    - **파란 반투명 배경** = 이미지 렌더 영역 (SVG object/img 경계)
 4. 상태 변경 (sleeping, waking 등) 시 hitBox 크기/위치 변화 확인
-5. `CLAWD_DEBUG` 미설정 시 Debug 메뉴 자체가 노출되지 않음
+5. `GITANIMALS_DEBUG` 미설정 시 Debug 메뉴 자체가 노출되지 않음
 
 ### hitBox 설정 가이드
 

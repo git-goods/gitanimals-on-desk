@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Clawd — CodeBuddy hook (stdin JSON with hook_event_name; stdout JSON for gating hooks)
+// GitAnimals — CodeBuddy hook (stdin JSON with hook_event_name; stdout JSON for gating hooks)
 // Registered in ~/.codebuddy/settings.json by hooks/codebuddy-install.js
 // CodeBuddy uses Claude Code-compatible hook format with identical event names.
 
 const { postStateToRunningServer, readHostPrefix } = require("./server-config");
 const { createPidResolver, readStdinJson, getPlatformConfig } = require("./shared-process");
 
-// CodeBuddy hook event → { state, event } for the Clawd state machine
+// CodeBuddy hook event → { state, event } for the GitAnimals state machine
 const HOOK_MAP = {
   SessionStart:     { state: "idle",         event: "SessionStart" },
   SessionEnd:       { state: "sleeping",     event: "SessionEnd" },
@@ -50,7 +50,7 @@ readStdinJson().then((payload) => {
   }
 
   const { state, event } = mapped;
-  if (hookName === "SessionStart" && !process.env.CLAWD_REMOTE) resolve();
+  if (hookName === "SessionStart" && !process.env.GITANIMALS_REMOTE) resolve();
 
   const sessionId = (payload && payload.session_id) || "default";
   const cwd = (payload && payload.cwd) || "";
@@ -60,7 +60,7 @@ readStdinJson().then((payload) => {
   const body = { state, session_id: sessionId, event };
   body.agent_id = "codebuddy";
   if (cwd) body.cwd = cwd;
-  if (process.env.CLAWD_REMOTE) {
+  if (process.env.GITANIMALS_REMOTE) {
     body.host = readHostPrefix();
   } else {
     body.source_pid = stablePid;

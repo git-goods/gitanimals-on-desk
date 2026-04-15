@@ -99,7 +99,7 @@ describe("updateRegistry pure-data validators", () => {
 
   it("theme requires a non-empty string", () => {
     const deps = { snapshot: baseSnapshot };
-    assert.strictEqual(updateRegistry.theme("clawd", deps).status, "ok");
+    assert.strictEqual(updateRegistry.theme("gitanimals", deps).status, "ok");
     assert.strictEqual(updateRegistry.theme("", deps).status, "error");
     assert.strictEqual(updateRegistry.theme(null, deps).status, "error");
   });
