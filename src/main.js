@@ -474,7 +474,7 @@ const _permCtx = {
     if (s && s.sourcePid) focusTerminalWindow(s.sourcePid, s.cwd, s.editor, s.pidChain);
   },
 };
-const _perm = require("./permission")(_permCtx);
+const _perm = require("./server/permission")(_permCtx);
 const { showPermissionBubble, resolvePermissionEntry, sendPermissionResponse, repositionBubbles, permLog, PASSTHROUGH_TOOLS, showCodexNotifyBubble, clearCodexNotifyBubbles, syncPermissionShortcuts, replyOpencodePermission } = _perm;
 const pendingPermissions = _perm.pendingPermissions;
 let permDebugLog = null; // set after app.whenReady()
@@ -662,7 +662,7 @@ const _serverCtx = {
   replyOpencodePermission,
   permLog,
 };
-const _server = require("./server")(_serverCtx);
+const _server = require("./server/server")(_serverCtx);
 const { startHttpServer, getHookServerPort } = _server;
 
 // ── alwaysOnTop recovery (Windows DWM / Shell can strip TOPMOST flag) ──
