@@ -168,6 +168,10 @@ function loadTheme(themeId) {
     console.error(`[theme-loader] Theme "${themeId}" validation errors:`, errors);
     try { report("[theme] validation errors", "error", { themeId, errors: errors.slice(0, 10) }); } catch {}
     if (themeId !== "fox") return loadTheme("fox");
+    // Phase 1: fox itself is corrupt. Booting with an invalid theme would
+    // leave STATE_SVGS.idle empty and eventually surface as a silent
+    // "disappearing pet". Fail loud — Sentry already captured the details.
+    throw new Error(`Default theme 'fox' is corrupt: ${errors.slice(0, 3).join("; ")}`);
   }
 
   // Merge defaults for optional fields

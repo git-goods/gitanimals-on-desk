@@ -102,7 +102,21 @@ const STATE_LABEL_KEY = {
 
 function refreshTheme() {
   theme = ctx.theme;
-  SVG_IDLE_FOLLOW = theme.states.idle[0];
+  SVG_IDLE_FOLLOW = theme.states.idle && theme.states.idle[0];
+  if (!SVG_IDLE_FOLLOW) {
+    // Theme is missing the most essential asset. theme-loader's validator
+    // should have rejected this already — arriving here means something
+    // mutated the theme after load. Fail loud so the user gets a crash
+    // rather than a silently invisible pet.
+    try {
+      report("[state] theme has no idle svg after refreshTheme", "error", {
+        themeId: theme && theme._id,
+        source: theme && theme._source,
+        stateKeys: theme && theme.states ? Object.keys(theme.states) : [],
+      });
+    } catch {}
+    throw new Error("Theme has no idle svg — applyState fallback would fail");
+  }
   STATE_SVGS = { ...theme.states };
   if (theme.miniMode && theme.miniMode.states) {
     Object.assign(STATE_SVGS, theme.miniMode.states);
@@ -201,12 +215,11 @@ function applyState(state, svgOverride) {
     ctx.playSound("confirm");
   }
 
-  const svgs = STATE_SVGS[state] || STATE_SVGS.idle;
-  const svg = svgOverride || (svgs && svgs[Math.floor(Math.random() * svgs.length)]);
-  currentSvg = svg;
+  // Phase 1: primary SVG resolution.
+  const primaryPool = (STATE_SVGS[state] && STATE_SVGS[state].length) ? STATE_SVGS[state] : STATE_SVGS.idle;
+  let svg = svgOverride || (primaryPool && primaryPool.length && primaryPool[Math.floor(Math.random() * primaryPool.length)]);
 
-  // Diagnostics — only emit when state actually changes, plus always warn on
-  // missing SVG (the central hypothesis for macOS "pet disappears" reports).
+  // Diagnostics — breadcrumb on every actual transition (Phase 0).
   if (previousState !== state || (svgOverride && svgOverride !== svg)) {
     try {
       bc("state", "applyState", {
@@ -219,7 +232,15 @@ function applyState(state, svgOverride) {
       });
     } catch {}
   }
-  if (!svg) {
+
+  // Phase 1 invariant: "pet is always showing some SVG".
+  // If the primary lookup produced nothing (theme missing the state, empty
+  // pool, or a buggy override), fall back to the idle pool, then the cached
+  // SVG_IDLE_FOLLOW constant. Fire Phase 0 warning first so Sentry still
+  // captures the primary-lookup failure — the fallback is the safety net,
+  // not a silencer.
+  const primaryEmpty = !svg;
+  if (primaryEmpty) {
     try {
       report("[state] applyState produced empty svg", "warning", {
         state,
@@ -233,7 +254,9 @@ function applyState(state, svgOverride) {
         miniMode: !!ctx.miniMode,
       });
     } catch {}
+    svg = (STATE_SVGS.idle && STATE_SVGS.idle.length) ? STATE_SVGS.idle[0] : SVG_IDLE_FOLLOW;
   }
+  currentSvg = svg;
 
   // Force eye resend after SVG load completes (~300ms)
   // After sweeping → idle, pause eye tracking briefly so eyes stay centered before resuming
@@ -245,19 +268,24 @@ function applyState(state, svgOverride) {
     eyeResendTimer = setTimeout(() => { eyeResendTimer = null; ctx.forceEyeResend = true; }, delay);
   }
 
-  // Update hit box based on SVG
-  if (SLEEPING_SVGS.has(svg)) {
-    currentHitBox = HIT_BOXES.sleeping;
-  } else if (WIDE_SVGS.has(svg)) {
-    currentHitBox = HIT_BOXES.wide;
-  } else {
-    currentHitBox = HIT_BOXES.default;
-  }
+  // Phase 1 invariant enforcement: never let a null svg reach the renderer.
+  // If the fallback chain above also failed, the renderer's swapToFile(null)
+  // guard keeps the previous element — the pet stays visible.
+  if (svg) {
+    // Update hit box based on SVG
+    if (SLEEPING_SVGS.has(svg)) {
+      currentHitBox = HIT_BOXES.sleeping;
+    } else if (WIDE_SVGS.has(svg)) {
+      currentHitBox = HIT_BOXES.wide;
+    } else {
+      currentHitBox = HIT_BOXES.default;
+    }
 
-  ctx.sendToRenderer("state-change", state, svg);
-  ctx.syncHitWin();
-  ctx.sendToHitWin("hit-state-sync", { currentSvg: svg, currentState: state });
-  ctx.sendToHitWin("hit-cancel-reaction");
+    ctx.sendToRenderer("state-change", state, svg);
+    ctx.syncHitWin();
+    ctx.sendToHitWin("hit-state-sync", { currentSvg: svg, currentState: state });
+    ctx.sendToHitWin("hit-cancel-reaction");
+  }
 
   if (state !== "idle" && state !== "mini-idle") {
     ctx.sendToRenderer("eye-move", 0, 0);
