@@ -9,7 +9,7 @@
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
     "build:all": "electron-builder --win --mac --linux",
-    "test": "node --test test/*.test.js",
+    "test": "node --test test/",
     "mock-server": "python3 -m http.server --directory .mock-server 8765",
     "dev": "node scripts/dev.js",
     "dev:clean": "node scripts/clean-cache.js && node scripts/dev.js",

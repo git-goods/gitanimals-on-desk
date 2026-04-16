@@ -136,6 +136,7 @@ opencode (in-process plugin, ~0ms):
 
 ## 개발 규범
 
+- **PR 베이스 브랜치는 `main`** (origin/HEAD가 `remote-img`로 잡혀 있더라도 PR/머지 타깃은 `main`)
 - 민감 정보는 `.env`만, 하드코딩 금지
 - Hook 등록 시 기존 배열에 **추가** (덮어쓰기 금지)
 - HTTP 포트 `127.0.0.1:23333-23337`, 런타임 포트 `~/.clawd/runtime.json` 기록, 종료 시 정리

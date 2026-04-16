@@ -2,8 +2,8 @@ const { app, BrowserWindow, screen, Menu, ipcMain, globalShortcut, nativeTheme, 
 const path = require("path");
 const fs = require("fs");
 const { applyStationaryCollectionBehavior } = require("./mac-window");
-const hitGeometry = require("./hit-geometry");
-const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("./work-area");
+const hitGeometry = require("./hit/geometry");
+const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("./utils/work-area");
 const telemetry = require("./telemetry");
 const { bc, report, captureException } = telemetry;
 
@@ -63,7 +63,7 @@ const SIZES = {
 // `_settingsController.applyUpdate()`, which auto-persists.
 const prefsModule = require("./prefs");
 const { createSettingsController } = require("./settings-controller");
-const loginItemHelpers = require("./login-item");
+const loginItemHelpers = require("./settings/login-item");
 const PREFS_PATH = path.join(app.getPath("userData"), "gitanimals-prefs.json");
 const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
 
@@ -453,7 +453,7 @@ function _finishThemeReload() {
 
 
 // ── Permission bubble — delegated to src/permission.js ──
-const { isAgentEnabled: _isAgentEnabled, isAgentPermissionsEnabled: _isAgentPermissionsEnabled } = require("./agent-gate");
+const { isAgentEnabled: _isAgentEnabled, isAgentPermissionsEnabled: _isAgentPermissionsEnabled } = require("./settings/agent-gate");
 const _permCtx = {
   get win() { return win; },
   get lang() { return lang; },
@@ -636,7 +636,7 @@ const _tickCtx = {
   getObjRect,
   getHitRectScreen,
 };
-const _tick = require("./tick")(_tickCtx);
+const _tick = require("./animation/tick")(_tickCtx);
 const { startMainTick, resetIdleTimer } = _tick;
 
 // ── Terminal focus — delegated to src/focus.js ──
@@ -736,7 +736,7 @@ function stopTopmostWatchdog() {
 
 function updateLog(msg) {
   if (!updateDebugLog) return;
-  const { rotatedAppend } = require("./log-rotate");
+  const { rotatedAppend } = require("./utils/log-rotate");
   rotatedAppend(updateDebugLog, `[${new Date().toISOString()}] ${msg}\n`);
 }
 
@@ -1009,7 +1009,7 @@ function openSettingsWindow() {
     // `--bg` CSS variable in settings.html for each theme.
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#1c1c1f" : "#f5f5f7",
     webPreferences: {
-      preload: path.join(__dirname, "preload-settings.js"),
+      preload: path.join(__dirname, "preload", "settings.js"),
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -1083,7 +1083,7 @@ function createWindow() {
     ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
     ...(isMac ? { type: "panel", roundedCorners: false } : {}),
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload", "preload.js"),
       backgroundThrottling: false,
       additionalArguments: [
         "--theme-config=" + JSON.stringify(themeLoader.getRendererConfig()),
@@ -1170,7 +1170,7 @@ function createWindow() {
       ...(isMac ? { type: "panel", roundedCorners: false } : {}),
       focusable: !isLinux,  // KEY EXPERIMENT: allow activation to avoid WS_EX_NOACTIVATE input routing bugs (Windows-only issue)
       webPreferences: {
-        preload: path.join(__dirname, "preload-hit.js"),
+        preload: path.join(__dirname, "preload", "hit.js"),
         backgroundThrottling: false,
         additionalArguments: [
           "--hit-theme-config=" + JSON.stringify(themeLoader.getHitRendererConfig()),
@@ -1190,7 +1190,7 @@ function createWindow() {
     }
     // macOS: apply after showInactive() — it resets NSWindowCollectionBehavior
     reapplyMacVisibility();
-    hitWin.loadFile(path.join(__dirname, "hit.html"));
+    hitWin.loadFile(path.join(__dirname, "hit", "hit.html"));
     if (isWin) guardAlwaysOnTop(hitWin);
 
     // Event-level safety net for position sync
