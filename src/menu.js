@@ -22,7 +22,7 @@ const SIZES = {
 
 // i18n string pool + translator factory live in src/i18n.js so the future
 // settings panel can share them. menu.js binds the translator to ctx.lang.
-const { createTranslator } = require("./i18n");
+const { createTranslator } = require("./settings/i18n");
 
 const { shell } = require("electron");
 
