@@ -1009,7 +1009,7 @@ function openSettingsWindow() {
     // `--bg` CSS variable in settings.html for each theme.
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#1c1c1f" : "#f5f5f7",
     webPreferences: {
-      preload: path.join(__dirname, "preload-settings.js"),
+      preload: path.join(__dirname, "preload", "settings.js"),
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -1083,7 +1083,7 @@ function createWindow() {
     ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
     ...(isMac ? { type: "panel", roundedCorners: false } : {}),
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload", "preload.js"),
       backgroundThrottling: false,
       additionalArguments: [
         "--theme-config=" + JSON.stringify(themeLoader.getRendererConfig()),
@@ -1170,7 +1170,7 @@ function createWindow() {
       ...(isMac ? { type: "panel", roundedCorners: false } : {}),
       focusable: !isLinux,  // KEY EXPERIMENT: allow activation to avoid WS_EX_NOACTIVATE input routing bugs (Windows-only issue)
       webPreferences: {
-        preload: path.join(__dirname, "preload-hit.js"),
+        preload: path.join(__dirname, "preload", "hit.js"),
         backgroundThrottling: false,
         additionalArguments: [
           "--hit-theme-config=" + JSON.stringify(themeLoader.getHitRendererConfig()),

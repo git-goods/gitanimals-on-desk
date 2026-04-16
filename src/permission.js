@@ -277,7 +277,7 @@ function showPermissionBubble(permEntry) {
     ...(isMac ? { type: "panel" } : {}),
     focusable: false,
     webPreferences: {
-      preload: path.join(__dirname, "preload-bubble.js"),
+      preload: path.join(__dirname, "preload", "bubble.js"),
       nodeIntegration: false,
       contextIsolation: true,
     },

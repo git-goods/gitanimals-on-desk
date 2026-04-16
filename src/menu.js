@@ -337,7 +337,7 @@ module.exports = function initMenu(ctx) {
       frame: false, transparent: false,
       show: false,
       webPreferences: {
-        preload: path.join(__dirname, "preload-prompt.js"),
+        preload: path.join(__dirname, "preload", "prompt.js"),
         nodeIntegration: false,
         contextIsolation: true,
       },
