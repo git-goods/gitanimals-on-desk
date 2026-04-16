@@ -3,6 +3,9 @@
 const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
+const { bc, report } = (() => {
+  try { return require("./telemetry"); } catch { return { bc() {}, report() {} }; }
+})();
 
 // ── Defaults (used when theme.json omits optional fields) ──
 
@@ -155,6 +158,7 @@ function loadTheme(themeId) {
 
   if (!raw) {
     console.error(`[theme-loader] Theme "${themeId}" not found`);
+    try { report("[theme] not found", "error", { themeId, fallingBackToFox: themeId !== "fox" }); } catch {}
     if (themeId !== "fox") return loadTheme("fox");
     throw new Error("Default theme 'fox' not found");
   }
@@ -162,6 +166,7 @@ function loadTheme(themeId) {
   const errors = validateTheme(raw);
   if (errors.length > 0) {
     console.error(`[theme-loader] Theme "${themeId}" validation errors:`, errors);
+    try { report("[theme] validation errors", "error", { themeId, errors: errors.slice(0, 10) }); } catch {}
     if (themeId !== "fox") return loadTheme("fox");
   }
 
@@ -186,6 +191,14 @@ function loadTheme(themeId) {
   }
 
   activeTheme = theme;
+  try {
+    bc("theme", "loaded", {
+      id: themeId,
+      source: theme._source,
+      stateKeys: theme.states ? Object.keys(theme.states).length : 0,
+      idleCount: theme.states && Array.isArray(theme.states.idle) ? theme.states.idle.length : 0,
+    });
+  } catch {}
   return theme;
 }
 

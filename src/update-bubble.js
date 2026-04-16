@@ -111,7 +111,7 @@ module.exports = function initUpdateBubble(ctx) {
       focusable: false,
       ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
       webPreferences: {
-        preload: path.join(__dirname, "preload-update-bubble.js"),
+        preload: path.join(__dirname, "preload", "update-bubble.js"),
         nodeIntegration: false,
         contextIsolation: true,
       },

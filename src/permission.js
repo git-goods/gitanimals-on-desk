@@ -277,7 +277,7 @@ function showPermissionBubble(permEntry) {
     ...(isMac ? { type: "panel" } : {}),
     focusable: false,
     webPreferences: {
-      preload: path.join(__dirname, "preload-bubble.js"),
+      preload: path.join(__dirname, "preload", "bubble.js"),
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -411,7 +411,7 @@ function resolvePermissionEntry(permEntry, behavior, message) {
 
 function permLog(msg) {
   if (!ctx.permDebugLog) return;
-  const { rotatedAppend } = require("./log-rotate");
+  const { rotatedAppend } = require("./utils/log-rotate");
   rotatedAppend(ctx.permDebugLog, `[${new Date().toISOString()}] ${msg}\n`);
 }
 

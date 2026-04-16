@@ -53,7 +53,7 @@
 - theme.json 스키마 v1: `states`, `timings`, `hitBoxes`, `eyeTracking`, `viewBox`, `layout`
 - 9개 핫패스에서 참조 — 변경 시 영향 범위 주의
 
-## 에이전트 게이트 (agent-gate.js)
+## 에이전트 게이트 (settings/agent-gate.js)
 
 - 순수 게이트 함수: `isAgentEnabled(snapshot, agentId)` / `isAgentPermissionsEnabled(snapshot, agentId)`
 - 미등록 에이전트 기본 true (하위 호환)
@@ -94,13 +94,13 @@
 - 우클릭 Sessions 서브메뉴 → `focusTerminalWindow()`: PowerShell(Win) / osascript(Mac)
 - 알림 상태(attention/notification) 시 해당 세션 터미널 자동 포커스
 
-## 눈동자 추적 (tick.js → renderer.js)
+## 눈동자 추적 (animation/tick.js → renderer.js)
 
-- tick.js: 50ms(~20fps) 커서 위치 폴링 → 눈동자 오프셋 계산 (MAX_OFFSET=3px, 0.5px 양자화)
+- animation/tick.js: 50ms(~20fps) 커서 위치 폴링 → 눈동자 오프셋 계산 (MAX_OFFSET=3px, 0.5px 양자화)
 - IPC `eye-move` `{dx, dy}` → renderer SVG DOM: `#eyes-js` translate + `#body-js` 미세 오프셋 + `#shadow-js` 스트레칭
 - dedup: 마우스 미이동 시 전송 건너뜀. idle-look → idle-follow 복귀 시 `forceEyeResend` 필요
 
-## 클릭 반응 (hit-renderer.js → main relay → renderer.js)
+## 클릭 반응 (hit/renderer.js → main relay → renderer.js)
 
 - 더블클릭 → 찌르기 반응 (좌/우, 2.5s)
 - 4연타 → 양손 박수 (3.5s)
@@ -116,7 +116,7 @@
 - attention/mini-happy → complete.mp3, notification/mini-alert → confirm.mp3
 - 메뉴 "음효" 체크박스 → `gitanimals-prefs.json` 저장
 
-## i18n (i18n.js)
+## i18n (settings/i18n.js)
 
 - en / zh 지원, 우클릭/트레이 Language에서 전환
 - 언어 설정 `gitanimals-prefs.json` 저장

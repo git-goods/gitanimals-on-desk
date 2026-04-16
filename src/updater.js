@@ -3,6 +3,9 @@ const { execFile } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const electron = require("electron");
+const { bc, report } = (() => {
+  try { return require("./telemetry"); } catch { return { bc() {}, report() {} }; }
+})();
 
 function makeTranslate(ctx) {
   return (key, fallback) => {
@@ -467,6 +470,7 @@ function initUpdater(ctx, deps = {}) {
     if (!autoUpdater) return;
 
     autoUpdater.on("update-available", async (info) => {
+      try { bc("updater", "update-available", { version: info && info.version }); } catch {}
       const wasManual = manualUpdateCheck;
       manualUpdateCheck = false;
       updateStatus = "available";
@@ -507,6 +511,7 @@ function initUpdater(ctx, deps = {}) {
     });
 
     autoUpdater.on("update-downloaded", async (info) => {
+      try { bc("updater", "update-downloaded", { version: info && info.version }); } catch {}
       updateStatus = "ready";
       rebuildMenus();
       clearOverlay();
@@ -517,6 +522,7 @@ function initUpdater(ctx, deps = {}) {
 
     autoUpdater.on("error", async (err) => {
       log(`ERROR: AutoUpdater error: ${err.message}`);
+      try { report("[updater] error", "error", { message: err && err.message, code: err && err.code, status: updateStatus }); } catch {}
       const shouldShowErrorBubble = manualUpdateCheck || updateStatus === "downloading";
       const failedWhileDownloading = updateStatus === "downloading";
       if (!shouldShowErrorBubble) {

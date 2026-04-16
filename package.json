@@ -9,7 +9,7 @@
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
     "build:all": "electron-builder --win --mac --linux",
-    "test": "node --test test/*.test.js",
+    "test": "node --test test/",
     "mock-server": "python3 -m http.server --directory .mock-server 8765",
     "dev": "node scripts/dev.js",
     "dev:clean": "node scripts/clean-cache.js && node scripts/dev.js",
@@ -123,6 +123,7 @@
     "electron-builder": "^26.8.1"
   },
   "dependencies": {
+    "@sentry/electron": "^7.11.0",
     "electron-updater": "^6.8.3",
     "htmlparser2": "^12.0.0",
     "koffi": "^2.15.2"

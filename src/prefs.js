@@ -62,6 +62,9 @@ const SCHEMA = {
   hideBubbles: { type: "boolean", default: false },
   showSessionId: { type: "boolean", default: false },
   soundMuted: { type: "boolean", default: false },
+  // Anonymous crash/diagnostics reporting to Sentry. Default on; user can
+  // opt out from the settings panel. See src/telemetry.js.
+  sendDiagnostics: { type: "boolean", default: true },
   // Theme
   theme: { type: "string", default: "fox" },
   // Phase 2/3 placeholders — schema reserves the keys so future migrations don't need v2.

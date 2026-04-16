@@ -30,6 +30,8 @@ docs/*
 !docs/setup-guide.zh-CN.md
 !docs/known-limitations.md
 !docs/known-limitations.zh-CN.md
+!docs/superpowers/
+!docs/superpowers/**
 
 # Temp files from testing
 .tmp_*

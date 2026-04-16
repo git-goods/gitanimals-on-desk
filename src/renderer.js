@@ -2,6 +2,35 @@
 // All input (pointer/drag/click) is handled by the hit window (hit-renderer.js).
 // Reactions are triggered via IPC from main (relayed from hit window).
 
+// Renderer diagnostics: surface unhandled errors to main → Sentry. Main
+// handles the IPC via ipcMain.on("renderer-diagnostic", ...).
+try {
+  window.addEventListener("error", (e) => {
+    try {
+      window.electronAPI && window.electronAPI.reportDiagnostic &&
+        window.electronAPI.reportDiagnostic({
+          kind: "window-error",
+          message: e && e.message,
+          filename: e && e.filename,
+          lineno: e && e.lineno,
+          colno: e && e.colno,
+          stack: e && e.error && e.error.stack,
+        });
+    } catch (_) {}
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    try {
+      const reason = e && e.reason;
+      window.electronAPI && window.electronAPI.reportDiagnostic &&
+        window.electronAPI.reportDiagnostic({
+          kind: "unhandled-rejection",
+          message: reason && (reason.message || String(reason)),
+          stack: reason && reason.stack,
+        });
+    } catch (_) {}
+  });
+} catch (_) {}
+
 const container = document.getElementById("pet-container");
 let petEl = document.getElementById("gitanimals");
 let pendingNext = null;
@@ -351,6 +380,21 @@ function swapToFile(file, state, useObjectChannel) {
     if (pendingNext.tagName === "OBJECT") releaseObject(pendingNext);
     else releaseImg(pendingNext);
     pendingNext = null;
+  }
+
+  if (!file) {
+    // Emit diagnostic and keep the existing element. This is the canonical
+    // "pet disappears" signature — pet would otherwise render an empty URL.
+    try {
+      window.electronAPI && window.electronAPI.reportDiagnostic &&
+        window.electronAPI.reportDiagnostic({
+          kind: "empty-svg",
+          state,
+          useObjectChannel,
+          currentDisplayedSvg,
+        });
+    } catch (_) {}
+    return;
   }
 
   pendingSvgFile = file; // track what's loading for dedup

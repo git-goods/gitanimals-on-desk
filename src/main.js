@@ -1,9 +1,28 @@
-const { app, BrowserWindow, screen, Menu, ipcMain, globalShortcut, nativeTheme } = require("electron");
+const { app, BrowserWindow, screen, Menu, ipcMain, globalShortcut, nativeTheme, powerMonitor } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { applyStationaryCollectionBehavior } = require("./mac-window");
-const hitGeometry = require("./hit-geometry");
-const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("./work-area");
+const hitGeometry = require("./hit/geometry");
+const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("./utils/work-area");
+const telemetry = require("./telemetry");
+const { bc, report, captureException } = telemetry;
+
+// Initialize Sentry as early as possible so uncaught startup errors are
+// captured. Enabled state is reconciled with prefs.sendDiagnostics after the
+// settings store is created (see app.whenReady below).
+telemetry.init();
+
+// Global exception handlers — main process crashes bubble up here.
+process.on("uncaughtException", (err) => {
+  try { captureException(err, { where: "main/uncaughtException" }); } catch {}
+  // eslint-disable-next-line no-console
+  console.error("GitAnimals uncaughtException:", err && err.stack || err);
+});
+process.on("unhandledRejection", (reason) => {
+  try { captureException(reason instanceof Error ? reason : new Error(String(reason)), { where: "main/unhandledRejection" }); } catch {}
+  // eslint-disable-next-line no-console
+  console.error("GitAnimals unhandledRejection:", reason);
+});
 
 // ── Autoplay policy: allow sound playback without user gesture ──
 // MUST be set before any BrowserWindow is created (before app.whenReady)
@@ -44,7 +63,7 @@ const SIZES = {
 // `_settingsController.applyUpdate()`, which auto-persists.
 const prefsModule = require("./prefs");
 const { createSettingsController } = require("./settings-controller");
-const loginItemHelpers = require("./login-item");
+const loginItemHelpers = require("./settings/login-item");
 const PREFS_PATH = path.join(app.getPath("userData"), "gitanimals-prefs.json");
 const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
 
@@ -120,6 +139,7 @@ const _settingsController = createSettingsController({
     stopMonitorForAgent: _deferredStopMonitorForAgent,
     clearSessionsByAgent: _deferredClearSessionsByAgent,
     dismissPermissionsByAgent: _deferredDismissPermissionsByAgent,
+    setTelemetryEnabled: (v) => telemetry.setEnabled(v),
   },
 });
 
@@ -258,6 +278,11 @@ const DEFAULT_TOGGLE_SHORTCUT = "CommandOrControl+Shift+Alt+C";
 function togglePetVisibility() {
   if (!win || win.isDestroyed()) return;
   if (_mini.getMiniTransitioning()) return;
+  try {
+    bc("window", "togglePetVisibility", {
+      before: { visible: win.isVisible(), bounds: win.getBounds(), petHidden },
+    });
+  } catch {}
   if (petHidden) {
     win.showInactive();
     if (isLinux) win.setSkipTaskbar(true);
@@ -428,7 +453,7 @@ function _finishThemeReload() {
 
 
 // ── Permission bubble — delegated to src/permission.js ──
-const { isAgentEnabled: _isAgentEnabled, isAgentPermissionsEnabled: _isAgentPermissionsEnabled } = require("./agent-gate");
+const { isAgentEnabled: _isAgentEnabled, isAgentPermissionsEnabled: _isAgentPermissionsEnabled } = require("./settings/agent-gate");
 const _permCtx = {
   get win() { return win; },
   get lang() { return lang; },
@@ -611,7 +636,7 @@ const _tickCtx = {
   getObjRect,
   getHitRectScreen,
 };
-const _tick = require("./tick")(_tickCtx);
+const _tick = require("./animation/tick")(_tickCtx);
 const { startMainTick, resetIdleTimer } = _tick;
 
 // ── Terminal focus — delegated to src/focus.js ──
@@ -711,7 +736,7 @@ function stopTopmostWatchdog() {
 
 function updateLog(msg) {
   if (!updateDebugLog) return;
-  const { rotatedAppend } = require("./log-rotate");
+  const { rotatedAppend } = require("./utils/log-rotate");
   rotatedAppend(updateDebugLog, `[${new Date().toISOString()}] ${msg}\n`);
 }
 
@@ -984,7 +1009,7 @@ function openSettingsWindow() {
     // `--bg` CSS variable in settings.html for each theme.
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#1c1c1f" : "#f5f5f7",
     webPreferences: {
-      preload: path.join(__dirname, "preload-settings.js"),
+      preload: path.join(__dirname, "preload", "settings.js"),
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -1058,7 +1083,7 @@ function createWindow() {
     ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
     ...(isMac ? { type: "panel", roundedCorners: false } : {}),
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload", "preload.js"),
       backgroundThrottling: false,
       additionalArguments: [
         "--theme-config=" + JSON.stringify(themeLoader.getRendererConfig()),
@@ -1067,6 +1092,18 @@ function createWindow() {
   });
 
   win.setFocusable(false);
+
+  try {
+    const b = win.getBounds();
+    const disp = screen.getDisplayMatching(b);
+    bc("window", "created", {
+      bounds: b,
+      visible: win.isVisible(),
+      displayId: disp && disp.id,
+      miniMode: !!(prefs && prefs.miniMode),
+      size: prefs && prefs.size,
+    });
+  } catch { /* ignore */ }
 
   // Watchdog (Linux only): prevent accidental window close.
   // render-process-gone is handled by the global crash-recovery handler below.
@@ -1133,7 +1170,7 @@ function createWindow() {
       ...(isMac ? { type: "panel", roundedCorners: false } : {}),
       focusable: !isLinux,  // KEY EXPERIMENT: allow activation to avoid WS_EX_NOACTIVATE input routing bugs (Windows-only issue)
       webPreferences: {
-        preload: path.join(__dirname, "preload-hit.js"),
+        preload: path.join(__dirname, "preload", "hit.js"),
         backgroundThrottling: false,
         additionalArguments: [
           "--hit-theme-config=" + JSON.stringify(themeLoader.getHitRendererConfig()),
@@ -1153,7 +1190,7 @@ function createWindow() {
     }
     // macOS: apply after showInactive() — it resets NSWindowCollectionBehavior
     reapplyMacVisibility();
-    hitWin.loadFile(path.join(__dirname, "hit.html"));
+    hitWin.loadFile(path.join(__dirname, "hit", "hit.html"));
     if (isWin) guardAlwaysOnTop(hitWin);
 
     // Event-level safety net for position sync
@@ -1178,6 +1215,12 @@ function createWindow() {
 
     // Crash recovery for hitWin
     hitWin.webContents.on("render-process-gone", (_event, details) => {
+      try {
+        report("[renderer] render-process-gone (hit win)", "error", {
+          reason: details.reason,
+          exitCode: details.exitCode,
+        });
+      } catch {}
       console.error("hitWin renderer crashed:", details.reason);
       hitWin.webContents.reload();
     });
@@ -1284,6 +1327,21 @@ function createWindow() {
   // Renderer ready handshake: renderer.js signals after all IPC listeners registered.
   // This replaces did-finish-load for IPC dispatch — did-finish-load can fire before
   // renderer.js executes, causing messages to be silently dropped.
+  ipcMain.on("renderer-diagnostic", (_event, payload) => {
+    try {
+      const kind = payload && payload.kind;
+      if (kind === "empty-svg") {
+        report("[renderer] swapToFile empty file", "warning", payload);
+      } else if (kind === "window-error") {
+        report("[renderer] window.onerror", "error", payload);
+      } else if (kind === "unhandled-rejection") {
+        report("[renderer] unhandledrejection", "error", payload);
+      } else {
+        bc("renderer", String(kind || "diagnostic"), payload);
+      }
+    } catch {}
+  });
+
   ipcMain.on("renderer-ready", (event) => {
     if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
     sendToRenderer("theme-config", themeLoader.getRendererConfig());
@@ -1297,6 +1355,14 @@ function createWindow() {
   // ── Crash recovery: renderer process can die from <object> churn ──
   win.webContents.on("render-process-gone", (_event, details) => {
     console.error("Renderer crashed:", details.reason);
+    try {
+      report("[renderer] render-process-gone (main win)", "error", {
+        reason: details.reason,
+        exitCode: details.exitCode,
+        bounds: win && !win.isDestroyed() ? win.getBounds() : null,
+        visible: win && !win.isDestroyed() ? win.isVisible() : null,
+      });
+    } catch {}
     dragLocked = false;
     idlePaused = false;
     mouseOverPet = false;
@@ -1308,7 +1374,16 @@ function createWindow() {
 
   // ── Display change: re-clamp window to prevent off-screen ──
   // In proportional mode, also recalculate size based on the new work area.
-  screen.on("display-metrics-changed", () => {
+  screen.on("display-metrics-changed", (_event, display, changedMetrics) => {
+    try {
+      bc("window", "display-metrics-changed", {
+        displayId: display && display.id,
+        metrics: changedMetrics,
+        winBounds: win && !win.isDestroyed() ? win.getBounds() : null,
+        visible: win && !win.isDestroyed() ? win.isVisible() : null,
+        miniMode: _mini.getMiniMode(),
+      });
+    } catch {}
     reapplyMacVisibility();
     if (!win || win.isDestroyed()) return;
     if (_mini.getMiniMode()) {
@@ -1324,7 +1399,15 @@ function createWindow() {
       repositionUpdateBubble();
     }
   });
-  screen.on("display-removed", () => {
+  screen.on("display-removed", (_event, display) => {
+    try {
+      bc("window", "display-removed", {
+        displayId: display && display.id,
+        winBounds: win && !win.isDestroyed() ? win.getBounds() : null,
+        visible: win && !win.isDestroyed() ? win.isVisible() : null,
+        miniMode: _mini.getMiniMode(),
+      });
+    } catch {}
     reapplyMacVisibility();
     if (!win || win.isDestroyed()) return;
     if (_mini.getMiniMode()) {
@@ -1338,7 +1421,13 @@ function createWindow() {
     syncHitWin();
     repositionUpdateBubble();
   });
-  screen.on("display-added", () => {
+  screen.on("display-added", (_event, display) => {
+    try {
+      bc("window", "display-added", {
+        displayId: display && display.id,
+        bounds: display && display.bounds,
+      });
+    } catch {}
     reapplyMacVisibility();
     repositionUpdateBubble();
   });
@@ -1532,6 +1621,34 @@ if (!gotTheLock) {
     // hydrated value rather than the schema default.
     hydrateSystemBackedSettings();
 
+    // Reconcile telemetry with user preference. Default is true (opt-out).
+    try {
+      const snap = _settingsController.getSnapshot();
+      const wantTelemetry = snap.sendDiagnostics !== false;
+      telemetry.setEnabled(wantTelemetry);
+      bc("app", "whenReady", {
+        version: app.getVersion(),
+        packaged: app.isPackaged,
+        platform: process.platform,
+        arch: process.arch,
+        telemetry: wantTelemetry,
+      });
+    } catch {}
+
+    // macOS/Windows power + focus signals — helpful for "pet disappears after
+    // wake" / "pet disappears after switching Space" reports.
+    try {
+      powerMonitor.on("suspend",       () => bc("power", "suspend"));
+      powerMonitor.on("resume",        () => bc("power", "resume", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
+      powerMonitor.on("lock-screen",   () => bc("power", "lock-screen"));
+      powerMonitor.on("unlock-screen", () => bc("power", "unlock-screen", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
+      app.on("did-become-active",      () => bc("app", "did-become-active", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
+      app.on("did-resign-active",      () => bc("app", "did-resign-active"));
+      app.on("child-process-gone", (_e, details) => {
+        try { report("[app] child-process-gone", "error", details); } catch {}
+      });
+    } catch {}
+
     permDebugLog = path.join(app.getPath("userData"), "permission-debug.log");
     updateDebugLog = path.join(app.getPath("userData"), "update-debug.log");
     createWindow();
@@ -1598,6 +1715,7 @@ if (!gotTheLock) {
   });
 
   app.on("before-quit", () => {
+    try { bc("app", "before-quit"); } catch {}
     isQuitting = true;
     flushRuntimeStateToPrefs();
     unregisterToggleShortcut();

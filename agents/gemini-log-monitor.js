@@ -266,7 +266,7 @@ class GeminiLogMonitor {
       : JSON.stringify(lastMsg.content || "").slice(0, 80);
     const line = `[${new Date().toISOString()}] msgs=${msgCount} type=${lastMsg.type} tools=[${toolInfo}] | ${contentPreview}\n`;
     try {
-      const { rotatedAppend } = require("../src/log-rotate");
+      const { rotatedAppend } = require("../src/utils/log-rotate");
       rotatedAppend(this._debugLogPath, line);
     } catch {
       try { fs.appendFileSync(this._debugLogPath, line); } catch {}
