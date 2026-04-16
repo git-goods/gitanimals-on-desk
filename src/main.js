@@ -2,7 +2,7 @@ const { app, BrowserWindow, screen, Menu, ipcMain, globalShortcut, nativeTheme, 
 const path = require("path");
 const fs = require("fs");
 const { applyStationaryCollectionBehavior } = require("./mac-window");
-const hitGeometry = require("./hit-geometry");
+const hitGeometry = require("./hit/geometry");
 const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("./utils/work-area");
 const telemetry = require("./telemetry");
 const { bc, report, captureException } = telemetry;
@@ -1190,7 +1190,7 @@ function createWindow() {
     }
     // macOS: apply after showInactive() — it resets NSWindowCollectionBehavior
     reapplyMacVisibility();
-    hitWin.loadFile(path.join(__dirname, "hit.html"));
+    hitWin.loadFile(path.join(__dirname, "hit", "hit.html"));
     if (isWin) guardAlwaysOnTop(hitWin);
 
     // Event-level safety net for position sync
