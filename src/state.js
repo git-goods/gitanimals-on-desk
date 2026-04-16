@@ -5,6 +5,9 @@ let screen, nativeImage;
 try { ({ screen, nativeImage } = require("electron")); } catch { screen = null; nativeImage = null; }
 const path = require("path");
 const fs = require("fs");
+const { bc, report } = (() => {
+  try { return require("./telemetry"); } catch { return { bc() {}, report() {} }; }
+})();
 
 // ── Agent icons (official logos from assets/icons/agents/) ──
 const AGENT_ICON_DIR = path.join(__dirname, "..", "assets", "icons", "agents");
@@ -199,8 +202,38 @@ function applyState(state, svgOverride) {
   }
 
   const svgs = STATE_SVGS[state] || STATE_SVGS.idle;
-  const svg = svgOverride || svgs[Math.floor(Math.random() * svgs.length)];
+  const svg = svgOverride || (svgs && svgs[Math.floor(Math.random() * svgs.length)]);
   currentSvg = svg;
+
+  // Diagnostics — only emit when state actually changes, plus always warn on
+  // missing SVG (the central hypothesis for macOS "pet disappears" reports).
+  if (previousState !== state || (svgOverride && svgOverride !== svg)) {
+    try {
+      bc("state", "applyState", {
+        from: previousState,
+        to: state,
+        svg,
+        sessions: sessions.size,
+        dnd: !!ctx.doNotDisturb,
+        miniMode: !!ctx.miniMode,
+      });
+    } catch {}
+  }
+  if (!svg) {
+    try {
+      report("[state] applyState produced empty svg", "warning", {
+        state,
+        svgOverride,
+        hasStateSvgs: !!STATE_SVGS[state],
+        stateSvgsLen: Array.isArray(STATE_SVGS[state]) ? STATE_SVGS[state].length : null,
+        hasIdleSvgs: !!STATE_SVGS.idle,
+        idleSvgsLen: Array.isArray(STATE_SVGS.idle) ? STATE_SVGS.idle.length : null,
+        sessions: sessions.size,
+        dnd: !!ctx.doNotDisturb,
+        miniMode: !!ctx.miniMode,
+      });
+    } catch {}
+  }
 
   // Force eye resend after SVG load completes (~300ms)
   // After sweeping → idle, pause eye tracking briefly so eyes stay centered before resuming
@@ -371,6 +404,14 @@ function updateSession(sessionId, state, event, sourcePid, cwd, editor, pidChain
   if (event === "SessionEnd") {
     const endingSession = sessions.get(sessionId);
     sessions.delete(sessionId);
+    try {
+      bc("session", "end", {
+        sessionId,
+        agentId: srcAgentId,
+        remaining: sessions.size,
+        wasHeadless: !!(endingSession && endingSession.headless),
+      });
+    } catch {}
     cleanStaleSessions();
     if (!endingSession || !endingSession.headless) {
       let hasLiveInteractive = false;
@@ -465,6 +506,15 @@ function cleanStaleSessions() {
         s.state = "idle"; s.displayHint = null; s.updatedAt = now; changed = true;
       }
     }
+  }
+  if (changed) {
+    try {
+      bc("session", "cleanStale", {
+        remaining: sessions.size,
+        removedNonHeadless,
+        current: currentState,
+      });
+    } catch {}
   }
   if (changed && sessions.size === 0) {
     if (removedNonHeadless) {

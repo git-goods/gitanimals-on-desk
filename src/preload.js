@@ -1,5 +1,13 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+// Renderer Sentry — inherits DSN/release/env from the main process client.
+// Safe no-op if main process init didn't run (e.g. missing DSN).
+try {
+  // @sentry/electron v7 exposes `/renderer` for renderer processes; wrapping
+  // in try/catch so a broken install can never break the main window.
+  require("@sentry/electron/renderer").init({});
+} catch (_e) { /* telemetry disabled */ }
+
 // Parse theme config from additionalArguments (synchronous, available on first load)
 const themeArg = process.argv.find(a => a.startsWith("--theme-config="));
 const themeConfig = themeArg ? JSON.parse(themeArg.slice("--theme-config=".length)) : null;
@@ -28,4 +36,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onDebugHitbox: (cb) => ipcRenderer.on("debug-hitbox", (_, enabled) => cb(enabled)),
   // Handshake: renderer signals all IPC listeners are registered
   signalReady: () => ipcRenderer.send("renderer-ready"),
+  // Telemetry — renderer can flag conditions that are only observable in the
+  // DOM (e.g. SVG swap-to-empty). Main process forwards to Sentry.
+  reportDiagnostic: (payload) => ipcRenderer.send("renderer-diagnostic", payload),
 });

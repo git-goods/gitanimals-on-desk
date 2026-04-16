@@ -1,5 +1,7 @@
 "use strict";
 
+try { require("@sentry/electron/renderer").init({}); } catch (_e) { /* telemetry disabled */ }
+
 // ── Settings panel preload ──
 //
 // Surface: window.settingsAPI

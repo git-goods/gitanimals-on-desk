@@ -2,6 +2,9 @@
 // Extracted from main.js L315-331, L2700-2911
 
 const { screen } = require("electron");
+const { bc } = (() => {
+  try { return require("./telemetry"); } catch { return { bc() {} }; }
+})();
 
 module.exports = function initMini(ctx) {
 
@@ -115,6 +118,7 @@ function miniPeekOut() {
 }
 
 function cancelMiniTransition() {
+  if (miniTransitioning) { try { bc("mini", "transitioning", { v: false, label: "cancel" }); } catch {} }
   miniTransitioning = false;
   if (miniTransitionTimer) { clearTimeout(miniTransitionTimer); miniTransitionTimer = null; }
   if (peekAnimTimer) { clearTimeout(peekAnimTimer); peekAnimTimer = null; }
@@ -170,6 +174,7 @@ function enterMiniMode(wa, viaMenu, edge) {
   ctx.sendToRenderer("mini-mode-change", true, miniEdge);
   ctx.sendToHitWin("hit-state-sync", { miniMode: true });
   miniTransitioning = true;
+  try { bc("mini", "transitioning", { v: true, label: "enterMiniMode", viaMenu, edge: miniEdge, bounds }); } catch {}
   ctx.buildContextMenu();
   ctx.buildTrayMenu();
 
@@ -194,6 +199,7 @@ function enterMiniMode(wa, viaMenu, edge) {
         ctx.win.setBounds({ x: currentMiniX, y: miniSnap.y, width: miniSnap.width, height: miniSnap.height });
         miniTransitionTimer = setTimeout(() => {
           miniTransitioning = false;
+          try { bc("mini", "transitioning", { v: false, label: "enterMiniMode-viaMenu-done" }); } catch {}
           ctx.applyState(ctx.doNotDisturb ? "mini-sleep" : "mini-idle");
         }, 3200);
       }, 300);
@@ -203,6 +209,7 @@ function enterMiniMode(wa, viaMenu, edge) {
     ctx.applyState(enterSvgState);
     miniTransitionTimer = setTimeout(() => {
       miniTransitioning = false;
+      try { bc("mini", "transitioning", { v: false, label: "enterMiniMode-slide-done" }); } catch {}
       ctx.applyState(ctx.doNotDisturb ? "mini-sleep" : "mini-idle");
     }, 3200);
   }
@@ -216,6 +223,7 @@ function exitMiniMode() {
   // display-metrics-changed, move-window-by, checkMiniModeSnap, etc.)
   // from interfering with the animation. Both flags clear in onDone.
   miniTransitioning = true;
+  try { bc("mini", "transitioning", { v: true, label: "exitMiniMode" }); } catch {}
   miniSnap = null;
   miniSleepPeeked = false;
   miniPeeked = false;
@@ -236,6 +244,7 @@ function exitMiniMode() {
   animateWindowParabola(clamped.x, clamped.y, JUMP_DURATION, () => {
     miniMode = false;
     miniTransitioning = false;
+    try { bc("mini", "transitioning", { v: false, label: "exitMiniMode-done", bounds: ctx.win && !ctx.win.isDestroyed() ? ctx.win.getBounds() : null }); } catch {}
     ctx.sendToRenderer("mini-mode-change", false);
     ctx.sendToHitWin("hit-state-sync", { miniMode: false });
     ctx.buildContextMenu();
@@ -268,6 +277,7 @@ function enterMiniViaMenu() {
   preMiniX = bounds.x;
   preMiniY = bounds.y;
   miniTransitioning = true;
+  try { bc("mini", "transitioning", { v: true, label: "enterMiniViaMenu-crabwalk", edge, bounds }); } catch {}
 
   // Send edge before crabwalk so CSS flip applies before animation starts
   ctx.sendToRenderer("mini-mode-change", true, edge);

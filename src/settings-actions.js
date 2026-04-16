@@ -133,6 +133,25 @@ const updateRegistry = {
   hideBubbles: requireBoolean("hideBubbles"),
   showSessionId: requireBoolean("showSessionId"),
 
+  // ── Anonymous diagnostics (Sentry) ──
+  // Validator + effect: toggling in the UI immediately enables/disables the
+  // Sentry client so opt-out is respected without restarting the app.
+  sendDiagnostics: {
+    validate: requireBoolean("sendDiagnostics"),
+    effect(value, deps) {
+      if (!deps || typeof deps.setTelemetryEnabled !== "function") {
+        // Deps missing is fine in tests — committing the pref is still safe.
+        return { status: "ok" };
+      }
+      try {
+        deps.setTelemetryEnabled(value);
+        return { status: "ok" };
+      } catch (err) {
+        return { status: "error", message: `sendDiagnostics: ${err && err.message}` };
+      }
+    },
+  },
+
   // ── System-backed prefs (object-form: validate + effect pre-commit gate) ──
   //
   // autoStartWithClaude: writes/removes a SessionStart hook in
