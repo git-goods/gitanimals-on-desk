@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
 const { bc, report } = (() => {
-  try { return require("./telemetry"); } catch { return { bc() {}, report() {} }; }
+  try { return require("../telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
 
 // ── Defaults (used when theme.json omits optional fields) ──

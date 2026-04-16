@@ -210,9 +210,9 @@ function stopMonitorForAgent(agentId) {
 }
 
 // ── Theme loader ──
-const themeLoader = require("./theme-loader");
+const themeLoader = require("./theme/loader");
 themeLoader.init(__dirname, app.getPath("userData"));
-const remoteThemeSync = require("./remote-theme-sync");
+const remoteThemeSync = require("./theme/remote-sync");
 remoteThemeSync.init(app.getPath("userData"));
 
 let activeTheme = themeLoader.loadTheme(_settingsController.get("theme") || "fox");
