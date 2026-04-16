@@ -42,7 +42,7 @@ Shell 테스트 스크립트 (개발용): `test-demo.sh`, `test-mini.sh`, `test-
 공통 Hook 흐름 (Claude Code / Copilot / Cursor / Gemini / CodeBuddy / Kiro):
   Agent 이벤트 → hooks/*-hook.js (제로 의존성, stdin JSON → 상태 매핑)
     → HTTP POST 127.0.0.1:23333/state { state, session_id, event, source_pid, cwd }
-    → src/server.js → src/state.js 상태 머신 (다중 세션 + 우선순위 + 수면 시퀀스)
+    → src/server/server.js → src/state.js 상태 머신 (다중 세션 + 우선순위 + 수면 시퀀스)
     → IPC state-change → src/renderer.js (SVG 프리로드 + 페이드 전환 + 눈동자 추적)
 
 Codex CLI (JSONL 로그 폴링, ~1.5s 지연):
@@ -89,9 +89,9 @@ opencode (in-process plugin, ~0ms):
 | ---------------------------- | ---------------------------------------------------------- |
 | `src/main.js`                | Electron 메인 프로세스: 윈도우, IPC, ctx, 앱 생명주기      |
 | `src/state.js`               | 상태 머신: 다중 세션, 우선순위, 수면 시퀀스, DND           |
-| `src/server.js`              | HTTP 서버: /state, /permission, 포트 디스커버리, hook 등록 |
-| `src/theme-loader.js`        | 테마 로더: theme.json 파싱, SVG 해석 (9개 핫패스 참조)     |
-| `src/settings-controller.js` | 설정 패널: 단일 쓰기 패턴 (prefs 변경의 유일 진입점)       |
+| `src/server/server.js`       | HTTP 서버: /state, /permission, 포트 디스커버리, hook 등록 |
+| `src/theme/loader.js`        | 테마 로더: theme.json 파싱, SVG 해석 (9개 핫패스 참조)     |
+| `src/settings/controller.js` | 설정 패널: 단일 쓰기 패턴 (prefs 변경의 유일 진입점)       |
 | `agents/registry.js`         | 에이전트 레지스트리: 8개 에이전트 ID/프로세스명 조회       |
 | `hooks/server-config.js`     | 공유: 포트 상수, 런타임 설정, HTTP 헬퍼, 서비스 디스커버리 |
 
