@@ -453,7 +453,7 @@ function _finishThemeReload() {
 
 
 // ── Permission bubble — delegated to src/permission.js ──
-const { isAgentEnabled: _isAgentEnabled, isAgentPermissionsEnabled: _isAgentPermissionsEnabled } = require("./agent-gate");
+const { isAgentEnabled: _isAgentEnabled, isAgentPermissionsEnabled: _isAgentPermissionsEnabled } = require("./settings/agent-gate");
 const _permCtx = {
   get win() { return win; },
   get lang() { return lang; },

@@ -3,9 +3,9 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const { isAgentEnabled, isAgentPermissionsEnabled } = require("../src/agent-gate");
-const { commandRegistry } = require("../src/settings-actions");
-const prefs = require("../src/prefs");
+const { isAgentEnabled, isAgentPermissionsEnabled } = require("../../src/settings/agent-gate");
+const { commandRegistry } = require("../../src/settings-actions");
+const prefs = require("../../src/prefs");
 
 describe("isAgentEnabled", () => {
   it("returns true when snapshot is missing", () => {
