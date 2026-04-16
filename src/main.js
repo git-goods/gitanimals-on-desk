@@ -490,7 +490,7 @@ const _updateBubbleCtx = {
   guardAlwaysOnTop,
   reapplyMacVisibility,
 };
-const _updateBubble = require("./update-bubble")(_updateBubbleCtx);
+const _updateBubble = require("./update/bubble")(_updateBubbleCtx);
 const {
   showUpdateBubble,
   hideUpdateBubble,
@@ -954,7 +954,7 @@ const _updaterCtx = {
   getSvgOverride: (state) => getSvgOverride(state),
   resetSoundCooldown: () => resetSoundCooldown(),
 };
-const _updater = require("./updater")(_updaterCtx);
+const _updater = require("./update/updater")(_updaterCtx);
 const { setupAutoUpdater, checkForUpdates, getUpdateMenuItem, getUpdateMenuLabel } = _updater;
 
 // ── Settings panel window ──
