@@ -61,8 +61,8 @@ const SIZES = {
 // Module-level `lang`/`showTray`/etc. below are mirror caches kept in sync via
 // a subscriber wired after menu.js loads. The ctx setters route writes through
 // `_settingsController.applyUpdate()`, which auto-persists.
-const prefsModule = require("./prefs");
-const { createSettingsController } = require("./settings-controller");
+const prefsModule = require("./settings/prefs");
+const { createSettingsController } = require("./settings/controller");
 const loginItemHelpers = require("./settings/login-item");
 const PREFS_PATH = path.join(app.getPath("userData"), "gitanimals-prefs.json");
 const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
@@ -1017,7 +1017,7 @@ function openSettingsWindow() {
   if (iconPath) opts.icon = iconPath;
   settingsWindow = new BrowserWindow(opts);
   settingsWindow.setMenuBarVisibility(false);
-  settingsWindow.loadFile(path.join(__dirname, "settings.html"));
+  settingsWindow.loadFile(path.join(__dirname, "settings", "settings.html"));
   settingsWindow.once("ready-to-show", () => {
     settingsWindow.show();
     settingsWindow.focus();
