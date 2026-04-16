@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const { applyStationaryCollectionBehavior } = require("./mac-window");
 const hitGeometry = require("./hit-geometry");
-const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("./work-area");
+const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("./utils/work-area");
 const telemetry = require("./telemetry");
 const { bc, report, captureException } = telemetry;
 

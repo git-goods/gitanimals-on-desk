@@ -10,7 +10,7 @@ const {
   findNearestWorkArea,
   computeLooseClamp,
   SYNTHETIC_WORK_AREA,
-} = require("../src/work-area");
+} = require("../../src/utils/work-area");
 
 const wa = (x, y, w, h) => ({ x, y, width: w, height: h });
 const display = (x, y, w, h) => ({ workArea: wa(x, y, w, h) });
