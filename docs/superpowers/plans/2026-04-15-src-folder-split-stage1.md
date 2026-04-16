@@ -1,5 +1,9 @@
 # src/ Folder Split — Stage 1 Implementation Plan
 
+## 한 줄 요약 (사용자 관점)
+
+**유저 동작/UI는 전혀 바뀌지 않습니다.** Stage 1은 `src/` 안의 33개 평탄한 파일 중 의존성이 가장 적은 15개 (preload 6, utils 2, hit 3, animation 1, settings 리프 3)를 6개 신규 폴더로 옮기고, 관련 테스트 4개도 같이 정리하는 내부 리팩토링입니다. 동작 변경 0, 새 기능 0, 단위 테스트 그대로 322개 통과 유지가 성공 기준입니다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `src/` 최상위 33개 flat 파일 중 **Stage 1 대상 15개**(preload/6, utils/2, hit/3, animation/1, settings leaves/3)를 기능별 서브폴더로 이동하고, 관련 테스트 4개와 `package.json` 테스트 스크립트를 같은 PR에서 원자적으로 업데이트한다.

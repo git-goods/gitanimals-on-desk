@@ -4,6 +4,10 @@
 **브랜치**: `refactor/src-folder-split`
 **worktree**: `.worktrees/src-folder-split/`
 
+## 한 줄 요약 (사용자 관점)
+
+**유저 동작/UI는 전혀 바뀌지 않습니다.** 개발자가 코드 파일을 찾고 수정하기 쉽도록 `src/` 33개 평탄한 파일을 9개 기능 폴더(`core/`, `settings/`, `theme/`, `server/`, `update/`, `preload/`, `animation/`, `hit/`, `utils/`)로 정리하는 내부 리팩토링입니다. 한 번에 적용하면 리뷰가 불가능하므로 3 PR(Stage 1/2/3)로 쪼갭니다.
+
 ## Context
 
 현재 `src/` 디렉토리는 33개 `.js` 파일(+ HTML/CSS)이 모두 최상위에 flat하게 배치되어 있다. 파일명 prefix(`settings-*`, `preload-*`, `hit-*`, `remote-theme-*`, `update-*`)로 논리 그룹을 암시하지만 실제 디렉토리 경계가 없어 다음 문제가 발생한다.
