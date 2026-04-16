@@ -411,7 +411,7 @@ function resolvePermissionEntry(permEntry, behavior, message) {
 
 function permLog(msg) {
   if (!ctx.permDebugLog) return;
-  const { rotatedAppend } = require("./log-rotate");
+  const { rotatedAppend } = require("./utils/log-rotate");
   rotatedAppend(ctx.permDebugLog, `[${new Date().toISOString()}] ${msg}\n`);
 }
 
