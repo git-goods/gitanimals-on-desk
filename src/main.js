@@ -636,7 +636,7 @@ const _tickCtx = {
   getObjRect,
   getHitRectScreen,
 };
-const _tick = require("./tick")(_tickCtx);
+const _tick = require("./animation/tick")(_tickCtx);
 const { startMainTick, resetIdleTimer } = _tick;
 
 // ── Terminal focus — delegated to src/focus.js ──
