@@ -95,8 +95,9 @@
 
 ### package.json test 스크립트 갱신 (Stage 1 필수)
 
-`"test": "node --test test/*.test.js"` → `"test": "node --test test/*.test.js test/*/*.test.js"`
-(shell glob이 서브디렉토리까지 매치되도록; Stage 2에서 2단 깊이, Stage 3에서는 변동 없음)
+`"test": "node --test test/*.test.js"` → `"test": "node --test test/"`
+- Node 18+ 내장 디렉토리 재귀 탐색을 사용한다. shell glob 비의존이라 `cmd.exe` 포함 모든 셸에서 동일 동작.
+- 처음 후보였던 `"test/*.test.js test/*/*.test.js"` 다중 글롭 안은 시점 의존성 결함이 있다 (서브폴더 테스트가 0개일 때 shell이 unexpand한 literal `test/*/*.test.js`를 node가 받아 exit 1). 검증 후 폐기.
 
 ### 문서 갱신 (Stage 1)
 

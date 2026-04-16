@@ -95,9 +95,14 @@ Expected hits (Stage 1 타깃; Task 종료 후 0이어야 함):
 
 ---
 
-## Task 1: package.json 테스트 스크립트 확장
+## Task 1: package.json 테스트 스크립트 디렉토리 재귀로 변경
 
-**이유:** 이후 태스크에서 테스트를 `test/utils/`, `test/settings/` 서브폴더로 이동한다. 현재 `"test": "node --test test/*.test.js"` 글롭은 subdirectory를 매치하지 않아 이동된 테스트가 조용히 누락된다. 먼저 글롭을 확장해 안전망을 깐다.
+**이유:** 이후 태스크에서 테스트를 `test/utils/`, `test/settings/` 서브폴더로 이동한다. 현재 `"test": "node --test test/*.test.js"` 글롭은 subdirectory를 매치하지 않아 이동된 테스트가 조용히 누락된다.
+
+**스펙 정정 노트** (검증으로 확인됨):
+- 원래 스펙안 `"node --test test/*.test.js test/*/*.test.js"`는 시점 의존적 결함이 있다. shell이 `test/*/*.test.js`를 unexpand 상태로 그대로 전달하면 `node --test`가 literal 경로로 해석해 exit 1이 된다 (Stage 1 시작 시점에는 서브폴더 테스트가 아직 0개라 unexpand 발생).
+- 또한 `$(...)` 같은 shell substitution은 Windows `cmd.exe`에서 동작하지 않아 portability 깨짐.
+- 채택안: **`"test": "node --test test/"`** — Node 18+ 내장 디렉토리 재귀 탐색. shell glob 비의존, Windows 포함 모든 셸 동일 동작. 현재 worktree Node v20.19.3에서 동일 baseline(322/55/0) 검증됨.
 
 **Files:**
 - Modify: `package.json`
@@ -108,38 +113,37 @@ Expected hits (Stage 1 타깃; Task 종료 후 0이어야 함):
 grep '"test"' package.json
 ```
 
-Expected: `"test": "node --test test/*.test.js",`
+Expected (정정 전 베이스): `"test": "node --test test/*.test.js",`
 
 - [ ] **Step 1.2:** `package.json` 편집
 
-`"test": "node --test test/*.test.js"` → `"test": "node --test test/*.test.js test/*/*.test.js"`
+`"test": "node --test test/*.test.js"` → `"test": "node --test test/"`
 
-- [ ] **Step 1.3:** 양쪽 글롭이 모두 매치하는지 임시 확인
+- [ ] **Step 1.3:** 디렉토리 재귀 동작 검증
 
 ```bash
-ls test/*.test.js | wc -l       # 28이어야 함
-mkdir -p test/.glob-probe
-echo "module.exports={}" > test/.glob-probe/probe.test.js
-ls test/*/*.test.js | wc -l     # 1 이상이어야 함 (probe 포함)
-rm -rf test/.glob-probe
+node --test test/ 2>&1 | tail -10
 ```
+
+Expected: `# pass 322 / # suites 55 / # fail 0` (baseline 그대로).
 
 - [ ] **Step 1.4:** `npm test` 통과 확인
 
 ```bash
-npm test 2>&1 | tail -5
+npm test 2>&1 | tail -10
 ```
 
-Expected: 28개 pass 유지.
+Expected: 동일 322 pass / 55 suites / 0 fail.
 
 - [ ] **Step 1.5:** Commit
 
 ```bash
 git add package.json
-git commit -m "chore(test): glob 확장으로 test 서브폴더 지원 준비
+git commit -m "chore(test): node --test test/ 디렉토리 재귀로 전환
 
-Stage 1에서 test/ 일부가 서브폴더로 이동한다. glob을 미리 확장해
-이동된 테스트가 silent drop 되지 않도록 한다.
+Stage 1에서 test/ 일부가 서브폴더로 이동한다. shell glob 의존을
+없애기 위해 Node 18+ 내장 디렉토리 재귀 탐색으로 변경. cmd.exe
+포함 모든 셸에서 동일 동작.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>"
 ```
