@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
 const { bc, report } = (() => {
-  try { return require("../telemetry"); } catch { return { bc() {}, report() {} }; }
+  try { return require("../core/telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
 
 // ── Defaults (used when theme.json omits optional fields) ──
@@ -461,19 +461,19 @@ function getAssetPath(filename) {
  * @returns {string} path prefix
  */
 function getRendererAssetsPath() {
-  if (!activeTheme) return "../assets/svg";
+  if (!activeTheme) return "../../assets/svg";
   if (activeTheme._builtin) {
     // Built-in theme with own assets dir (e.g., calico with SVG + APNGs)
     const themeAssetsDir = path.join(activeTheme._themeDir, "assets");
     if (fs.existsSync(themeAssetsDir)) {
       // Use relative path (not file:// URL) so SVG internal <style> works
       // file:// absolute URLs may cause browser to restrict inline CSS in SVG
-      return "../themes/" + activeTheme._id + "/assets";
+      return "../../themes/" + activeTheme._id + "/assets";
     }
-    return "../assets/svg";
+    return "../../assets/svg";
   }
   // External theme: return file:// URL to the cache dir for SVGs
-  return activeTheme._assetsFileUrl || "../assets/svg";
+  return activeTheme._assetsFileUrl || "../../assets/svg";
 }
 
 /**
@@ -487,7 +487,7 @@ function getRendererSourceAssetsPath() {
     // Built-in theme with own assets dir (e.g., calico with APNGs)
     const themeAssetsDir = path.join(activeTheme._themeDir, "assets");
     if (fs.existsSync(themeAssetsDir)) {
-      return "../themes/" + activeTheme._id + "/assets";
+      return "../../themes/" + activeTheme._id + "/assets";
     }
     return null;
   }

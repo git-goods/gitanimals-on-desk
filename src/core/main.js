@@ -2,8 +2,8 @@ const { app, BrowserWindow, screen, Menu, ipcMain, globalShortcut, nativeTheme, 
 const path = require("path");
 const fs = require("fs");
 const { applyStationaryCollectionBehavior } = require("./mac-window");
-const hitGeometry = require("./hit/geometry");
-const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("./utils/work-area");
+const hitGeometry = require("../hit/geometry");
+const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("../utils/work-area");
 const telemetry = require("./telemetry");
 const { bc, report, captureException } = telemetry;
 
@@ -61,9 +61,9 @@ const SIZES = {
 // Module-level `lang`/`showTray`/etc. below are mirror caches kept in sync via
 // a subscriber wired after menu.js loads. The ctx setters route writes through
 // `_settingsController.applyUpdate()`, which auto-persists.
-const prefsModule = require("./settings/prefs");
-const { createSettingsController } = require("./settings/controller");
-const loginItemHelpers = require("./settings/login-item");
+const prefsModule = require("../settings/prefs");
+const { createSettingsController } = require("../settings/controller");
+const loginItemHelpers = require("../settings/login-item");
 const PREFS_PATH = path.join(app.getPath("userData"), "gitanimals-prefs.json");
 const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
 
@@ -71,11 +71,11 @@ const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
 // long after server.js / hooks/install.js are loaded. Wrapping them in closures
 // avoids a chicken-and-egg require order at module load.
 function _installAutoStartHook() {
-  const { registerHooks } = require("../hooks/install.js");
+  const { registerHooks } = require("../../hooks/install.js");
   registerHooks({ silent: true, autoStart: true, port: getHookServerPort() });
 }
 function _uninstallAutoStartHook() {
-  const { unregisterAutoStart } = require("../hooks/install.js");
+  const { unregisterAutoStart } = require("../../hooks/install.js");
   unregisterAutoStart();
 }
 
@@ -84,7 +84,7 @@ function _uninstallAutoStartHook() {
 // surface the error to the UI.
 function _writeSystemOpenAtLogin(enabled) {
   if (isLinux) {
-    const launchScript = path.join(__dirname, "..", "launch.js");
+    const launchScript = path.join(__dirname, "..", "..", "launch.js");
     const execCmd = app.isPackaged
       ? `"${process.env.APPIMAGE || app.getPath("exe")}"`
       : `node "${launchScript}"`;
@@ -210,9 +210,9 @@ function stopMonitorForAgent(agentId) {
 }
 
 // ── Theme loader ──
-const themeLoader = require("./theme/loader");
-themeLoader.init(__dirname, app.getPath("userData"));
-const remoteThemeSync = require("./theme/remote-sync");
+const themeLoader = require("../theme/loader");
+themeLoader.init(path.join(__dirname, ".."), app.getPath("userData"));
+const remoteThemeSync = require("../theme/remote-sync");
 remoteThemeSync.init(app.getPath("userData"));
 
 let activeTheme = themeLoader.loadTheme(_settingsController.get("theme") || "fox");
@@ -453,7 +453,7 @@ function _finishThemeReload() {
 
 
 // ── Permission bubble — delegated to src/permission.js ──
-const { isAgentEnabled: _isAgentEnabled, isAgentPermissionsEnabled: _isAgentPermissionsEnabled } = require("./settings/agent-gate");
+const { isAgentEnabled: _isAgentEnabled, isAgentPermissionsEnabled: _isAgentPermissionsEnabled } = require("../settings/agent-gate");
 const _permCtx = {
   get win() { return win; },
   get lang() { return lang; },
@@ -474,7 +474,7 @@ const _permCtx = {
     if (s && s.sourcePid) focusTerminalWindow(s.sourcePid, s.cwd, s.editor, s.pidChain);
   },
 };
-const _perm = require("./server/permission")(_permCtx);
+const _perm = require("../server/permission")(_permCtx);
 const { showPermissionBubble, resolvePermissionEntry, sendPermissionResponse, repositionBubbles, permLog, PASSTHROUGH_TOOLS, showCodexNotifyBubble, clearCodexNotifyBubbles, syncPermissionShortcuts, replyOpencodePermission } = _perm;
 const pendingPermissions = _perm.pendingPermissions;
 let permDebugLog = null; // set after app.whenReady()
@@ -490,7 +490,7 @@ const _updateBubbleCtx = {
   guardAlwaysOnTop,
   reapplyMacVisibility,
 };
-const _updateBubble = require("./update/bubble")(_updateBubbleCtx);
+const _updateBubble = require("../update/bubble")(_updateBubbleCtx);
 const {
   showUpdateBubble,
   hideUpdateBubble,
@@ -636,7 +636,7 @@ const _tickCtx = {
   getObjRect,
   getHitRectScreen,
 };
-const _tick = require("./animation/tick")(_tickCtx);
+const _tick = require("../animation/tick")(_tickCtx);
 const { startMainTick, resetIdleTimer } = _tick;
 
 // ── Terminal focus — delegated to src/focus.js ──
@@ -662,7 +662,7 @@ const _serverCtx = {
   replyOpencodePermission,
   permLog,
 };
-const _server = require("./server/server")(_serverCtx);
+const _server = require("../server/server")(_serverCtx);
 const { startHttpServer, getHookServerPort } = _server;
 
 // ── alwaysOnTop recovery (Windows DWM / Shell can strip TOPMOST flag) ──
@@ -736,7 +736,7 @@ function stopTopmostWatchdog() {
 
 function updateLog(msg) {
   if (!updateDebugLog) return;
-  const { rotatedAppend } = require("./utils/log-rotate");
+  const { rotatedAppend } = require("../utils/log-rotate");
   rotatedAppend(updateDebugLog, `[${new Date().toISOString()}] ${msg}\n`);
 }
 
@@ -927,7 +927,7 @@ ipcMain.handle("settings:command", async (_event, payload) => {
 // re-fetch.
 ipcMain.handle("settings:list-agents", () => {
   try {
-    const { getAllAgents } = require("../agents/registry");
+    const { getAllAgents } = require("../../agents/registry");
     return getAllAgents().map((a) => ({
       id: a.id,
       name: a.name,
@@ -954,7 +954,7 @@ const _updaterCtx = {
   getSvgOverride: (state) => getSvgOverride(state),
   resetSoundCooldown: () => resetSoundCooldown(),
 };
-const _updater = require("./update/updater")(_updaterCtx);
+const _updater = require("../update/updater")(_updaterCtx);
 const { setupAutoUpdater, checkForUpdates, getUpdateMenuItem, getUpdateMenuLabel } = _updater;
 
 // ── Settings panel window ──
@@ -975,7 +975,7 @@ function getSettingsWindowIcon() {
     // a packaged build — that path doesn't exist inside app.asar.
     return app.isPackaged
       ? path.join(process.resourcesPath, "icon.ico")
-      : path.join(__dirname, "..", "assets", "icon.ico");
+      : path.join(__dirname, "..", "..", "assets", "icon.ico");
   }
   // Linux: build config points at assets/icons/, but those aren't shipped in
   // files[]. Skip the icon — the .desktop file (deb/AppImage) provides one.
@@ -1009,7 +1009,7 @@ function openSettingsWindow() {
     // `--bg` CSS variable in settings.html for each theme.
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#1c1c1f" : "#f5f5f7",
     webPreferences: {
-      preload: path.join(__dirname, "preload", "settings.js"),
+      preload: path.join(__dirname, "..", "preload", "settings.js"),
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -1017,7 +1017,7 @@ function openSettingsWindow() {
   if (iconPath) opts.icon = iconPath;
   settingsWindow = new BrowserWindow(opts);
   settingsWindow.setMenuBarVisibility(false);
-  settingsWindow.loadFile(path.join(__dirname, "settings", "settings.html"));
+  settingsWindow.loadFile(path.join(__dirname, "..", "settings", "settings.html"));
   settingsWindow.once("ready-to-show", () => {
     settingsWindow.show();
     settingsWindow.focus();
@@ -1083,7 +1083,7 @@ function createWindow() {
     ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
     ...(isMac ? { type: "panel", roundedCorners: false } : {}),
     webPreferences: {
-      preload: path.join(__dirname, "preload", "preload.js"),
+      preload: path.join(__dirname, "..", "preload", "preload.js"),
       backgroundThrottling: false,
       additionalArguments: [
         "--theme-config=" + JSON.stringify(themeLoader.getRendererConfig()),
@@ -1170,7 +1170,7 @@ function createWindow() {
       ...(isMac ? { type: "panel", roundedCorners: false } : {}),
       focusable: !isLinux,  // KEY EXPERIMENT: allow activation to avoid WS_EX_NOACTIVATE input routing bugs (Windows-only issue)
       webPreferences: {
-        preload: path.join(__dirname, "preload", "hit.js"),
+        preload: path.join(__dirname, "..", "preload", "hit.js"),
         backgroundThrottling: false,
         additionalArguments: [
           "--hit-theme-config=" + JSON.stringify(themeLoader.getHitRendererConfig()),
@@ -1190,7 +1190,7 @@ function createWindow() {
     }
     // macOS: apply after showInactive() — it resets NSWindowCollectionBehavior
     reapplyMacVisibility();
-    hitWin.loadFile(path.join(__dirname, "hit", "hit.html"));
+    hitWin.loadFile(path.join(__dirname, "..", "hit", "hit.html"));
     if (isWin) guardAlwaysOnTop(hitWin);
 
     // Event-level safety net for position sync
@@ -1553,7 +1553,7 @@ function installTerminalFocusExtension() {
   const home = os.homedir();
 
   // Extension source — in dev: ../extensions/vscode/, in packaged: app.asar.unpacked/
-  let extSrc = path.join(__dirname, "..", "extensions", "vscode");
+  let extSrc = path.join(__dirname, "..", "..", "extensions", "vscode");
   extSrc = extSrc.replace("app.asar" + path.sep, "app.asar.unpacked" + path.sep);
 
   if (!fs.existsSync(extSrc)) {
@@ -1671,8 +1671,8 @@ if (!gotTheLock) {
     // agent-gate snapshot — a user who disabled Codex at last shutdown
     // shouldn't see its file watcher spin up on the next launch.
     try {
-      const CodexLogMonitor = require("../agents/codex-log-monitor");
-      const codexAgent = require("../agents/codex");
+      const CodexLogMonitor = require("../../agents/codex-log-monitor");
+      const codexAgent = require("../../agents/codex");
       _codexMonitor = new CodexLogMonitor(codexAgent, (sid, state, event, extra) => {
         if (state === "codex-permission") {
           updateSession(sid, "notification", event, null, extra.cwd, null, null, null, "codex");
@@ -1693,8 +1693,8 @@ if (!gotTheLock) {
     }
 
     try {
-      const GeminiLogMonitor = require("../agents/gemini-log-monitor");
-      const geminiAgent = require("../agents/gemini-cli");
+      const GeminiLogMonitor = require("../../agents/gemini-log-monitor");
+      const geminiAgent = require("../../agents/gemini-cli");
       _geminiMonitor = new GeminiLogMonitor(geminiAgent, (sid, state, event, extra) => {
         updateSession(sid, state, event, null, extra.cwd, null, null, null, "gemini-cli");
       });

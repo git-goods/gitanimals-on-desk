@@ -22,7 +22,7 @@ const SIZES = {
 
 // i18n string pool + translator factory live in src/i18n.js so the future
 // settings panel can share them. menu.js binds the translator to ctx.lang.
-const { createTranslator } = require("./settings/i18n");
+const { createTranslator } = require("../settings/i18n");
 
 const { shell } = require("electron");
 
@@ -63,10 +63,10 @@ module.exports = function initMenu(ctx) {
     if (ctx.tray) return;
     let icon;
     if (isMac) {
-      icon = nativeImage.createFromPath(path.join(__dirname, "../assets/tray-iconTemplate.png"));
+      icon = nativeImage.createFromPath(path.join(__dirname, "../../assets/tray-iconTemplate.png"));
       icon.setTemplateImage(true);
     } else {
-      icon = nativeImage.createFromPath(path.join(__dirname, "../assets/tray-icon.png")).resize({ width: 32, height: 32 });
+      icon = nativeImage.createFromPath(path.join(__dirname, "../../assets/tray-icon.png")).resize({ width: 32, height: 32 });
     }
     ctx.tray = new Tray(icon);
     ctx.tray.setToolTip("GitAnimals Desktop Pet");
@@ -337,7 +337,7 @@ module.exports = function initMenu(ctx) {
       frame: false, transparent: false,
       show: false,
       webPreferences: {
-        preload: path.join(__dirname, "preload", "prompt.js"),
+        preload: path.join(__dirname, "..", "preload", "prompt.js"),
         nodeIntegration: false,
         contextIsolation: true,
       },
