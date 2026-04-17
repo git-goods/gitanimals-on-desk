@@ -40,7 +40,7 @@ function _loadDsn() {
   // step, this block is a no-op.
   try {
     const fs = require("fs");
-    const envPath = path.resolve(__dirname, "..", ".env");
+    const envPath = path.resolve(__dirname, "..", "..", ".env");
     if (fs.existsSync(envPath)) {
       const raw = fs.readFileSync(envPath, "utf8");
       for (const line of raw.split(/\r?\n/)) {
@@ -50,7 +50,7 @@ function _loadDsn() {
     }
   } catch { /* ignore */ }
   try {
-    const pkg = require("../package.json");
+    const pkg = require("../../package.json");
     if (pkg && pkg.sentry && pkg.sentry.dsn) return pkg.sentry.dsn;
   } catch { /* ignore */ }
   return null;

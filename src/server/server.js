@@ -15,7 +15,7 @@ const {
   writeRuntimeConfig,
 } = require("../../hooks/server-config");
 const { bc, report } = (() => {
-  try { return require("../telemetry"); } catch { return { bc() {}, report() {} }; }
+  try { return require("../core/telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
 
 // ExitPlanMode (Plan Review) and AskUserQuestion (elicitation) happen to

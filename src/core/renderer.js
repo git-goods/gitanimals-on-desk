@@ -42,7 +42,7 @@ function initWithConfig(cfg) {
   tc = cfg || {};
   _viewBox = tc.viewBox || { x: -15, y: -25, width: 45, height: 45 };
   _layout = tc.layout || null;
-  _assetsPath = tc.assetsPath || "../assets/svg";
+  _assetsPath = tc.assetsPath || "../../assets/svg";
   _sourceAssetsPath = tc.sourceAssetsPath || null;
   _eyeIds = (tc.eyeTracking && tc.eyeTracking.ids) || { eyes: "eyes-js", body: "body-js", shadow: "shadow-js", dozeEyes: "eyes-doze" };
   _bodyScale = (tc.eyeTracking && tc.eyeTracking.bodyScale) || 0.33;

@@ -59,7 +59,7 @@
 - 미등록 에이전트 기본 true (하위 호환)
 - `server.js`의 `shouldBypassCCBubble()` / `shouldBypassOpencodeBubble()`에서 사용
 
-## 극간모드 (mini.js)
+## 극간모드 (core/mini.js)
 
 캐릭터가 화면 오른쪽 가장자리에 숨고, 윈도우 절반이 화면 밖으로 밀려나 자연스럽게 가려짐.
 
@@ -87,7 +87,7 @@
 | mini-enter-sleep | DND 상태 진입 애니메이션 |
 | mini-sleep | DND 수면: Zzz + hover 시 탐색 (미각성) |
 
-## 터미널 포커스 (focus.js)
+## 터미널 포커스 (core/focus.js)
 
 - hook 스크립트가 `getStablePid()` → 프로세스 트리 탐색으로 터미널 PID 찾기
 - `source_pid`가 상태 업데이트와 함께 전송 → session 기록 저장
@@ -108,7 +108,7 @@
 - DRAG_THRESHOLD=3px 초과 시 드래그, 이하는 클릭
 - 반응 중 눈동자 추적 detach, 종료 후 reattach
 
-## 효과음 (main.js → IPC → renderer.js)
+## 효과음 (core/main.js → IPC → core/renderer.js)
 
 - `autoplay-policy: "no-user-gesture-required"` — Chromium autoplay 제한 해제
 - `playSound(name)`: soundMuted·DND·10초 쿨다운 검사 → IPC `play-sound`
