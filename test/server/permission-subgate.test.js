@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const { shouldBypassCCBubble, shouldBypassOpencodeBubble } = require("../src/server").__test;
+const { shouldBypassCCBubble, shouldBypassOpencodeBubble } = require("../../src/server/server").__test;
 
 function makeCtx({ enabled = true } = {}) {
   return {

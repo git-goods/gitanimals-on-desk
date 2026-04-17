@@ -61,8 +61,8 @@ const SIZES = {
 // Module-level `lang`/`showTray`/etc. below are mirror caches kept in sync via
 // a subscriber wired after menu.js loads. The ctx setters route writes through
 // `_settingsController.applyUpdate()`, which auto-persists.
-const prefsModule = require("./prefs");
-const { createSettingsController } = require("./settings-controller");
+const prefsModule = require("./settings/prefs");
+const { createSettingsController } = require("./settings/controller");
 const loginItemHelpers = require("./settings/login-item");
 const PREFS_PATH = path.join(app.getPath("userData"), "gitanimals-prefs.json");
 const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
@@ -210,9 +210,9 @@ function stopMonitorForAgent(agentId) {
 }
 
 // ── Theme loader ──
-const themeLoader = require("./theme-loader");
+const themeLoader = require("./theme/loader");
 themeLoader.init(__dirname, app.getPath("userData"));
-const remoteThemeSync = require("./remote-theme-sync");
+const remoteThemeSync = require("./theme/remote-sync");
 remoteThemeSync.init(app.getPath("userData"));
 
 let activeTheme = themeLoader.loadTheme(_settingsController.get("theme") || "fox");
@@ -474,7 +474,7 @@ const _permCtx = {
     if (s && s.sourcePid) focusTerminalWindow(s.sourcePid, s.cwd, s.editor, s.pidChain);
   },
 };
-const _perm = require("./permission")(_permCtx);
+const _perm = require("./server/permission")(_permCtx);
 const { showPermissionBubble, resolvePermissionEntry, sendPermissionResponse, repositionBubbles, permLog, PASSTHROUGH_TOOLS, showCodexNotifyBubble, clearCodexNotifyBubbles, syncPermissionShortcuts, replyOpencodePermission } = _perm;
 const pendingPermissions = _perm.pendingPermissions;
 let permDebugLog = null; // set after app.whenReady()
@@ -490,7 +490,7 @@ const _updateBubbleCtx = {
   guardAlwaysOnTop,
   reapplyMacVisibility,
 };
-const _updateBubble = require("./update-bubble")(_updateBubbleCtx);
+const _updateBubble = require("./update/bubble")(_updateBubbleCtx);
 const {
   showUpdateBubble,
   hideUpdateBubble,
@@ -662,7 +662,7 @@ const _serverCtx = {
   replyOpencodePermission,
   permLog,
 };
-const _server = require("./server")(_serverCtx);
+const _server = require("./server/server")(_serverCtx);
 const { startHttpServer, getHookServerPort } = _server;
 
 // ── alwaysOnTop recovery (Windows DWM / Shell can strip TOPMOST flag) ──
@@ -954,7 +954,7 @@ const _updaterCtx = {
   getSvgOverride: (state) => getSvgOverride(state),
   resetSoundCooldown: () => resetSoundCooldown(),
 };
-const _updater = require("./updater")(_updaterCtx);
+const _updater = require("./update/updater")(_updaterCtx);
 const { setupAutoUpdater, checkForUpdates, getUpdateMenuItem, getUpdateMenuLabel } = _updater;
 
 // ── Settings panel window ──
@@ -1017,7 +1017,7 @@ function openSettingsWindow() {
   if (iconPath) opts.icon = iconPath;
   settingsWindow = new BrowserWindow(opts);
   settingsWindow.setMenuBarVisibility(false);
-  settingsWindow.loadFile(path.join(__dirname, "settings.html"));
+  settingsWindow.loadFile(path.join(__dirname, "settings", "settings.html"));
   settingsWindow.once("ready-to-show", () => {
     settingsWindow.show();
     settingsWindow.focus();

@@ -1,7 +1,7 @@
 const { describe, it, beforeEach, mock } = require("node:test");
 const assert = require("node:assert");
 
-let initUpdater = require("../src/updater");
+let initUpdater = require("../../src/update/updater");
 
 function makeCtx(overrides = {}) {
   return {
@@ -56,8 +56,8 @@ function makeDeps(overrides = {}) {
 describe("updater visual flow", () => {
   beforeEach(() => {
     mock.restoreAll();
-    delete require.cache[require.resolve("../src/updater")];
-    initUpdater = require("../src/updater");
+    delete require.cache[require.resolve("../../src/update/updater")];
+    initUpdater = require("../../src/update/updater");
   });
 
   it("shows sweeping state and up-to-date bubble when latest version matches", async () => {
@@ -136,8 +136,8 @@ describe("updater visual flow", () => {
   it("shows a real error bubble when packaged download fails after user starts it", async () => {
     const originalPlatform = process.platform;
     Object.defineProperty(process, "platform", { value: "win32" });
-    delete require.cache[require.resolve("../src/updater")];
-    initUpdater = require("../src/updater");
+    delete require.cache[require.resolve("../../src/update/updater")];
+    initUpdater = require("../../src/update/updater");
     const bubbles = [];
     const handlers = {};
     const ctx = makeCtx({
@@ -191,8 +191,8 @@ describe("updater visual flow", () => {
     let downloadCalled = false;
     Object.defineProperty(process, "platform", { value: "darwin" });
     try {
-      delete require.cache[require.resolve("../src/updater")];
-      initUpdater = require("../src/updater");
+      delete require.cache[require.resolve("../../src/update/updater")];
+      initUpdater = require("../../src/update/updater");
       const ctx = makeCtx({
         showUpdateBubble: async (payload) => {
           bubbles.push(payload);

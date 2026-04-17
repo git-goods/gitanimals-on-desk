@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const electron = require("electron");
 const { bc, report } = (() => {
-  try { return require("./telemetry"); } catch { return { bc() {}, report() {} }; }
+  try { return require("../telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
 
 function makeTranslate(ctx) {

@@ -56,9 +56,9 @@
 // createSettingsController never see it, so the only way to mutate state is
 // through this controller.
 
-const { createStore } = require("./settings-store");
+const { createStore } = require("./store");
 const prefsModule = require("./prefs");
-const defaultActions = require("./settings-actions");
+const defaultActions = require("./actions");
 
 function createSettingsController({
   prefsPath,

@@ -13,9 +13,9 @@ const {
   getPortCandidates,
   readRuntimePort,
   writeRuntimeConfig,
-} = require("../hooks/server-config");
+} = require("../../hooks/server-config");
 const { bc, report } = (() => {
-  try { return require("./telemetry"); } catch { return { bc() {}, report() {} }; }
+  try { return require("../telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
 
 // ExitPlanMode (Plan Review) and AskUserQuestion (elicitation) happen to
@@ -44,7 +44,7 @@ function getHookServerPort() {
 
 function syncGitAnimalsHooks() {
   try {
-    const { registerHooks } = require("../hooks/install.js");
+    const { registerHooks } = require("../../hooks/install.js");
     const { added, updated, removed } = registerHooks({
       silent: true,
       autoStart: ctx.autoStartWithClaude,
@@ -60,7 +60,7 @@ function syncGitAnimalsHooks() {
 
 function syncGeminiHooks() {
   try {
-    const { registerGeminiHooks } = require("../hooks/gemini-install.js");
+    const { registerGeminiHooks } = require("../../hooks/gemini-install.js");
     const { added, updated } = registerGeminiHooks({ silent: true });
     if (added > 0 || updated > 0) {
       console.log(`GitAnimals: synced Gemini hooks (added ${added}, updated ${updated})`);
@@ -72,7 +72,7 @@ function syncGeminiHooks() {
 
 function syncCodeBuddyHooks() {
   try {
-    const { registerCodeBuddyHooks } = require("../hooks/codebuddy-install.js");
+    const { registerCodeBuddyHooks } = require("../../hooks/codebuddy-install.js");
     const { added, updated } = registerCodeBuddyHooks({ silent: true });
     if (added > 0 || updated > 0) {
       console.log(`GitAnimals: synced CodeBuddy hooks (added ${added}, updated ${updated})`);
@@ -84,7 +84,7 @@ function syncCodeBuddyHooks() {
 
 function syncKiroHooks() {
   try {
-    const { registerKiroHooks } = require("../hooks/kiro-install.js");
+    const { registerKiroHooks } = require("../../hooks/kiro-install.js");
     const { added, updated } = registerKiroHooks({ silent: true });
     if (added > 0 || updated > 0) {
       console.log(`GitAnimals: synced Kiro hooks (added ${added}, updated ${updated})`);
@@ -96,7 +96,7 @@ function syncKiroHooks() {
 
 function syncCursorHooks() {
   try {
-    const { registerCursorHooks } = require("../hooks/cursor-install.js");
+    const { registerCursorHooks } = require("../../hooks/cursor-install.js");
     const { added, updated } = registerCursorHooks({ silent: true });
     if (added > 0 || updated > 0) {
       console.log(`GitAnimals: synced Cursor hooks (added ${added}, updated ${updated})`);
@@ -108,7 +108,7 @@ function syncCursorHooks() {
 
 function syncOpencodePlugin() {
   try {
-    const { registerOpencodePlugin } = require("../hooks/opencode-install.js");
+    const { registerOpencodePlugin } = require("../../hooks/opencode-install.js");
     const { added, created } = registerOpencodePlugin({ silent: true });
     if (added || created) {
       console.log(`GitAnimals: synced opencode plugin (added=${added}, created=${created})`);
