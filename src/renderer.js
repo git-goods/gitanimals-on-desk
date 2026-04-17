@@ -76,6 +76,11 @@ function initWithConfig(cfg) {
   _transitions = tc.transitions || {};
   _miniFlipAssets = !!tc.miniFlipAssets;
 
+  // Accessories
+  _accessoriesDefs = tc.accessories || {};
+  _activeAccessories = tc.activeAccessories || [];
+  _accessorySvgCache.clear();
+
   applyObjectScaleStyle(petEl);
   applyObjectScaleStyle(pendingNext);
 }
@@ -179,6 +184,12 @@ let _layerTargetDy = 0;           // raw dy from tick.js
 let _layerAnimFrame = null;        // requestAnimationFrame handle
 let _layeredTrackingObj = null;    // the <object> element currently tracked (guard against re-init)
 
+// ── Accessory injection state ──
+let _accessoriesDefs = {};            // from theme config: { name: { file, anchors } }
+let _activeAccessories = [];          // list of accessory names currently enabled
+const _accessorySvgCache = new Map(); // file → parsed SVG text cache
+let _accessoryInjectToken = 0;        // stale injection guard
+
 initWithConfig(tc);
 
 // Theme switch: reload + IPC push overrides additionalArguments
@@ -272,6 +283,8 @@ function getObjectSvgName(objectEl) {
 function needsObjectChannel(state, file) {
   if (!file) return false;
   if (!file.endsWith(".svg")) return false;
+  // Object channel needed for eye tracking OR accessory injection (both need SVG DOM access)
+  if (_activeAccessories.length > 0) return true;
   return _eyeTrackingStates.includes(state);
 }
 
@@ -439,6 +452,9 @@ function swapToFile(file, state, useObjectChannel) {
         attachEyeTracking(next);
       }
       if (miniLeftFlip) applyGlyphFlipCompensation(next);
+      if (_activeAccessories.length > 0) {
+        injectAccessories(next, state);
+      }
     };
 
     next.addEventListener("load", swap, { once: true });
@@ -719,6 +735,91 @@ function _cleanupLayeredTracking() {
   _layerTargetDx = 0;
   _layerTargetDy = 0;
   _layeredTrackingObj = null;
+}
+
+// ── Accessory injection ──
+
+function _removeInjectedAccessories(svgDoc) {
+  if (!svgDoc) return;
+  try {
+    const injected = svgDoc.querySelectorAll("[data-accessory]");
+    for (const el of injected) el.remove();
+  } catch {}
+}
+
+async function _fetchAccessorySvg(file) {
+  if (_accessorySvgCache.has(file)) return _accessorySvgCache.get(file);
+  const url = getAssetUrl(file);
+  try {
+    const resp = await fetch(url);
+    const text = await resp.text();
+    _accessorySvgCache.set(file, text);
+    return text;
+  } catch (e) {
+    console.warn("[accessory] Failed to fetch", file, e.message);
+    return null;
+  }
+}
+
+function injectAccessories(objectEl, state) {
+  if (!objectEl || objectEl.tagName !== "OBJECT") return;
+  const token = ++_accessoryInjectToken;
+
+  const tryInject = (attempt) => {
+    if (token !== _accessoryInjectToken) return;
+    if (!objectEl || !objectEl.isConnected) return;
+
+    let svgDoc;
+    try { svgDoc = objectEl.contentDocument; } catch { return; }
+    if (!svgDoc) {
+      if (attempt < 60) setTimeout(() => tryInject(attempt + 1), 16);
+      return;
+    }
+
+    _removeInjectedAccessories(svgDoc);
+
+    for (const accName of _activeAccessories) {
+      const def = _accessoriesDefs[accName];
+      if (!def || !def.anchors) continue;
+
+      // Resolve anchor for current state: specific state → "*" fallback → null (skip)
+      const anchor = def.anchors[state] !== undefined ? def.anchors[state] : (def.anchors["*"] || null);
+      if (!anchor) continue;
+      console.log(`[accessory] injecting "${accName}" into state="${state}", parentId="${anchor.parentId}", transform="${anchor.transform}"`);
+
+      // "root" = append to SVG document element; otherwise find by ID
+      const parent = anchor.parentId === "root"
+        ? svgDoc.documentElement
+        : svgDoc.getElementById(anchor.parentId);
+      if (!parent) continue;
+
+      _fetchAccessorySvg(def.file).then((svgText) => {
+        if (token !== _accessoryInjectToken) return;
+        if (!svgText) return;
+
+        try {
+          const parser = new DOMParser();
+          const accDoc = parser.parseFromString(svgText, "image/svg+xml");
+          const sourceG = accDoc.querySelector("g");
+          if (!sourceG) return;
+
+          const wrapper = svgDoc.createElementNS("http://www.w3.org/2000/svg", "g");
+          wrapper.setAttribute("data-accessory", accName);
+          if (anchor.transform) wrapper.setAttribute("transform", anchor.transform);
+
+          // Import all children of the source <g> into the target SVG document
+          for (const child of [...sourceG.childNodes]) {
+            wrapper.appendChild(svgDoc.importNode(child, true));
+          }
+          parent.appendChild(wrapper);
+        } catch (e) {
+          console.warn("[accessory] Injection failed for", accName, e.message);
+        }
+      });
+    }
+  };
+
+  tryInject(0);
 }
 
 // ── Attach / Detach (dispatches to correct system) ──
