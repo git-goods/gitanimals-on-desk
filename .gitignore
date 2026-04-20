@@ -71,4 +71,3 @@ scripts/*
 
 # Cursor local config (MCP, rules from omc setup)
 .cursor/
-!scripts/mock-auth-server.js
