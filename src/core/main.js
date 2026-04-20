@@ -142,6 +142,7 @@ const _settingsController = createSettingsController({
     setTelemetryEnabled: (v) => telemetry.setEnabled(v),
     getDiscoveredThemes: () => themeLoader.discoverThemes(),
     getActiveThemeId: () => (activeTheme ? activeTheme._id : "fox"),
+    resyncPersonas: () => personaSync.syncAll({ force: true }),
   },
 });
 
