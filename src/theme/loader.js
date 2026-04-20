@@ -82,6 +82,10 @@ let userDataDir = null;        // app.getPath("userData") — set by init()
 let userThemesDir = null;      // {userData}/themes/
 let themeCacheDir = null;      // {userData}/theme-cache/
 
+// Variant map: variant ID → { parentId, parentDir, accessories, builtin, source }
+// Populated by discoverThemes(), consumed by loadTheme().
+let _variantMap = {};
+
 // ── Public API ──
 
 /**
@@ -108,6 +112,7 @@ function init(appDir, userData) {
 function discoverThemes() {
   const themes = [];
   const seen = new Set();
+  _variantMap = {};
 
   // Built-in themes
   if (builtinThemesDir) {
@@ -138,10 +143,32 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
       if (!fs.existsSync(jsonPath)) continue;
       try {
         const cfg = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-        const item = { id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin };
-        if (opts.source) item.source = opts.source;
-        themes.push(item);
-        seen.add(entry.name);
+        const themeDir = path.join(dir, entry.name);
+
+        // Variants: if theme declares variants, register each as a separate selectable entry
+        if (Array.isArray(cfg.variants) && cfg.variants.length > 0) {
+          for (const v of cfg.variants) {
+            if (!v.id || !v.name || seen.has(v.id)) continue;
+            _variantMap[v.id] = {
+              parentId: entry.name,
+              parentDir: themeDir,
+              accessories: Array.isArray(v.accessories) ? v.accessories : [],
+              builtin,
+              source: opts.source || null,
+            };
+            const item = { id: v.id, name: v.name, path: jsonPath, builtin };
+            if (opts.source) item.source = opts.source;
+            themes.push(item);
+            seen.add(v.id);
+          }
+          // Also mark the directory name as seen to prevent duplicate entries
+          seen.add(entry.name);
+        } else {
+          const item = { id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin };
+          if (opts.source) item.source = opts.source;
+          themes.push(item);
+          seen.add(entry.name);
+        }
       } catch { /* skip malformed */ }
     }
   } catch { /* dir not found */ }
@@ -153,8 +180,20 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
  * @returns {object} merged theme config
  */
 function loadTheme(themeId) {
+  // Resolve variant ID → parent theme directory
+  // Lazily populate variant map if not yet initialized (e.g. startup before discoverThemes)
+  if (Object.keys(_variantMap).length === 0) {
+    discoverThemes();
+  }
+  let variantAccessories = null;
+  let resolvedId = themeId;
+  if (_variantMap[themeId]) {
+    resolvedId = _variantMap[themeId].parentId;
+    variantAccessories = _variantMap[themeId].accessories;
+  }
+
   // Try built-in → user → cached-remote
-  const { raw, isBuiltin, themeDir, source } = _readThemeJson(themeId);
+  const { raw, isBuiltin, themeDir, source } = _readThemeJson(resolvedId);
 
   if (!raw) {
     console.error(`[theme-loader] Theme "${themeId}" not found`);
@@ -179,6 +218,9 @@ function loadTheme(themeId) {
   theme._themeDir = themeDir;
   theme._source = source || (isBuiltin ? "builtin" : "user");
 
+  // Variant: store active accessories list for renderer
+  theme._activeVariantAccessories = variantAccessories || [];
+
   if (source === "remote") {
     // Remote-cached theme: SVGs in {themeDir}/assets/ are already sanitized by remote-theme-sync
     const assetsDir = path.join(themeDir, "assets");
@@ -186,7 +228,7 @@ function loadTheme(themeId) {
     theme._assetsFileUrl = pathToFileURL(assetsDir).href;
   } else if (!isBuiltin) {
     // External theme: sanitize SVGs + resolve asset paths
-    const assetsDir = _resolveExternalAssetsDir(themeId, themeDir);
+    const assetsDir = _resolveExternalAssetsDir(resolvedId, themeDir);
     theme._assetsDir = assetsDir;
     theme._assetsFileUrl = pathToFileURL(assetsDir).href;
   } else {
@@ -468,7 +510,8 @@ function getRendererAssetsPath() {
     if (fs.existsSync(themeAssetsDir)) {
       // Use relative path (not file:// URL) so SVG internal <style> works
       // file:// absolute URLs may cause browser to restrict inline CSS in SVG
-      return "../../themes/" + activeTheme._id + "/assets";
+      // Use directory basename (not _id) — variant IDs differ from dir names
+      return "../../themes/" + path.basename(activeTheme._themeDir) + "/assets";
     }
     return "../../assets/svg";
   }
@@ -516,6 +559,8 @@ function getRendererConfig() {
     eyeTrackingStates: t.eyeTracking.enabled ? t.eyeTracking.states : [],
     objectScale: t.objectScale,
     transitions: t.transitions || {},
+    accessories: t.accessories || {},
+    activeAccessories: t._activeVariantAccessories || [],
   };
 }
 
@@ -588,6 +633,52 @@ function validateTheme(cfg) {
     const cb = cfg.layout.contentBox;
     if (!cb || cb.x == null || cb.y == null || cb.width == null || cb.height == null) {
       errors.push("layout.contentBox must include x, y, width, height");
+    }
+  }
+
+  // accessories validation
+  if (cfg.accessories && typeof cfg.accessories === "object") {
+    for (const [accName, acc] of Object.entries(cfg.accessories)) {
+      if (!acc || typeof acc !== "object") {
+        errors.push(`accessories.${accName} must be an object`);
+        continue;
+      }
+      if (!acc.file || typeof acc.file !== "string") {
+        errors.push(`accessories.${accName}.file is required and must be a string`);
+      } else if (!acc.file.endsWith(".svg")) {
+        errors.push(`accessories.${accName}.file must be .svg, got "${acc.file}"`);
+      }
+      if (!acc.anchors || typeof acc.anchors !== "object") {
+        errors.push(`accessories.${accName}.anchors is required and must be an object`);
+      }
+    }
+  }
+
+  // variants validation
+  if (cfg.variants) {
+    if (!Array.isArray(cfg.variants)) {
+      errors.push("variants must be an array");
+    } else {
+      const variantIds = new Set();
+      for (const v of cfg.variants) {
+        if (!v.id || typeof v.id !== "string") {
+          errors.push("each variant must have a string id");
+        } else if (variantIds.has(v.id)) {
+          errors.push(`duplicate variant id: "${v.id}"`);
+        } else {
+          variantIds.add(v.id);
+        }
+        if (!v.name || typeof v.name !== "string") {
+          errors.push(`variant "${v.id || "?"}" must have a string name`);
+        }
+        if (v.accessories && Array.isArray(v.accessories) && cfg.accessories) {
+          for (const accRef of v.accessories) {
+            if (!cfg.accessories[accRef]) {
+              errors.push(`variant "${v.id}" references unknown accessory "${accRef}"`);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -697,6 +788,9 @@ function mergeDefaults(raw, themeId, isBuiltin) {
   // idleAnimations
   theme.idleAnimations = raw.idleAnimations || [];
 
+  // accessories
+  theme.accessories = raw.accessories || {};
+
   // ── Filename sanitization: basename all file references to prevent path traversal ──
   const bn = (f) => typeof f === "string" ? f.replace(/^.*[\/\\]/, "") : f;
   for (const [s, files] of Object.entries(theme.states || {})) {
@@ -730,6 +824,11 @@ function mergeDefaults(raw, themeId, isBuiltin) {
   }
   if (Array.isArray(theme.wideHitboxFiles)) theme.wideHitboxFiles = theme.wideHitboxFiles.map(bn);
   if (Array.isArray(theme.sleepingHitboxFiles)) theme.sleepingHitboxFiles = theme.sleepingHitboxFiles.map(bn);
+  if (theme.accessories) {
+    for (const acc of Object.values(theme.accessories)) {
+      if (acc && acc.file) acc.file = bn(acc.file);
+    }
+  }
 
   return theme;
 }
