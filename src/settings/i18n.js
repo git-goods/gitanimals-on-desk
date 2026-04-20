@@ -69,6 +69,7 @@ const i18n = {
     openThemeDir: "Open Theme Folder…",
     settings: "Settings…",
     toggleShortcut: "Toggle Shortcut: {shortcut}",
+    logout: "Sign Out",
     quit: "Quit",
   },
   zh: {
@@ -134,6 +135,7 @@ const i18n = {
     openThemeDir: "打开主题文件夹…",
     settings: "设置…",
     toggleShortcut: "切换快捷键: {shortcut}",
+    logout: "退出登录",
     quit: "退出",
   },
 };

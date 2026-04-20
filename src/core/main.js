@@ -215,6 +215,11 @@ themeLoader.init(path.join(__dirname, ".."), app.getPath("userData"));
 const remoteThemeSync = require("../theme/remote-sync");
 remoteThemeSync.init(app.getPath("userData"));
 
+// ── Auth gate ──
+const { shouldShowLogin } = require("../auth/gate");
+const { LoginWindow } = require("../auth/login-window");
+const tokenStore = require("../auth/token-store");
+
 let activeTheme = themeLoader.loadTheme(_settingsController.get("theme") || "fox");
 
 // ── CSS <object> sizing (from theme) ──
@@ -815,6 +820,11 @@ const _menuCtx = {
   getActiveThemeId: () => activeTheme ? activeTheme._id : "fox",
   ensureUserThemesDir: () => themeLoader.ensureUserThemesDir(),
   openSettingsWindow: () => openSettingsWindow(),
+  logout: () => {
+    tokenStore.clear();
+    app.relaunch();
+    app.exit(0);
+  },
 };
 const _menu = require("./menu")(_menuCtx);
 const { t, buildContextMenu, buildTrayMenu, rebuildAllMenus, createTray,
@@ -1615,40 +1625,7 @@ if (!gotTheLock) {
     }
   }
 
-  app.whenReady().then(() => {
-    // Import system-backed settings (openAtLogin) into prefs on first run.
-    // Must run before createWindow() so the first menu draw sees the
-    // hydrated value rather than the schema default.
-    hydrateSystemBackedSettings();
-
-    // Reconcile telemetry with user preference. Default is true (opt-out).
-    try {
-      const snap = _settingsController.getSnapshot();
-      const wantTelemetry = snap.sendDiagnostics !== false;
-      telemetry.setEnabled(wantTelemetry);
-      bc("app", "whenReady", {
-        version: app.getVersion(),
-        packaged: app.isPackaged,
-        platform: process.platform,
-        arch: process.arch,
-        telemetry: wantTelemetry,
-      });
-    } catch {}
-
-    // macOS/Windows power + focus signals — helpful for "pet disappears after
-    // wake" / "pet disappears after switching Space" reports.
-    try {
-      powerMonitor.on("suspend",       () => bc("power", "suspend"));
-      powerMonitor.on("resume",        () => bc("power", "resume", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
-      powerMonitor.on("lock-screen",   () => bc("power", "lock-screen"));
-      powerMonitor.on("unlock-screen", () => bc("power", "unlock-screen", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
-      app.on("did-become-active",      () => bc("app", "did-become-active", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
-      app.on("did-resign-active",      () => bc("app", "did-resign-active"));
-      app.on("child-process-gone", (_e, details) => {
-        try { report("[app] child-process-gone", "error", details); } catch {}
-      });
-    } catch {}
-
+  function _bootApp() {
     permDebugLog = path.join(app.getPath("userData"), "permission-debug.log");
     updateDebugLog = path.join(app.getPath("userData"), "update-debug.log");
     createWindow();
@@ -1712,6 +1689,52 @@ if (!gotTheLock) {
 
     // Auto-updater: setup event handlers (user triggers check via tray menu)
     setupAutoUpdater();
+  }
+
+  app.whenReady().then(async () => {
+    // Import system-backed settings (openAtLogin) into prefs on first run.
+    // Must run before createWindow() so the first menu draw sees the
+    // hydrated value rather than the schema default.
+    hydrateSystemBackedSettings();
+
+    // Reconcile telemetry with user preference. Default is true (opt-out).
+    try {
+      const snap = _settingsController.getSnapshot();
+      const wantTelemetry = snap.sendDiagnostics !== false;
+      telemetry.setEnabled(wantTelemetry);
+      bc("app", "whenReady", {
+        version: app.getVersion(),
+        packaged: app.isPackaged,
+        platform: process.platform,
+        arch: process.arch,
+        telemetry: wantTelemetry,
+      });
+    } catch {}
+
+    // macOS/Windows power + focus signals — helpful for "pet disappears after
+    // wake" / "pet disappears after switching Space" reports.
+    try {
+      powerMonitor.on("suspend",       () => bc("power", "suspend"));
+      powerMonitor.on("resume",        () => bc("power", "resume", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
+      powerMonitor.on("lock-screen",   () => bc("power", "lock-screen"));
+      powerMonitor.on("unlock-screen", () => bc("power", "unlock-screen", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
+      app.on("did-become-active",      () => bc("app", "did-become-active", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
+      app.on("did-resign-active",      () => bc("app", "did-resign-active"));
+      app.on("child-process-gone", (_e, details) => {
+        try { report("[app] child-process-gone", "error", details); } catch {}
+      });
+    } catch {}
+
+    if (shouldShowLogin()) {
+      const _loginWin = new LoginWindow();
+      _loginWin.once("authenticated", () => {
+        _loginWin.cleanup();
+        _bootApp();
+      });
+      await _loginWin.open();
+    } else {
+      _bootApp();
+    }
   });
 
   app.on("before-quit", () => {
