@@ -10,7 +10,7 @@ const { bc } = (() => {
   try { return require("../core/telemetry"); } catch { return { bc() {} }; }
 })();
 
-const GITANIMALS_BASE = (process.env.GITANIMALS_API_BASE_URL || "https://gitanimals.org").replace(/\/$/, "");
+const WEB_BASE = (process.env.WEB_BASE_URL || "https://gitanimals.org").replace(/\/$/, "");
 
 class LoginWindow extends EventEmitter {
   constructor() {
@@ -86,7 +86,7 @@ class LoginWindow extends EventEmitter {
   _openBrowser() {
     if (!this._cbServer) return;
     const redirectUri = `http://127.0.0.1:${this._cbServer.port}/auth/callback`;
-    const url = new URL(`${GITANIMALS_BASE}/auth/desktop`);
+    const url = new URL(`${WEB_BASE}/auth/desktop`);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", this._cbServer.state);
     bc("auth", "login.start");
