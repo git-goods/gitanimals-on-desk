@@ -10,7 +10,7 @@ const { bc, report } = (() => {
 })();
 
 // ── Agent icons (official logos from assets/icons/agents/) ──
-const AGENT_ICON_DIR = path.join(__dirname, "..", "assets", "icons", "agents");
+const AGENT_ICON_DIR = path.join(__dirname, "..", "..", "assets", "icons", "agents");
 const _agentIconCache = new Map();
 
 function getAgentIcon(agentId) {

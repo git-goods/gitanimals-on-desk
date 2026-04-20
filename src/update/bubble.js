@@ -111,7 +111,7 @@ module.exports = function initUpdateBubble(ctx) {
       focusable: false,
       ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
       webPreferences: {
-        preload: path.join(__dirname, "preload", "update-bubble.js"),
+        preload: path.join(__dirname, "..", "preload", "update-bubble.js"),
         nodeIntegration: false,
         contextIsolation: true,
       },
@@ -119,7 +119,7 @@ module.exports = function initUpdateBubble(ctx) {
 
     if (isWin) bubble.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
 
-    bubble.loadFile(path.join(__dirname, "update-bubble.html"));
+    bubble.loadFile(path.join(__dirname, "bubble.html"));
     bubble.on("closed", () => {
       bubble = null;
       measuredHeight = 0;

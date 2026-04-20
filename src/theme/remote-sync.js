@@ -172,7 +172,7 @@ async function _syncTheme(themeId, baseUrl, { force = false } = {}) {
   const requiredFiles = _extractThemeFileList(themeRaw);
 
   // 3. Fetch SVGs (sanitize via theme-loader's exported helper)
-  const { sanitizeSvg } = require("./theme-loader");
+  const { sanitizeSvg } = require("./loader");
   const newFilesMeta = { ...(meta.files || {}) };
   let allOk = true;
 

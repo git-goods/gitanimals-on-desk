@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const remoteThemeSync = require("../src/remote-theme-sync");
+const remoteThemeSync = require("../../src/theme/remote-sync");
 
 // ── Test fixtures ──
 

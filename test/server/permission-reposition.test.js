@@ -1,7 +1,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const permission = require("../src/permission");
+const permission = require("../../src/server/permission");
 const { computeBubbleStackLayout } = permission.__test;
 
 // Common defaults so each test only spells out what's interesting.

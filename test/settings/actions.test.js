@@ -8,8 +8,8 @@ const {
   requireBoolean,
   requireFiniteNumber,
   requireEnum,
-} = require("../src/settings-actions");
-const prefs = require("../src/prefs");
+} = require("../../src/settings/actions");
+const prefs = require("../../src/settings/prefs");
 
 describe("validator helpers", () => {
   it("requireBoolean accepts only booleans", () => {
