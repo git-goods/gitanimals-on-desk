@@ -122,7 +122,7 @@ GitHub Secrets 등록이 완료되면, 다음 파일들이 변경되어야 합�
 3. **`.github/workflows/build.yml`** `build-mac` job에 환경변수 추가:
    - `CSC_LINK`, `CSC_KEY_PASSWORD`
    - `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
-4. **`src/updater.js`** macOS 분기 제거 → Windows와 동일하게 `autoUpdater.downloadUpdate()` 통합
+4. **`src/update/updater.js`** macOS 분기 제거 → Windows와 동일하게 `autoUpdater.downloadUpdate()` 통합
 
 ---
 
