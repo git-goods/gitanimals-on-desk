@@ -13,6 +13,8 @@
     "mock-server": "python3 -m http.server --directory .mock-server 8765",
     "dev": "node scripts/dev.js",
     "dev:clean": "node scripts/clean-cache.js && node scripts/dev.js",
+    "dev:real": "node launch.js",
+    "clear-auth": "node scripts/clear-auth.js",
     "clean-cache": "node scripts/clean-cache.js",
     "install:gemini-hooks": "node hooks/gemini-install.js",
     "install:cursor-hooks": "node hooks/cursor-install.js",
