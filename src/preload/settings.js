@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld("settingsAPI", {
   update: (key, value) => ipcRenderer.invoke("settings:update", { key, value }),
   command: (action, payload) => ipcRenderer.invoke("settings:command", { action, payload }),
   listAgents: () => ipcRenderer.invoke("settings:list-agents"),
+  listThemes: () => ipcRenderer.invoke("settings:list-themes"),
   onChanged: (cb) => {
     if (typeof cb === "function") listeners.add(cb);
   },
