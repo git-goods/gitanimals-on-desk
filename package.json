@@ -11,6 +11,7 @@
     "build:all": "electron-builder --win --mac --linux",
     "test": "node --test test/",
     "mock-server": "python3 -m http.server --directory .mock-server 8765",
+    "mock-server:auth": "node scripts/mock-auth-server.js",
     "dev": "node scripts/dev.js",
     "dev:clean": "node scripts/clean-cache.js && node scripts/dev.js",
     "clean-cache": "node scripts/clean-cache.js",
