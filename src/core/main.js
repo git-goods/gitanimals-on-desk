@@ -212,8 +212,8 @@ function stopMonitorForAgent(agentId) {
 // ── Theme loader ──
 const themeLoader = require("../theme/loader");
 themeLoader.init(path.join(__dirname, ".."), app.getPath("userData"));
-const remoteThemeSync = require("../theme/remote-sync");
-remoteThemeSync.init(app.getPath("userData"));
+const personaSync = require("../theme/persona-sync");
+personaSync.init(app.getPath("userData"));
 
 // ── Auth gate ──
 const { shouldShowLogin } = require("../auth/gate");
@@ -1635,12 +1635,19 @@ if (!gotTheLock) {
 
     // Background: fetch remote theme registry + per-theme configs & assets.
     // Menu is rebuilt on each successful theme sync so new themes appear.
-    remoteThemeSync.onSyncComplete(() => {
+    personaSync.onSyncComplete(() => {
       try { rebuildAllMenus(); } catch (err) {
-        console.warn("GitAnimals: rebuildAllMenus after remote sync failed:", err && err.message);
+        console.warn("GitAnimals: rebuildAllMenus after persona sync failed:", err && err.message);
       }
     });
-    remoteThemeSync.syncAll();
+    personaSync.onUnauthorized(() => {
+      try { bc("auth", "session.expired"); } catch {}
+      tokenStore.clear();
+      const reloginWin = new LoginWindow();
+      reloginWin.once("authenticated", () => { reloginWin.cleanup(); personaSync.syncAll({ force: true }); });
+      reloginWin.open().catch((e) => console.warn("[auth] relogin window failed:", e.message));
+    });
+    personaSync.syncAll();
 
     // Construct log monitors. We always instantiate them so toggling the
     // agent on/off later can call start()/stop() without paying the require
