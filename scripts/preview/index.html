@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Theme Preview</title>
+  <link rel="stylesheet" href="preview.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="state-buttons">
+    <button class="state-btn active" id="btn-single" onclick="setMode('single')">Single</button>
+    <button class="state-btn" id="btn-gallery" onclick="setMode('gallery')">Gallery</button>
+  </div>
+
+  <label>Theme</label>
+  <select id="theme-select"></select>
+
+  <label>State</label>
+  <div class="state-buttons" id="state-buttons"></div>
+</div>
+
+<!-- Single mode -->
+<div class="main-area" id="single-mode">
+  <div class="preview-panel">
+    <div class="preview-container" id="pet-container"></div>
+  </div>
+
+  <div class="controls-panel">
+    <h3>Accessories</h3>
+    <div id="accessory-list"></div>
+
+    <h3>Transform Editor</h3>
+    <div id="transform-editor">
+      <p style="color:#666; font-size:12px;">Select an accessory above to adjust</p>
+    </div>
+
+    <h3>Theme Info</h3>
+    <div id="theme-info" style="font-size:12px; color:#888;"></div>
+  </div>
+</div>
+
+<!-- Gallery mode -->
+<div class="gallery-mode" id="gallery-mode" style="display:none;"></div>
+
+<div class="status-bar">
+  <span id="status-text">Loading...</span>
+  <span id="watch-status" class="disconnected">disconnected</span>
+</div>
+
+<script src="preview-renderer.js"></script>
+<script>
+// ── App State ──
+let themes = [];
+let currentThemeId = null;
+let currentThemeConfig = null;   // full theme.json (from /config endpoint)
+let currentRendererConfig = null;
+let currentState = "idle";
+let selectedAccessory = null;
+
+const STATES = ["idle", "thinking", "working", "sleeping", "waking"];
+const MINI_STATES = ["mini-idle", "mini-alert", "mini-happy", "mini-sleep"];
+
+// ── Init ──
+async function init() {
+  await loadThemes();
+  setupStateButtons();
+  setupSSE();
+}
+
+async function loadThemes() {
+  const res = await fetch("/api/themes");
+  themes = await res.json();
+  const select = document.getElementById("theme-select");
+  select.innerHTML = "";
+  for (const t of themes) {
+    const opt = document.createElement("option");
+    opt.value = t.id;
+    opt.textContent = `${t.name}${t.builtin ? "" : " (external)"}`;
+    select.appendChild(opt);
+  }
+  select.addEventListener("change", () => selectTheme(select.value));
+
+  // Auto-select first theme
+  if (themes.length > 0) {
+    selectTheme(themes[0].id);
+  }
+}
+
+async function selectTheme(themeId) {
+  currentThemeId = themeId;
+  document.getElementById("theme-select").value = themeId;
+
+  try {
+    const res = await fetch(`/api/themes/${encodeURIComponent(themeId)}/config`);
+    currentRendererConfig = await res.json();
+    if (currentRendererConfig.error) {
+      setStatus(`Error: ${currentRendererConfig.error}`);
+      return;
+    }
+
+    initWithConfig(currentRendererConfig);
+    setupAccessories();
+    showState(currentState);
+    updateThemeInfo();
+    setStatus(`Loaded: ${themeId}`);
+  } catch (e) {
+    setStatus(`Failed to load ${themeId}: ${e.message}`);
+  }
+}
+
+// ── State buttons ──
+function setupStateButtons() {
+  const container = document.getElementById("state-buttons");
+  const allStates = [...STATES, ...MINI_STATES];
+  for (const state of allStates) {
+    const btn = document.createElement("button");
+    btn.className = "state-btn" + (state === "idle" ? " active" : "");
+    btn.textContent = state;
+    btn.dataset.state = state;
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".state-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      showState(state);
+    });
+    container.appendChild(btn);
+  }
+}
+
+function showState(state) {
+  currentState = state;
+  if (!currentRendererConfig) return;
+
+  // Resolve state → file from config
+  let stateMap = "states";
+  let file = null;
+
+  if (currentRendererConfig.states && currentRendererConfig.states[state]) {
+    file = currentRendererConfig.states[state][0];
+  }
+  if (!file && currentRendererConfig.miniMode && currentRendererConfig.miniMode.states &&
+      currentRendererConfig.miniMode.states[state]) {
+    file = currentRendererConfig.miniMode.states[state][0];
+  }
+
+  // Fallbacks
+  if (!file) {
+    const fallbacks = {
+      error: "working", attention: "idle", notification: "idle",
+      sweeping: "working", carrying: "working", juggling: "working",
+    };
+    const fb = fallbacks[state];
+    if (fb && currentRendererConfig.states && currentRendererConfig.states[fb]) {
+      file = currentRendererConfig.states[fb][0];
+    }
+  }
+  if (!file && currentRendererConfig.states && currentRendererConfig.states.idle) {
+    file = currentRendererConfig.states.idle[0];
+  }
+
+  if (file) {
+    swapToFile(file, state);
+  }
+}
+
+// ── Accessories ──
+function setupAccessories() {
+  const list = document.getElementById("accessory-list");
+  list.innerHTML = "";
+
+  const defs = currentRendererConfig.accessories || {};
+  const active = currentRendererConfig.activeAccessories || [];
+
+  if (Object.keys(defs).length === 0) {
+    list.innerHTML = '<p style="color:#666; font-size:12px;">No accessories for this theme</p>';
+    document.getElementById("transform-editor").innerHTML =
+      '<p style="color:#666; font-size:12px;">No accessories available</p>';
+    selectedAccessory = null;
+    return;
+  }
+
+  for (const [name, def] of Object.entries(defs)) {
+    const item = document.createElement("div");
+    item.className = "accessory-item";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.id = `acc-${name}`;
+    cb.checked = active.includes(name);
+    cb.addEventListener("change", () => {
+      const newActive = [];
+      for (const [n] of Object.entries(defs)) {
+        const el = document.getElementById(`acc-${n}`);
+        if (el && el.checked) newActive.push(n);
+      }
+      setActiveAccessories(newActive);
+    });
+
+    const label = document.createElement("label");
+    label.htmlFor = `acc-${name}`;
+    label.textContent = def.name || name;
+    label.style.cursor = "pointer";
+
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "Edit";
+    editBtn.className = "state-btn";
+    editBtn.style.marginLeft = "auto";
+    editBtn.style.fontSize = "11px";
+    editBtn.addEventListener("click", () => setupTransformEditor(name, def));
+
+    item.appendChild(cb);
+    item.appendChild(label);
+    item.appendChild(editBtn);
+    list.appendChild(item);
+  }
+
+  // Auto-select first accessory for editing
+  const firstAcc = Object.keys(defs)[0];
+  if (firstAcc) setupTransformEditor(firstAcc, defs[firstAcc]);
+}
+
+function setupTransformEditor(accName, def) {
+  selectedAccessory = accName;
+  const editor = document.getElementById("transform-editor");
+
+  // Parse current transform from anchors
+  const anchor = def.anchors && (def.anchors["*"] || Object.values(def.anchors).find(a => a && a.transform));
+  let tx = 0, ty = 0, s = 1, r = 0;
+
+  if (anchor && anchor.transform) {
+    const tm = anchor.transform.match(/translate\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/);
+    if (tm) { tx = parseFloat(tm[1]); ty = parseFloat(tm[2]); }
+    const sm = anchor.transform.match(/scale\(\s*([-\d.]+)\s*\)/);
+    if (sm) { s = parseFloat(sm[1]); }
+    const rm = anchor.transform.match(/rotate\(\s*([-\d.]+)\s*\)/);
+    if (rm) { r = parseFloat(rm[1]); }
+  }
+
+  editor.innerHTML = `
+    <div style="font-size:13px; color:#4fc3f7; margin-bottom:8px;">${def.name || accName}</div>
+    <div class="slider-group">
+      <label>translateX <span id="val-tx">${tx}</span></label>
+      <input type="range" id="sl-tx" min="-10" max="10" step="0.1" value="${tx}">
+    </div>
+    <div class="slider-group">
+      <label>translateY <span id="val-ty">${ty}</span></label>
+      <input type="range" id="sl-ty" min="-10" max="10" step="0.1" value="${ty}">
+    </div>
+    <div class="slider-group">
+      <label>scale <span id="val-s">${s}</span></label>
+      <input type="range" id="sl-s" min="0.1" max="3" step="0.05" value="${s}">
+    </div>
+    <div class="slider-group">
+      <label>rotate <span id="val-r">${r}</span></label>
+      <input type="range" id="sl-r" min="-180" max="180" step="1" value="${r}">
+    </div>
+    <div class="transform-output" id="transform-output"></div>
+    <button class="copy-btn" id="copy-btn">Copy transform to clipboard</button>
+  `;
+
+  function updateTransform() {
+    const ntx = parseFloat(document.getElementById("sl-tx").value);
+    const nty = parseFloat(document.getElementById("sl-ty").value);
+    const ns = parseFloat(document.getElementById("sl-s").value);
+    const nr = parseFloat(document.getElementById("sl-r").value);
+
+    document.getElementById("val-tx").textContent = ntx;
+    document.getElementById("val-ty").textContent = nty;
+    document.getElementById("val-s").textContent = ns;
+    document.getElementById("val-r").textContent = nr;
+
+    let transform = `translate(${ntx}, ${nty})`;
+    if (ns !== 1) transform += ` scale(${ns})`;
+    if (nr !== 0) transform += ` rotate(${nr})`;
+
+    document.getElementById("transform-output").textContent = `"transform": "${transform}"`;
+
+    // Live update in SVG
+    updateAccessoryTransform(accName, transform);
+  }
+
+  for (const id of ["sl-tx", "sl-ty", "sl-s", "sl-r"]) {
+    document.getElementById(id).addEventListener("input", updateTransform);
+  }
+
+  document.getElementById("copy-btn").addEventListener("click", () => {
+    const text = document.getElementById("transform-output").textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById("copy-btn");
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = "Copy transform to clipboard"; btn.classList.remove("copied"); }, 1500);
+    });
+  });
+
+  updateTransform();
+}
+
+// ── Theme info ──
+function updateThemeInfo() {
+  const info = document.getElementById("theme-info");
+  if (!currentRendererConfig) { info.textContent = ""; return; }
+  const c = currentRendererConfig;
+  const stateCount = c.states ? Object.keys(c.states).length : 0;
+  const miniCount = c.miniMode && c.miniMode.states ? Object.keys(c.miniMode.states).length : 0;
+  const accCount = c.accessories ? Object.keys(c.accessories).length : 0;
+  info.innerHTML = `
+    States: ${stateCount} | Mini: ${miniCount} | Accessories: ${accCount}<br>
+    ViewBox: ${c.viewBox ? `${c.viewBox.x},${c.viewBox.y} ${c.viewBox.width}x${c.viewBox.height}` : "?"}
+  `;
+}
+
+// ── SSE hot-reload ──
+function setupSSE() {
+  const es = new EventSource("/api/watch");
+  const el = document.getElementById("watch-status");
+
+  es.onopen = () => {
+    el.textContent = "watching";
+    el.className = "connected";
+  };
+
+  es.onmessage = (e) => {
+    if (e.data === "connected") return;
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === "theme-changed" && currentThemeId) {
+        setStatus(`Change detected in ${msg.theme}, reloading...`);
+        // Small delay to let file write complete
+        setTimeout(() => selectTheme(currentThemeId), 300);
+      }
+    } catch {}
+  };
+
+  es.onerror = () => {
+    el.textContent = "disconnected";
+    el.className = "disconnected";
+  };
+}
+
+// ── Status bar ──
+function setStatus(msg) {
+  document.getElementById("status-text").textContent = msg;
+}
+
+// ── Mode switching ──
+let currentMode = "single";
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById("btn-single").classList.toggle("active", mode === "single");
+  document.getElementById("btn-gallery").classList.toggle("active", mode === "gallery");
+  document.getElementById("single-mode").style.display = mode === "single" ? "flex" : "none";
+  document.getElementById("gallery-mode").style.display = mode === "gallery" ? "block" : "none";
+
+  if (mode === "gallery") {
+    renderGallery();
+  }
+}
+
+// ── Gallery mode ──
+async function renderGallery() {
+  const gallery = document.getElementById("gallery-mode");
+  gallery.innerHTML = '<p style="color:#888;">Loading all themes...</p>';
+
+  const allStates = ["idle", "thinking", "working", "sleeping", "waking"];
+
+  let html = "";
+  for (const theme of themes) {
+    try {
+      const res = await fetch(`/api/themes/${encodeURIComponent(theme.id)}/config`);
+      const config = await res.json();
+      if (config.error) continue;
+
+      const miniStates = config.miniMode && config.miniMode.states
+        ? Object.keys(config.miniMode.states) : [];
+      const statesForTheme = [...allStates, ...miniStates];
+
+      html += `<div class="gallery-theme">`;
+      html += `<div class="gallery-theme-title">${theme.name} (${theme.id})</div>`;
+      html += `<div class="gallery-row">`;
+
+      for (const state of statesForTheme) {
+        let file = null;
+        if (config.states && config.states[state]) file = config.states[state][0];
+        if (!file && config.miniMode && config.miniMode.states && config.miniMode.states[state])
+          file = config.miniMode.states[state][0];
+        if (!file) continue;
+
+        const url = `${config.assetsPath}/${file}`;
+        const containerId = `gallery-${theme.id}-${state}`.replace(/[^a-zA-Z0-9-]/g, "_");
+
+        html += `<div class="gallery-cell">`;
+        html += `<div class="gallery-cell-label">${state}</div>`;
+        html += `<div class="gallery-cell-container" id="${containerId}">`;
+        if (file.endsWith(".svg")) {
+          html += `<object type="image/svg+xml" data="${url}"></object>`;
+        } else {
+          html += `<img src="${url}" style="position:absolute;width:190%;height:130%;left:-45%;bottom:5%;">`;
+        }
+        html += `</div></div>`;
+      }
+
+      html += `</div></div>`;
+    } catch (e) {
+      html += `<div class="gallery-theme"><div class="gallery-theme-title">${theme.name} (error)</div></div>`;
+    }
+  }
+
+  gallery.innerHTML = html;
+
+  // Inject accessories into gallery SVGs
+  for (const theme of themes) {
+    try {
+      const res = await fetch(`/api/themes/${encodeURIComponent(theme.id)}/config`);
+      const config = await res.json();
+      if (config.error || !config.activeAccessories || config.activeAccessories.length === 0) continue;
+
+      const accDefs = config.accessories || {};
+      const activeAcc = config.activeAccessories;
+
+      const statesInDom = [...allStates];
+      if (config.miniMode && config.miniMode.states) statesInDom.push(...Object.keys(config.miniMode.states));
+
+      for (const state of statesInDom) {
+        const containerId = `gallery-${theme.id}-${state}`.replace(/[^a-zA-Z0-9-]/g, "_");
+        const cell = document.getElementById(containerId);
+        if (!cell) continue;
+        const obj = cell.querySelector("object");
+        if (!obj) continue;
+
+        // Wait for load then inject
+        const doInject = () => {
+          let svgDoc;
+          try { svgDoc = obj.contentDocument; } catch { return; }
+          if (!svgDoc) return;
+
+          for (const accName of activeAcc) {
+            const def = accDefs[accName];
+            if (!def || !def.anchors) continue;
+            const anchor = def.anchors[state] !== undefined ? def.anchors[state] : (def.anchors["*"] || null);
+            if (!anchor) continue;
+
+            const parent = anchor.parentId === "root"
+              ? svgDoc.documentElement
+              : svgDoc.getElementById(anchor.parentId);
+            if (!parent) continue;
+
+            fetch(`${config.assetsPath}/${def.file}`)
+              .then(r => r.text())
+              .then(svgText => {
+                const parser = new DOMParser();
+                const accDoc = parser.parseFromString(svgText, "image/svg+xml");
+                const sourceG = accDoc.querySelector("g");
+                if (!sourceG) return;
+                const wrapper = svgDoc.createElementNS("http://www.w3.org/2000/svg", "g");
+                wrapper.setAttribute("data-accessory", accName);
+                if (anchor.transform) wrapper.setAttribute("transform", anchor.transform);
+                for (const child of [...sourceG.childNodes]) {
+                  wrapper.appendChild(svgDoc.importNode(child, true));
+                }
+                parent.appendChild(wrapper);
+              }).catch(() => {});
+          }
+        };
+
+        if (obj.contentDocument && obj.contentDocument.documentElement) {
+          doInject();
+        } else {
+          obj.addEventListener("load", doInject, { once: true });
+        }
+      }
+    } catch {}
+  }
+
+  setStatus(`Gallery: ${themes.length} themes loaded`);
+}
+
+// ── Go ──
+init();
+</script>
+</body>
+</html>

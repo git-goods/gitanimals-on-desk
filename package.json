@@ -16,7 +16,10 @@
     "clean-cache": "node scripts/clean-cache.js",
     "install:gemini-hooks": "node hooks/gemini-install.js",
     "install:cursor-hooks": "node hooks/cursor-install.js",
-    "install:kiro-hooks": "node hooks/kiro-install.js"
+    "install:kiro-hooks": "node hooks/kiro-install.js",
+    "preview": "cd tools/preview && npm run dev",
+    "preview:install": "cd tools/preview && npm install",
+    "preview:old": "node scripts/preview-server.js"
   },
   "keywords": [
     "gitanimals",
