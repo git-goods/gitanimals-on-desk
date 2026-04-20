@@ -17,13 +17,6 @@
     }
   </style>
 
-  <!-- Shadow -->
-  <g transform="translate(-2, 2)">
-    <rect width="12" height="3" transform="matrix(0.707107 0.707107 0.707107 -0.707107 1.41422 2.12132)" fill="#6F6F6F" fill-opacity="0.1"/>
-    <rect width="10" height="1" transform="matrix(0.707107 0.707107 0.707107 -0.707107 1.41422 3.53553)" fill="#6F6F6F" fill-opacity="0.1"/>
-    <rect width="8" height="1" transform="matrix(0.707107 0.707107 0.707107 -0.707107 1.41422 4.94975)" fill="#6F6F6F" fill-opacity="0.1"/>
-  </g>
-
   <!-- Leg (static — sitting) -->
   <g transform="translate(2, 6)">
     <rect width="2" height="2" fill="#FF6F0F"/>
