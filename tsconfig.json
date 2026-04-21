@@ -14,6 +14,7 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
+    "src/types/**/*.d.ts",
     "src/settings/prefs.js",
     "src/settings/agent-gate.js",
     "agents/**/*.js",

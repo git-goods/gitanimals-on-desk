@@ -95,6 +95,7 @@
 ### Step 3
 
 - 최소 공통 타입 계약 추가
+- `src/types/contracts.d.ts` 기준의 공통 도메인 계약 도입
 - settings/theme/agent/server/state 사이 암묵 계약 일부를 명시 계약으로 전환
 
 ### Step 4-6
