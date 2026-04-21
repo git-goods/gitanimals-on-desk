@@ -68,6 +68,7 @@ const STRINGS = {
     themeRefreshFailed: "Refresh failed: ",
     toastActiveLocked: "Cannot unpin the active theme.",
     toastMinOneRequired: "At least one theme must remain pinned.",
+    langKorean: "한국어",
   },
   zh: {
     settingsTitle: "设置",
@@ -122,6 +123,62 @@ const STRINGS = {
     themeRefreshFailed: "刷新失败：",
     toastActiveLocked: "无法取消固定当前使用的主题。",
     toastMinOneRequired: "至少需要保留一个固定主题。",
+    langKorean: "한국어",
+  },
+  ko: {
+    settingsTitle: "설정",
+    settingsSubtitle: "GitAnimals의 데스크톱 동작 방식을 설정합니다.",
+    sidebarGeneral: "일반",
+    sidebarAgents: "Agents",
+    sidebarTheme: "테마",
+    sidebarAnimMap: "애니메이션 매핑",
+    sidebarShortcuts: "단축키",
+    sidebarAbout: "정보",
+    sidebarSoon: "준비 중",
+    sectionAppearance: "모양",
+    sectionStartup: "시작",
+    sectionBubbles: "버블",
+    agentsTitle: "Agents",
+    agentsSubtitle: "Agent별로 추적을 켜거나 끌 수 있어요. 비활성화된 agent는 로그 모니터가 멈추고 HTTP 경계에서 hook 이벤트가 드롭돼요 — 펫을 움직이지도, 권한 버블을 표시하지도, 세션을 유지하지도 않아요.",
+    agentsEmpty: "등록된 agent가 없어요.",
+    eventSourceHook: "Hook",
+    eventSourceLogPoll: "로그 폴링",
+    eventSourcePlugin: "플러그인",
+    badgePermissionBubble: "권한 버블",
+    rowAgentPermissions: "팝업 버블 표시",
+    rowAgentPermissionsDesc: "끄면 이 agent가 자기 터미널에서 프롬프트를 처리하고 권한 버블을 띄우지 않아요.",
+    rowLanguage: "언어",
+    rowLanguageDesc: "메뉴와 버블의 인터페이스 언어예요.",
+    rowSound: "효과음",
+    rowSoundDesc: "GitAnimals가 작업을 마치거나 입력을 요청할 때 알림음을 재생해요.",
+    rowOpenAtLogin: "로그인 시 실행",
+    rowOpenAtLoginDesc: "로그인할 때 GitAnimals를 자동으로 시작해요.",
+    rowStartWithClaude: "Claude Code와 함께 시작",
+    rowStartWithClaudeDesc: "Claude Code 세션이 시작될 때마다 GitAnimals를 자동으로 실행해요.",
+    rowBubbleFollow: "버블이 펫을 따라오기",
+    rowBubbleFollowDesc: "권한 버블과 업데이트 버블을 화면 구석 대신 펫 옆에 표시해요.",
+    rowHideBubbles: "모든 버블 숨기기",
+    rowHideBubblesDesc: "권한·알림·업데이트 버블을 모두 숨겨요.",
+    rowShowSessionId: "세션 ID 표시",
+    rowShowSessionIdDesc: "버블 헤더와 세션 메뉴에 짧은 세션 ID를 추가해요.",
+    sectionPrivacy: "개인정보",
+    rowSendDiagnostics: "익명 진단 데이터 전송",
+    rowSendDiagnosticsDesc: "크래시 리포트와 익명화된 이벤트 기록을 공유해 주시면, 펫이 사라지는 등의 문제를 진단하는 데 도움이 돼요. 개인정보는 포함되지 않아요.",
+    placeholderTitle: "곧 제공됩니다",
+    placeholderDesc: "이 패널은 향후 GitAnimals 버전에 추가될 예정이에요. 기획은 docs/plan-settings-panel.md에 있어요.",
+    toastSaveFailed: "저장하지 못했어요: ",
+    langEnglish: "English",
+    langChinese: "中文",
+    langKorean: "한국어",
+    themeTabTitle: "테마",
+    themeTabSubtitle: "고정된 테마가 우클릭 페르소나 서브메뉴에 표시돼요. 하나 이상은 반드시 고정되어 있어야 해요.",
+    themeColPin: "고정",
+    themeRefresh: "새로고침",
+    themeRefreshing: "새로고침 중…",
+    themeRefreshDone: "테마를 새로고침했어요.",
+    themeRefreshFailed: "새로고침 실패: ",
+    toastActiveLocked: "현재 활성 테마는 고정 해제할 수 없어요.",
+    toastMinOneRequired: "하나 이상의 테마는 반드시 고정되어 있어야 해요.",
   },
 };
 
@@ -577,6 +634,7 @@ function buildLanguageRow() {
       `<div class="segmented" role="tablist">` +
         `<button data-lang="en"></button>` +
         `<button data-lang="zh"></button>` +
+        `<button data-lang="ko"></button>` +
       `</div>` +
     `</div>`;
   row.querySelector(".row-label").textContent = t("rowLanguage");
@@ -584,6 +642,7 @@ function buildLanguageRow() {
   const buttons = row.querySelectorAll(".segmented button");
   buttons[0].textContent = t("langEnglish");
   buttons[1].textContent = t("langChinese");
+  buttons[2].textContent = t("langKorean");
   const current = (snapshot && snapshot.lang) || "en";
   for (const btn of buttons) {
     if (btn.dataset.lang === current) btn.classList.add("active");
