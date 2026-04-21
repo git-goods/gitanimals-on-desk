@@ -28,6 +28,13 @@ ipcRenderer.on("settings-changed", (_event, payload) => {
   }
 });
 
+const tabListeners = new Set();
+ipcRenderer.on("settings:set-tab", (_event, tab) => {
+  for (const cb of tabListeners) {
+    try { cb(tab); } catch (err) { console.warn("settings onSetTab listener threw:", err); }
+  }
+});
+
 contextBridge.exposeInMainWorld("settingsAPI", {
   getSnapshot: () => ipcRenderer.invoke("settings:get-snapshot"),
   update: (key, value) => ipcRenderer.invoke("settings:update", { key, value }),
@@ -36,5 +43,8 @@ contextBridge.exposeInMainWorld("settingsAPI", {
   listThemes: () => ipcRenderer.invoke("settings:list-themes"),
   onChanged: (cb) => {
     if (typeof cb === "function") listeners.add(cb);
+  },
+  onSetTab: (cb) => {
+    if (typeof cb === "function") tabListeners.add(cb);
   },
 });

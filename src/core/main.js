@@ -834,8 +834,7 @@ const _menuCtx = {
   discoverThemes: () => themeLoader.discoverThemes(),
   getActiveThemeId: () => activeTheme ? activeTheme._id : "fox",
   getPinnedThemes: () => _settingsController.get("pinnedThemes") || {},
-  ensureUserThemesDir: () => themeLoader.ensureUserThemesDir(),
-  openSettingsWindow: () => openSettingsWindow(),
+  openSettingsWindow: (initialTab) => openSettingsWindow(initialTab),
   logout: () => {
     tokenStore.clear();
     const _cacheDir = path.join(app.getPath("userData"), "theme-cache");
@@ -1023,11 +1022,12 @@ function getSettingsWindowIcon() {
   return undefined;
 }
 
-function openSettingsWindow() {
+function openSettingsWindow(initialTab) {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     if (settingsWindow.isMinimized()) settingsWindow.restore();
     settingsWindow.show();
     settingsWindow.focus();
+    if (initialTab) settingsWindow.webContents.send("settings:set-tab", initialTab);
     return;
   }
   const iconPath = getSettingsWindowIcon();
@@ -1062,6 +1062,7 @@ function openSettingsWindow() {
   settingsWindow.once("ready-to-show", () => {
     settingsWindow.show();
     settingsWindow.focus();
+    if (initialTab) settingsWindow.webContents.send("settings:set-tab", initialTab);
   });
   settingsWindow.on("closed", () => {
     settingsWindow = null;

@@ -24,7 +24,6 @@ const SIZES = {
 // settings panel can share them. menu.js binds the translator to ctx.lang.
 const { createTranslator } = require("../settings/i18n");
 
-const { shell } = require("electron");
 
 module.exports = function initMenu(ctx) {
   // ── Translation helper (bound to ctx.lang via the shared i18n module) ──
@@ -56,11 +55,8 @@ module.exports = function initMenu(ctx) {
 
     items.push({ type: "separator" });
     items.push({
-      label: t("openThemeDir"),
-      click: () => {
-        const dir = ctx.ensureUserThemesDir ? ctx.ensureUserThemesDir() : null;
-        if (dir) shell.openPath(dir);
-      },
+      label: t("themeSettings"),
+      click: () => ctx.openSettingsWindow && ctx.openSettingsWindow("theme"),
     });
 
     return items;
