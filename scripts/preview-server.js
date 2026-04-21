@@ -23,7 +23,7 @@ const PREVIEW_DIR = path.join(__dirname, "preview");
 const THEMES_DIR = path.join(ROOT, "themes");
 
 // Reuse theme-loader
-const themeLoader = require(path.join(ROOT, "src", "theme-loader"));
+const themeLoader = require(path.join(ROOT, "src", "theme", "loader"));
 themeLoader.init(path.join(ROOT, "src"), null);
 
 // SSE clients for hot-reload

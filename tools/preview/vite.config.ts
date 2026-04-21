@@ -9,7 +9,7 @@ const ROOT = path.resolve(__dirname, "../..");
 const THEMES_DIR = path.join(ROOT, "themes");
 
 // Reuse existing theme-loader (CJS)
-const themeLoader = require(path.join(ROOT, "src", "theme-loader"));
+const themeLoader = require(path.join(ROOT, "src", "theme", "loader"));
 themeLoader.init(path.join(ROOT, "src"), null);
 
 const MIME: Record<string, string> = {
