@@ -2,8 +2,8 @@
 // Extracted from main.js L315-331, L2700-2911
 
 const { screen } = require("electron");
-const { bc } = (() => {
-  try { return require("./telemetry"); } catch { return { bc() {} }; }
+const { bc, report } = (() => {
+  try { return require("./telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
 
 module.exports = function initMini(ctx) {
@@ -26,6 +26,18 @@ let miniSnap = null;  // { y, width, height } — canonical rect to prevent DPI 
 let miniTransitionTimer = null;
 let peekAnimTimer = null;
 let isAnimating = false;
+let _miniStuckTimer = null;
+
+function _armMiniStuckReport(label, bounds) {
+  if (_miniStuckTimer) clearTimeout(_miniStuckTimer);
+  _miniStuckTimer = setTimeout(() => {
+    try { report("[mini] transitioning stuck ≥5s (not cleared)", "error", { label, bounds, miniMode, miniEdge }); } catch {}
+    _miniStuckTimer = null;
+  }, 5000);
+}
+function _disarmMiniStuckReport() {
+  if (_miniStuckTimer) { clearTimeout(_miniStuckTimer); _miniStuckTimer = null; }
+}
 
 function refreshTheme() {
   MINI_OFFSET_RATIO = ctx.theme.miniMode.offsetRatio;
@@ -120,6 +132,7 @@ function miniPeekOut() {
 function cancelMiniTransition() {
   if (miniTransitioning) { try { bc("mini", "transitioning", { v: false, label: "cancel" }); } catch {} }
   miniTransitioning = false;
+  _disarmMiniStuckReport();
   if (miniTransitionTimer) { clearTimeout(miniTransitionTimer); miniTransitionTimer = null; }
   if (peekAnimTimer) { clearTimeout(peekAnimTimer); peekAnimTimer = null; }
   isAnimating = false;
@@ -175,6 +188,7 @@ function enterMiniMode(wa, viaMenu, edge) {
   ctx.sendToHitWin("hit-state-sync", { miniMode: true });
   miniTransitioning = true;
   try { bc("mini", "transitioning", { v: true, label: "enterMiniMode", viaMenu, edge: miniEdge, bounds }); } catch {}
+  _armMiniStuckReport("enterMiniMode", bounds);
   ctx.buildContextMenu();
   ctx.buildTrayMenu();
 
@@ -200,6 +214,7 @@ function enterMiniMode(wa, viaMenu, edge) {
         miniTransitionTimer = setTimeout(() => {
           miniTransitioning = false;
           try { bc("mini", "transitioning", { v: false, label: "enterMiniMode-viaMenu-done" }); } catch {}
+          _disarmMiniStuckReport();
           ctx.applyState(ctx.doNotDisturb ? "mini-sleep" : "mini-idle");
         }, 3200);
       }, 300);
@@ -210,6 +225,7 @@ function enterMiniMode(wa, viaMenu, edge) {
     miniTransitionTimer = setTimeout(() => {
       miniTransitioning = false;
       try { bc("mini", "transitioning", { v: false, label: "enterMiniMode-slide-done" }); } catch {}
+      _disarmMiniStuckReport();
       ctx.applyState(ctx.doNotDisturb ? "mini-sleep" : "mini-idle");
     }, 3200);
   }
@@ -224,6 +240,7 @@ function exitMiniMode() {
   // from interfering with the animation. Both flags clear in onDone.
   miniTransitioning = true;
   try { bc("mini", "transitioning", { v: true, label: "exitMiniMode" }); } catch {}
+  _armMiniStuckReport("exitMiniMode", ctx.win && !ctx.win.isDestroyed() ? ctx.win.getBounds() : null);
   miniSnap = null;
   miniSleepPeeked = false;
   miniPeeked = false;
@@ -245,6 +262,7 @@ function exitMiniMode() {
     miniMode = false;
     miniTransitioning = false;
     try { bc("mini", "transitioning", { v: false, label: "exitMiniMode-done", bounds: ctx.win && !ctx.win.isDestroyed() ? ctx.win.getBounds() : null }); } catch {}
+    _disarmMiniStuckReport();
     ctx.sendToRenderer("mini-mode-change", false);
     ctx.sendToHitWin("hit-state-sync", { miniMode: false });
     ctx.buildContextMenu();
@@ -278,6 +296,7 @@ function enterMiniViaMenu() {
   preMiniY = bounds.y;
   miniTransitioning = true;
   try { bc("mini", "transitioning", { v: true, label: "enterMiniViaMenu-crabwalk", edge, bounds }); } catch {}
+  _armMiniStuckReport("enterMiniViaMenu-crabwalk", bounds);
 
   // Send edge before crabwalk so CSS flip applies before animation starts
   ctx.sendToRenderer("mini-mode-change", true, edge);

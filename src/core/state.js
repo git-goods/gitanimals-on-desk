@@ -191,6 +191,7 @@ function setState(newState, svgOverride) {
 
 function applyState(state, svgOverride) {
   if (ctx.miniTransitioning && !state.startsWith("mini-")) {
+    try { bc("state", "dropped-during-mini-transition", { state, svgOverride, from: currentState }); } catch {}
     return;
   }
 
