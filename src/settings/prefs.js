@@ -87,6 +87,11 @@ const SCHEMA = {
     defaultFactory: () => ({}),
     normalize: normalizeThemeOverrides,
   },
+  pinnedThemes: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizePinnedThemes,
+  },
 };
 
 const SCHEMA_KEYS = Object.freeze(Object.keys(SCHEMA));
@@ -212,6 +217,15 @@ function normalizeThemeOverrides(value, defaultsValue) {
     if (Object.keys(cleanThemeMap).length > 0) {
       out[themeId] = cleanThemeMap;
     }
+  }
+  return out;
+}
+
+function normalizePinnedThemes(value, defaultsValue) {
+  if (!value || typeof value !== "object") return defaultsValue;
+  const out = {};
+  for (const id of Object.keys(value)) {
+    if (value[id] === true) out[id] = true;
   }
   return out;
 }

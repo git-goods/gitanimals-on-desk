@@ -135,6 +135,31 @@ html, body {
   font-weight: 700;
   color: var(--text-primary);
 }
+
+.tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 4px;
+}
+.tab-header h1 { margin: 0; }
+
+.btn {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.btn:hover:not(:disabled) { background: var(--sidebar-hover); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.5; cursor: wait; }
 .content .subtitle {
   margin: 0 0 24px;
   font-size: 12px;
@@ -366,6 +391,6 @@ html, body {
   <main class="content" id="content"></main>
 </div>
 <div class="toast-stack" id="toastStack"></div>
-<script src="settings-renderer.js"></script>
+<script src="renderer.js"></script>
 </body>
 </html>

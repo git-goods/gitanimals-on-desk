@@ -140,6 +140,9 @@ const _settingsController = createSettingsController({
     clearSessionsByAgent: _deferredClearSessionsByAgent,
     dismissPermissionsByAgent: _deferredDismissPermissionsByAgent,
     setTelemetryEnabled: (v) => telemetry.setEnabled(v),
+    getDiscoveredThemes: () => themeLoader.discoverThemes(),
+    getActiveThemeId: () => (activeTheme ? activeTheme._id : "fox"),
+    resyncPersonas: () => personaSync.syncAll({ force: true }),
   },
 });
 
@@ -212,6 +215,18 @@ function stopMonitorForAgent(agentId) {
 // ── Theme loader ──
 const themeLoader = require("../theme/loader");
 themeLoader.init(path.join(__dirname, ".."), app.getPath("userData"));
+// Backfill bundled themes into pinnedThemes on first run or upgrade.
+{
+  const _pinned = _settingsController.get("pinnedThemes");
+  if (!_pinned || Object.keys(_pinned).length === 0) {
+    const _builtins = themeLoader.discoverThemes().filter(t => t.builtin);
+    if (_builtins.length > 0) {
+      const _backfill = {};
+      for (const _t of _builtins) _backfill[_t.id] = true;
+      _settingsController.applyBulk({ pinnedThemes: _backfill });
+    }
+  }
+}
 const personaSync = require("../theme/persona-sync");
 personaSync.init(app.getPath("userData"));
 
@@ -818,10 +833,13 @@ const _menuCtx = {
   switchTheme: (id) => switchTheme(id),
   discoverThemes: () => themeLoader.discoverThemes(),
   getActiveThemeId: () => activeTheme ? activeTheme._id : "fox",
+  getPinnedThemes: () => _settingsController.get("pinnedThemes") || {},
   ensureUserThemesDir: () => themeLoader.ensureUserThemesDir(),
   openSettingsWindow: () => openSettingsWindow(),
   logout: () => {
     tokenStore.clear();
+    const _cacheDir = path.join(app.getPath("userData"), "theme-cache");
+    try { require("fs").rmSync(_cacheDir, { recursive: true, force: true }); } catch (_e) {}
     app.relaunch();
     app.exit(0);
   },
@@ -841,7 +859,7 @@ const { t, buildContextMenu, buildTrayMenu, rebuildAllMenus, createTray,
 // from a future settings panel land here identically.
 const MENU_AFFECTING_KEYS = new Set([
   "lang", "soundMuted", "bubbleFollowPet", "hideBubbles", "showSessionId",
-  "autoStartWithClaude", "openAtLogin", "showTray", "showDock", "theme", "size",
+  "autoStartWithClaude", "openAtLogin", "showTray", "showDock", "theme", "size", "pinnedThemes",
 ]);
 function wireSettingsSubscribers() {
   _settingsController.subscribe(({ changes }) => {
@@ -946,6 +964,19 @@ ipcMain.handle("settings:list-agents", () => {
     }));
   } catch (err) {
     console.warn("GitAnimals: settings:list-agents failed:", err && err.message);
+    return [];
+  }
+});
+
+ipcMain.handle("settings:list-themes", () => {
+  try {
+    return themeLoader.discoverThemes().map(t => ({
+      id: t.id,
+      name: t.name,
+      builtin: t.builtin || false,
+    }));
+  } catch (err) {
+    console.warn("GitAnimals: settings:list-themes failed:", err && err.message);
     return [];
   }
 });

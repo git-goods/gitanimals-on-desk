@@ -59,6 +59,15 @@ const STRINGS = {
     toastSaveFailed: "Couldn't save: ",
     langEnglish: "English",
     langChinese: "中文",
+    themeTabTitle: "Theme",
+    themeTabSubtitle: "Pinned themes appear in the right-click Persona submenu. At least one must stay pinned.",
+    themeColPin: "Pin",
+    themeRefresh: "Refresh",
+    themeRefreshing: "Refreshing…",
+    themeRefreshDone: "Themes refreshed.",
+    themeRefreshFailed: "Refresh failed: ",
+    toastActiveLocked: "Cannot unpin the active theme.",
+    toastMinOneRequired: "At least one theme must remain pinned.",
     langKorean: "한국어",
   },
   zh: {
@@ -105,6 +114,15 @@ const STRINGS = {
     toastSaveFailed: "保存失败：",
     langEnglish: "English",
     langChinese: "中文",
+    themeTabTitle: "主题",
+    themeTabSubtitle: "已固定的主题会出现在右键菜单的「角色」子菜单中。至少保留一个固定主题。",
+    themeColPin: "固定",
+    themeRefresh: "刷新",
+    themeRefreshing: "刷新中…",
+    themeRefreshDone: "主题已刷新。",
+    themeRefreshFailed: "刷新失败：",
+    toastActiveLocked: "无法取消固定当前使用的主题。",
+    toastMinOneRequired: "至少需要保留一个固定主题。",
     langKorean: "한국어",
   },
   ko: {
@@ -152,15 +170,22 @@ const STRINGS = {
     langEnglish: "English",
     langChinese: "中文",
     langKorean: "한국어",
+    themeTabTitle: "테마",
+    themeTabSubtitle: "고정된 테마가 우클릭 페르소나 서브메뉴에 표시돼요. 하나 이상은 반드시 고정되어 있어야 해요.",
+    themeColPin: "고정",
+    themeRefresh: "새로고침",
+    themeRefreshing: "새로고침 중…",
+    themeRefreshDone: "테마를 새로고침했어요.",
+    themeRefreshFailed: "새로고침 실패: ",
+    toastActiveLocked: "현재 활성 테마는 고정 해제할 수 없어요.",
+    toastMinOneRequired: "하나 이상의 테마는 반드시 고정되어 있어야 해요.",
   },
 };
 
 let snapshot = null;
 let activeTab = "general";
-// Static per-agent metadata from agents/registry.js via settings:list-agents.
-// Fetched once at boot (since it can't change while the app is running).
-// Null until hydrated — renderAgentsTab() renders an empty placeholder.
 let agentMetadata = null;
+let themeMetadata = null;
 
 function t(key) {
   const lang = (snapshot && snapshot.lang) || "en";
@@ -189,7 +214,7 @@ function showToast(message, { error = false, ttl = 3500 } = {}) {
 const SIDEBAR_TABS = [
   { id: "general", icon: "\u2699", labelKey: "sidebarGeneral", available: true },
   { id: "agents", icon: "\u26A1", labelKey: "sidebarAgents", available: true },
-  { id: "theme", icon: "\u{1F3A8}", labelKey: "sidebarTheme", available: false },
+  { id: "theme", icon: "\u{1F3A8}", labelKey: "sidebarTheme", available: true },
   { id: "animMap", icon: "\u{1F3AC}", labelKey: "sidebarAnimMap", available: false },
   { id: "shortcuts", icon: "\u2328", labelKey: "sidebarShortcuts", available: false },
   { id: "about", icon: "\u2139", labelKey: "sidebarAbout", available: false },
@@ -226,6 +251,8 @@ function renderContent() {
     renderGeneralTab(content);
   } else if (activeTab === "agents") {
     renderAgentsTab(content);
+  } else if (activeTab === "theme") {
+    renderThemeTab(content);
   } else {
     renderPlaceholder(content);
   }
@@ -333,6 +360,113 @@ function buildAgentSwitchRow({ agent, flag, extraClass, buildText }) {
       value: !readFlag(),
     })
   );
+  ctrl.appendChild(sw);
+  row.appendChild(ctrl);
+  return row;
+}
+
+let _themeRefreshing = false;
+
+function renderThemeTab(parent) {
+  const header = document.createElement("div");
+  header.className = "tab-header";
+  const h1 = document.createElement("h1");
+  h1.textContent = t("themeTabTitle");
+  header.appendChild(h1);
+
+  const refreshBtn = document.createElement("button");
+  refreshBtn.className = "btn";
+  refreshBtn.type = "button";
+  refreshBtn.textContent = _themeRefreshing ? t("themeRefreshing") : t("themeRefresh");
+  refreshBtn.disabled = _themeRefreshing;
+  refreshBtn.addEventListener("click", () => _handleThemeRefresh());
+  header.appendChild(refreshBtn);
+  parent.appendChild(header);
+
+  const subtitle = document.createElement("p");
+  subtitle.className = "subtitle";
+  subtitle.textContent = t("themeTabSubtitle");
+  parent.appendChild(subtitle);
+
+  if (!themeMetadata) {
+    const loading = document.createElement("p");
+    loading.className = "subtitle";
+    loading.textContent = "…";
+    parent.appendChild(loading);
+    return;
+  }
+
+  const activeId = snapshot && snapshot.theme;
+  const pinned = (snapshot && snapshot.pinnedThemes) || {};
+  const rows = themeMetadata.map(theme => buildThemePinRow(theme, activeId, pinned));
+  parent.appendChild(buildSection("", rows));
+}
+
+async function _handleThemeRefresh() {
+  if (_themeRefreshing) return;
+  _themeRefreshing = true;
+  if (activeTab === "theme") renderContent();
+  try {
+    const result = await window.settingsAPI.command("refreshThemes");
+    if (result && result.status !== "ok") {
+      showToast(t("themeRefreshFailed") + (result.message || result.status), { error: true });
+    } else {
+      showToast(t("themeRefreshDone"));
+    }
+    if (typeof window.settingsAPI.listThemes === "function") {
+      try {
+        const list = await window.settingsAPI.listThemes();
+        themeMetadata = Array.isArray(list) ? list : [];
+      } catch (e) { console.warn("settings: listThemes failed", e); }
+    }
+  } catch (err) {
+    showToast(t("themeRefreshFailed") + (err && err.message), { error: true });
+  } finally {
+    _themeRefreshing = false;
+    if (activeTab === "theme") renderContent();
+  }
+}
+
+function buildThemePinRow(theme, activeId, pinned) {
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const text = document.createElement("div");
+  text.className = "row-text";
+  const label = document.createElement("span");
+  label.className = "row-label";
+  label.textContent = theme.name + (theme.builtin ? "" : " \u2746");
+  text.appendChild(label);
+  row.appendChild(text);
+
+  const ctrl = document.createElement("div");
+  ctrl.className = "row-control";
+  const sw = document.createElement("div");
+  sw.className = "switch";
+  sw.setAttribute("role", "switch");
+  const isActive = theme.id === activeId;
+  const isPinned = pinned[theme.id] === true;
+  if (isPinned) sw.classList.add("on");
+  sw.setAttribute("aria-checked", isPinned ? "true" : "false");
+
+  if (isActive) {
+    sw.classList.add("disabled");
+    sw.setAttribute("tabindex", "-1");
+    sw.title = t("toastActiveLocked");
+  } else {
+    sw.setAttribute("tabindex", "0");
+    attachSwitchToggle(sw, async () => {
+      const result = await window.settingsAPI.command("togglePinnedTheme", { themeId: theme.id });
+      if (result && result.status === "active-locked") {
+        return { status: "error", message: t("toastActiveLocked") };
+      }
+      if (result && result.status === "min-one-required") {
+        return { status: "error", message: t("toastMinOneRequired") };
+      }
+      return result;
+    });
+  }
+
   ctrl.appendChild(sw);
   row.appendChild(ctrl);
   return row;
@@ -555,8 +689,6 @@ window.settingsAPI.getSnapshot().then((snap) => {
   renderContent();
 });
 
-// Fetch static agent metadata once at boot. It's a pure lookup from
-// agents/registry.js — no runtime state — so there's no refresh loop.
 if (typeof window.settingsAPI.listAgents === "function") {
   window.settingsAPI
     .listAgents()
@@ -567,5 +699,18 @@ if (typeof window.settingsAPI.listAgents === "function") {
     .catch((err) => {
       console.warn("settings: listAgents failed", err);
       agentMetadata = [];
+    });
+}
+
+if (typeof window.settingsAPI.listThemes === "function") {
+  window.settingsAPI
+    .listThemes()
+    .then((list) => {
+      themeMetadata = Array.isArray(list) ? list : [];
+      if (activeTab === "theme") renderContent();
+    })
+    .catch((err) => {
+      console.warn("settings: listThemes failed", err);
+      themeMetadata = [];
     });
 }

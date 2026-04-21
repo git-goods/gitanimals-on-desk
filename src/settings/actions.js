@@ -244,6 +244,7 @@ const updateRegistry = {
   // ── Phase 2/3 placeholders — schema reserves these so applyUpdate accepts them ──
   agents: requirePlainObject("agents"),
   themeOverrides: requirePlainObject("themeOverrides"),
+  pinnedThemes: requirePlainObject("pinnedThemes"),
 
   // ── Internal — version is owned by prefs.js / migrate(), shouldn't normally
   //    be set via applyUpdate, but we accept it so programmatic upgrades work. ──
@@ -335,12 +336,58 @@ function setAgentFlag(payload, deps) {
   return { status: "ok", commit: { agents: nextAgents } };
 }
 
+function togglePinnedTheme(payload, deps) {
+  if (!payload || typeof payload !== "object") {
+    return { status: "error", message: "togglePinnedTheme: payload must be an object" };
+  }
+  const { themeId } = payload;
+  if (typeof themeId !== "string" || themeId.length === 0) {
+    return { status: "error", message: "togglePinnedTheme.themeId must be a non-empty string" };
+  }
+  const discovered = typeof deps.getDiscoveredThemes === "function" ? deps.getDiscoveredThemes() : [];
+  const knownIds = new Set(discovered.map(t => t.id));
+  if (!knownIds.has(themeId)) {
+    return { status: "error", message: `togglePinnedTheme: unknown theme "${themeId}"` };
+  }
+  const snapshot = deps && deps.snapshot;
+  const currentPinned = (snapshot && snapshot.pinnedThemes) || {};
+  const isPinned = currentPinned[themeId] === true;
+
+  if (!isPinned) {
+    return { status: "ok", commit: { pinnedThemes: { ...currentPinned, [themeId]: true } } };
+  }
+
+  const activeId = typeof deps.getActiveThemeId === "function" ? deps.getActiveThemeId() : null;
+  if (activeId && themeId === activeId) {
+    return { status: "active-locked", message: "Cannot unpin the active theme." };
+  }
+  const remainingCount = Object.keys(currentPinned).filter(id => id !== themeId && currentPinned[id] === true).length;
+  if (remainingCount < 1) {
+    return { status: "min-one-required", message: "At least one theme must remain pinned." };
+  }
+  const next = { ...currentPinned };
+  delete next[themeId];
+  return { status: "ok", commit: { pinnedThemes: next } };
+}
+
+async function refreshThemes(_payload, deps) {
+  if (typeof deps.resyncPersonas === "function") {
+    try { await deps.resyncPersonas(); }
+    catch (err) {
+      return { status: "error", message: `refreshThemes: ${err && err.message}` };
+    }
+  }
+  return { status: "ok" };
+}
+
 const commandRegistry = {
   removeTheme: notImplemented("removeTheme"),
   installHooks: notImplemented("installHooks"),
   uninstallHooks: notImplemented("uninstallHooks"),
   registerShortcut: notImplemented("registerShortcut"),
   setAgentFlag,
+  togglePinnedTheme,
+  refreshThemes,
 };
 
 module.exports = {

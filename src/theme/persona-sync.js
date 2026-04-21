@@ -8,6 +8,14 @@
 //
 // Additionally emits onUnauthorized(fn) when the token is rejected (→ relogin).
 
+let _sentry = null;
+try { _sentry = require("@sentry/electron"); } catch (_e) {}
+function _crumb(message, data) {
+  if (_sentry) {
+    try { _sentry.addBreadcrumb({ category: "persona-sync", message, data, level: "info" }); } catch (_e) {}
+  }
+}
+
 const fs   = require("fs");
 const path = require("path");
 const { URL } = require("url");
@@ -65,19 +73,20 @@ function syncAll(options = {}) {
   if (_syncInFlight) return Promise.resolve();
   _syncInFlight = true;
   return _syncAllInternal(options)
-    .catch((e) => console.warn("[persona-sync] syncAll error:", e.message))
+    .catch((e) => { console.warn("[persona-sync] syncAll error:", e.message); _crumb("persona.sync.fail", { error: e.message }); })
     .finally(() => { _syncInFlight = false; });
 }
 
 // ── Internal ──
 
 async function _syncAllInternal({ force = false } = {}) {
+  _crumb("persona.sync.start");
   if (!themeCacheDir) {
     console.warn("[persona-sync] not initialized; skipping");
     return;
   }
 
-  const { getMe, getAssets, downloadBuffer, UnauthorizedError } = require("../api/gitanimals-client");
+  const { getUser, getUserPersonas, getAssets, downloadBuffer, UnauthorizedError } = require("../api/gitanimals-client");
 
   fs.mkdirSync(themeCacheDir, { recursive: true });
 
@@ -91,13 +100,15 @@ async function _syncAllInternal({ force = false } = {}) {
   const shouldFetchList = force || _isStale(cachedMeta.fetchedAt);
   if (shouldFetchList) {
     try {
-      const me = await getMe();
-      if (!me || !Array.isArray(me.personas)) throw new Error("unexpected /users/me shape");
-      personas = me.personas.map(_toPersonaEntry).filter(Boolean);
+      const me = await getUser();
+      if (!me || typeof me.username !== "string") throw new Error("unexpected /users shape (no username)");
+      const userData = await getUserPersonas(me.username);
+      if (!userData || !Array.isArray(userData.personas)) throw new Error("unexpected /users/{username} shape");
+      personas = userData.personas.map(_toPersonaEntry).filter(Boolean);
       fs.writeFileSync(metaPath, JSON.stringify({ fetchedAt: Date.now(), personas }, null, 2), "utf8");
     } catch (e) {
       if (e instanceof UnauthorizedError) { _notifyUnauthorized(); return; }
-      console.warn("[persona-sync] /users/me fetch failed:", e.message);
+      console.warn("[persona-sync] persona list fetch failed:", e.message);
       // Fall through: try syncing with whatever is in cache
     }
   }
@@ -111,10 +122,14 @@ async function _syncAllInternal({ force = false } = {}) {
     } catch (e) {
       if (e instanceof UnauthorizedError) { _notifyUnauthorized(); return; }
       console.warn(`[persona-sync] persona "${p.personaType}" sync failed:`, e.message);
+      _crumb("persona.fetch.fail", { personaType: p.personaType, error: e.message });
     }
   }
 
-  if (shouldFetchList || anyUpdated) _notifySyncComplete();
+  if (shouldFetchList || anyUpdated) {
+    _crumb("persona.sync.success", { updated: anyUpdated });
+    _notifySyncComplete();
+  }
 }
 
 /**
