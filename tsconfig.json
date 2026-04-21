@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "src/settings/prefs.js",
+    "src/settings/agent-gate.js",
+    "agents/**/*.js",
+    "hooks/json-utils.js",
+    "hooks/shared-process.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".worktrees",
+    "tools/preview"
+  ]
+}
