@@ -34,8 +34,16 @@ module.exports = function initMenu(ctx) {
   function buildThemeSubmenu() {
     const themes = ctx.discoverThemes ? ctx.discoverThemes() : [];
     const activeId = ctx.getActiveThemeId ? ctx.getActiveThemeId() : "fox";
+    const pinned = ctx.getPinnedThemes ? ctx.getPinnedThemes() : null;
 
-    const items = themes.map(theme => ({
+    // Show only pinned themes; always include the active theme as a safety net.
+    let visible = themes;
+    if (pinned && typeof pinned === "object" && Object.keys(pinned).length > 0) {
+      visible = themes.filter(t => pinned[t.id] === true || t.id === activeId);
+      if (visible.length === 0) visible = themes.filter(t => t.id === activeId);
+    }
+
+    const items = visible.map(theme => ({
       label: theme.name + (theme.builtin ? "" : " ✦"),
       type: "radio",
       checked: theme.id === activeId,
