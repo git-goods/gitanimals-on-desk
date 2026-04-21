@@ -37,9 +37,13 @@ let pendingNext = null;
 
 // ── Theme config (injected via preload.js additionalArguments) ──
 let tc = window.themeConfig || {};
+let _themeId = null;
+let _themeSource = null;
 
 function initWithConfig(cfg) {
   tc = cfg || {};
+  _themeId = tc.themeId || null;
+  _themeSource = tc.themeSource || null;
   _viewBox = tc.viewBox || { x: -15, y: -25, width: 45, height: 45 };
   _layout = tc.layout || null;
   _assetsPath = tc.assetsPath || "../../assets/svg";
@@ -301,6 +305,22 @@ function getAssetUrl(file) {
   return `${_sourceAssetsPath}/${file}`;
 }
 
+// Asset load failures are invisible to Sentry unless we surface them from the
+// renderer: Chromium just paints the browser's broken-image glyph and no
+// exception fires. Guarded so a broken preload API can never crash swap().
+function reportAssetLoadFailed(info) {
+  try {
+    window.electronAPI && window.electronAPI.reportDiagnostic &&
+      window.electronAPI.reportDiagnostic({
+        kind: "asset-load-failed",
+        themeId: _themeId,
+        themeSource: _themeSource,
+        assetsPath: _assetsPath,
+        ...info,
+      });
+  } catch (_) {}
+}
+
 // --- Debug hitbox: show blue outline around image element ---
 let _debugHitbox = false;
 function applyDebugOutline(el) {
@@ -458,12 +478,25 @@ function swapToFile(file, state, useObjectChannel) {
     };
 
     next.addEventListener("load", swap, { once: true });
+    next.addEventListener("error", () => {
+      reportAssetLoadFailed({
+        state, file, url, channel: "object", failureMode: "error-event",
+      });
+    }, { once: true });
     next.data = url;
     container.appendChild(next);
     pendingNext = next;
     setTimeout(() => {
       if (pendingNext !== next) return;
-      try { if (!next.contentDocument) { releaseObject(next); pendingNext = null; return; } } catch {}
+      try {
+        if (!next.contentDocument) {
+          reportAssetLoadFailed({
+            state, file, url, channel: "object",
+            failureMode: "timeout-no-contentdocument",
+          });
+          releaseObject(next); pendingNext = null; return;
+        }
+      } catch {}
       swap();
     }, 3000);
   } else {
@@ -503,12 +536,25 @@ function swapToFile(file, state, useObjectChannel) {
     };
 
     next.addEventListener("load", swap, { once: true });
+    next.addEventListener("error", () => {
+      reportAssetLoadFailed({
+        state, file, url, channel: "img", failureMode: "error-event",
+      });
+    }, { once: true });
     next.src = url;
     container.appendChild(next);
     pendingNext = next;
     // Timeout fallback for images that fail to load
     setTimeout(() => {
       if (pendingNext !== next) return;
+      // naturalWidth === 0 on a "complete" image means load failed silently
+      // (e.g. error event didn't fire before timeout).
+      if (next.complete && next.naturalWidth === 0) {
+        reportAssetLoadFailed({
+          state, file, url, channel: "img",
+          failureMode: "timeout-naturalwidth-zero",
+        });
+      }
       swap();
     }, 3000);
   }

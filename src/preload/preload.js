@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Handshake: renderer signals all IPC listeners are registered
   signalReady: () => ipcRenderer.send("renderer-ready"),
   // Telemetry — renderer can flag conditions that are only observable in the
-  // DOM (e.g. SVG swap-to-empty). Main process forwards to Sentry.
+  // DOM (e.g. SVG swap-to-empty, <img>/<object> load failure). Main process
+  // forwards to Sentry. Known kinds: empty-svg, window-error,
+  // unhandled-rejection, asset-load-failed.
   reportDiagnostic: (payload) => ipcRenderer.send("renderer-diagnostic", payload),
 });
