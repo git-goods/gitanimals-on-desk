@@ -132,6 +132,14 @@ export interface ThemeManifest {
   };
 }
 
+export interface ThemeCatalogEntry {
+  id: string;
+  name: string;
+  path: string;
+  builtin: boolean;
+  source?: string;
+}
+
 export interface HookStatePayload {
   state: PetState | string;
   session_id?: string;

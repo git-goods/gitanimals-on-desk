@@ -17,6 +17,7 @@
 
 "use strict";
 
+const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
@@ -39,7 +40,6 @@ function _loadDsn() {
   // packaged build sets SENTRY_DSN via electron-builder extraMetadata or a build
   // step, this block is a no-op.
   try {
-    const fs = require("fs");
     const envPath = path.resolve(__dirname, "..", "..", ".env");
     if (fs.existsSync(envPath)) {
       const raw = fs.readFileSync(envPath, "utf8");
@@ -50,7 +50,8 @@ function _loadDsn() {
     }
   } catch { /* ignore */ }
   try {
-    const pkg = require("../../package.json");
+    const pkgPath = path.resolve(__dirname, "..", "..", "package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
     if (pkg && pkg.sentry && pkg.sentry.dsn) return pkg.sentry.dsn;
   } catch { /* ignore */ }
   return null;
@@ -86,28 +87,29 @@ function init(opts = {}) {
   }
 
   Sentry = _loadSDK();
-  if (!Sentry || typeof Sentry.init !== "function") {
+  const sentrySdk = /** @type {any} */ (Sentry);
+  if (!sentrySdk || typeof sentrySdk.init !== "function") {
     return false;
   }
 
   let release = opts.release;
   if (!release) {
     try {
-      const { app } = require("electron");
-      release = `gitanimals-on-desk@${app.getVersion()}`;
+      const electronForRelease = require("electron");
+      release = `gitanimals-on-desk@${electronForRelease.app.getVersion()}`;
     } catch { release = undefined; }
   }
 
   let environment = opts.environment;
   if (!environment) {
     try {
-      const { app } = require("electron");
-      environment = app.isPackaged ? "production" : "development";
+      const electronForEnv = require("electron");
+      environment = electronForEnv.app.isPackaged ? "production" : "development";
     } catch { environment = "development"; }
   }
 
   try {
-    Sentry.init({
+    sentrySdk.init({
       dsn,
       release,
       environment,

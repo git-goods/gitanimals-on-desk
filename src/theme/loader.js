@@ -7,6 +7,9 @@ const { bc, report } = (() => {
   try { return require("../core/telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
 
+/** @typedef {import("../types/contracts").ThemeCatalogEntry} ThemeCatalogEntry */
+/** @typedef {import("../types/contracts").ThemeManifest} ThemeManifest */
+
 // ── Defaults (used when theme.json omits optional fields) ──
 
 const DEFAULT_SOUNDS = {
@@ -107,10 +110,10 @@ function init(appDir, userData) {
 /**
  * Discover all available themes.
  * Scans built-in themes dir + {userData}/themes/
- * @returns {{ id: string, name: string, path: string, builtin: boolean }[]}
+ * @returns {ThemeCatalogEntry[]}
  */
 function discoverThemes() {
-  const themes = [];
+  const themes = /** @type {ThemeCatalogEntry[]} */ ([]);
   const seen = new Set();
   _variantMap = {};
 
@@ -177,7 +180,7 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
 /**
  * Load and activate a theme by ID.
  * @param {string} themeId
- * @returns {object} merged theme config
+ * @returns {ThemeManifest & Record<string, unknown>} merged theme config
  */
 function loadTheme(themeId) {
   // Resolve variant ID → parent theme directory
