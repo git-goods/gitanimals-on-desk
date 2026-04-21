@@ -8,6 +8,14 @@
 //
 // Additionally emits onUnauthorized(fn) when the token is rejected (→ relogin).
 
+let _sentry = null;
+try { _sentry = require("@sentry/electron"); } catch (_e) {}
+function _crumb(message, data) {
+  if (_sentry) {
+    try { _sentry.addBreadcrumb({ category: "persona-sync", message, data, level: "info" }); } catch (_e) {}
+  }
+}
+
 const fs   = require("fs");
 const path = require("path");
 const { URL } = require("url");
@@ -65,13 +73,14 @@ function syncAll(options = {}) {
   if (_syncInFlight) return Promise.resolve();
   _syncInFlight = true;
   return _syncAllInternal(options)
-    .catch((e) => console.warn("[persona-sync] syncAll error:", e.message))
+    .catch((e) => { console.warn("[persona-sync] syncAll error:", e.message); _crumb("persona.sync.fail", { error: e.message }); })
     .finally(() => { _syncInFlight = false; });
 }
 
 // ── Internal ──
 
 async function _syncAllInternal({ force = false } = {}) {
+  _crumb("persona.sync.start");
   if (!themeCacheDir) {
     console.warn("[persona-sync] not initialized; skipping");
     return;
@@ -113,10 +122,14 @@ async function _syncAllInternal({ force = false } = {}) {
     } catch (e) {
       if (e instanceof UnauthorizedError) { _notifyUnauthorized(); return; }
       console.warn(`[persona-sync] persona "${p.personaType}" sync failed:`, e.message);
+      _crumb("persona.fetch.fail", { personaType: p.personaType, error: e.message });
     }
   }
 
-  if (shouldFetchList || anyUpdated) _notifySyncComplete();
+  if (shouldFetchList || anyUpdated) {
+    _crumb("persona.sync.success", { updated: anyUpdated });
+    _notifySyncComplete();
+  }
 }
 
 /**
