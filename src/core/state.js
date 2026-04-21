@@ -253,36 +253,6 @@ function applyState(state, svgOverride) {
   }
   currentSvg = svg;
 
-  // Diagnostics — only emit when state actually changes, plus always warn on
-  // missing SVG (the central hypothesis for macOS "pet disappears" reports).
-  if (previousState !== state || (svgOverride && svgOverride !== svg)) {
-    try {
-      bc("state", "applyState", {
-        from: previousState,
-        to: state,
-        svg,
-        sessions: sessions.size,
-        dnd: !!ctx.doNotDisturb,
-        miniMode: !!ctx.miniMode,
-      });
-    } catch {}
-  }
-  if (!svg) {
-    try {
-      report("[state] applyState produced empty svg", "warning", {
-        state,
-        svgOverride,
-        hasStateSvgs: !!STATE_SVGS[state],
-        stateSvgsLen: Array.isArray(STATE_SVGS[state]) ? STATE_SVGS[state].length : null,
-        hasIdleSvgs: !!STATE_SVGS.idle,
-        idleSvgsLen: Array.isArray(STATE_SVGS.idle) ? STATE_SVGS.idle.length : null,
-        sessions: sessions.size,
-        dnd: !!ctx.doNotDisturb,
-        miniMode: !!ctx.miniMode,
-      });
-    } catch {}
-  }
-
   // Force eye resend after SVG load completes (~300ms)
   // After sweeping → idle, pause eye tracking briefly so eyes stay centered before resuming
   if (eyeResendTimer) { clearTimeout(eyeResendTimer); eyeResendTimer = null; }
