@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, Menu, ipcMain, globalShortcut, nativeTheme, powerMonitor } = require("electron");
+const { app, BrowserWindow, screen, Menu, ipcMain, globalShortcut, nativeTheme, powerMonitor, Notification } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { applyStationaryCollectionBehavior } = require("./mac-window");
@@ -153,6 +153,7 @@ const _settingsController = createSettingsController({
 });
 
 let _userCache = null; // { username: string } — cached after first settings:get-user call
+let _lastUnauthorizedNotifiedAt = 0; // epoch ms — debounce OS notification (30s)
 
 // Mirror of `_settingsController.get("lang")` so existing sync read sites in
 // menu.js / state.js / etc. don't have to round-trip through the controller.
@@ -1720,6 +1721,28 @@ if (!gotTheLock) {
     personaSync.onUnauthorized(() => {
       try { bc("auth", "session.expired"); } catch {}
       tokenStore.clear();
+
+      // OS notification + settings toast — debounce 30 s to avoid spam on repeated 401s
+      const now = Date.now();
+      if (now - _lastUnauthorizedNotifiedAt > 30_000) {
+        _lastUnauthorizedNotifiedAt = now;
+        try {
+          new Notification({
+            title: "GitAnimals",
+            body: lang === "ko"
+              ? "세션이 만료되었습니다 — 다시 로그인해 주세요"
+              : lang === "zh"
+                ? "会话已过期 — 请重新登录"
+                : "Session expired — please sign in again",
+          }).show();
+        } catch (_e) { /* notifications may be unavailable */ }
+        try {
+          if (settingsWindow && !settingsWindow.isDestroyed()) {
+            settingsWindow.webContents.send("auth:session-expired");
+          }
+        } catch (_e) { /* settings window may be closed */ }
+      }
+
       const reloginWin = new LoginWindow();
       reloginWin.once("authenticated", () => { reloginWin.cleanup(); personaSync.syncAll({ force: true }); });
       reloginWin.open().catch((e) => console.warn("[auth] relogin window failed:", e.message));
