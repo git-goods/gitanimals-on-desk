@@ -714,3 +714,10 @@ if (typeof window.settingsAPI.listThemes === "function") {
       themeMetadata = [];
     });
 }
+
+if (typeof window.settingsAPI.onSetTab === "function") {
+  window.settingsAPI.onSetTab((tab) => {
+    const valid = SIDEBAR_TABS.find(s => s.id === tab && s.available);
+    if (valid) { activeTab = tab; renderSidebar(); renderContent(); }
+  });
+}
