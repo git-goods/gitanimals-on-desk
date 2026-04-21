@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld("settingsAPI", {
   command: (action, payload) => ipcRenderer.invoke("settings:command", { action, payload }),
   listAgents: () => ipcRenderer.invoke("settings:list-agents"),
   listThemes: () => ipcRenderer.invoke("settings:list-themes"),
+  getUser: () => ipcRenderer.invoke("settings:get-user"),
   onChanged: (cb) => {
     if (typeof cb === "function") listeners.add(cb);
   },

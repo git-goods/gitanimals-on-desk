@@ -69,6 +69,10 @@ const STRINGS = {
     toastActiveLocked: "Cannot unpin the active theme.",
     toastMinOneRequired: "At least one theme must remain pinned.",
     langKorean: "한국어",
+    userCardSignedIn: "Signed in",
+    userCardLoading: "Loading account…",
+    userCardSignOut: "Sign out",
+    userCardSignInAgain: "Sign in again",
   },
   zh: {
     settingsTitle: "设置",
@@ -124,6 +128,10 @@ const STRINGS = {
     toastActiveLocked: "无法取消固定当前使用的主题。",
     toastMinOneRequired: "至少需要保留一个固定主题。",
     langKorean: "한국어",
+    userCardSignedIn: "已登录",
+    userCardLoading: "加载账号…",
+    userCardSignOut: "退出登录",
+    userCardSignInAgain: "重新登录",
   },
   ko: {
     settingsTitle: "설정",
@@ -179,6 +187,10 @@ const STRINGS = {
     themeRefreshFailed: "새로고침 실패: ",
     toastActiveLocked: "현재 활성 테마는 고정 해제할 수 없어요.",
     toastMinOneRequired: "하나 이상의 테마는 반드시 고정되어 있어야 해요.",
+    userCardSignedIn: "로그인됨",
+    userCardLoading: "계정 정보 불러오는 중…",
+    userCardSignOut: "로그아웃",
+    userCardSignInAgain: "다시 로그인",
   },
 };
 
@@ -186,6 +198,7 @@ let snapshot = null;
 let activeTab = "general";
 let agentMetadata = null;
 let themeMetadata = null;
+let _userInfo = null;
 
 function t(key) {
   const lang = (snapshot && snapshot.lang) || "en";
@@ -482,6 +495,71 @@ function renderPlaceholder(parent) {
   parent.appendChild(div);
 }
 
+function buildUserCard() {
+  const usernameEl = document.createElement("span");
+  usernameEl.className = "row-label";
+  usernameEl.textContent = _userInfo
+    ? "\u{1F464} @" + _userInfo.username
+    : "\u{1F464} " + t("userCardLoading");
+
+  const statusEl = document.createElement("span");
+  statusEl.className = "row-desc";
+  statusEl.textContent = t("userCardSignedIn");
+
+  const textDiv = document.createElement("div");
+  textDiv.className = "row-text";
+  textDiv.appendChild(usernameEl);
+  textDiv.appendChild(statusEl);
+
+  const signOutBtn = document.createElement("button");
+  signOutBtn.className = "btn";
+  signOutBtn.type = "button";
+  signOutBtn.textContent = t("userCardSignOut");
+
+  const signInAgainBtn = document.createElement("button");
+  signInAgainBtn.className = "btn";
+  signInAgainBtn.type = "button";
+  signInAgainBtn.textContent = t("userCardSignInAgain");
+
+  signOutBtn.addEventListener("click", () => {
+    signOutBtn.disabled = true;
+    signInAgainBtn.disabled = true;
+    window.settingsAPI.command("logout").catch(() => {});
+  });
+  signInAgainBtn.addEventListener("click", () => {
+    signOutBtn.disabled = true;
+    signInAgainBtn.disabled = true;
+    window.settingsAPI.command("signIn").catch(() => {});
+  });
+
+  const ctrlDiv = document.createElement("div");
+  ctrlDiv.className = "row-control";
+  ctrlDiv.style.display = "flex";
+  ctrlDiv.style.gap = "6px";
+  ctrlDiv.appendChild(signOutBtn);
+  ctrlDiv.appendChild(signInAgainBtn);
+
+  const row = document.createElement("div");
+  row.className = "row";
+  row.appendChild(textDiv);
+  row.appendChild(ctrlDiv);
+
+  if (!_userInfo && typeof window.settingsAPI.getUser === "function") {
+    window.settingsAPI.getUser().then(function(u) {
+      if (u && u.username) {
+        _userInfo = u;
+        usernameEl.textContent = "\u{1F464} @" + u.username;
+      } else {
+        usernameEl.textContent = "\u{1F464}";
+      }
+    }).catch(function() {
+      usernameEl.textContent = "\u{1F464}";
+    });
+  }
+
+  return buildSection("", [row]);
+}
+
 function renderGeneralTab(parent) {
   const h1 = document.createElement("h1");
   h1.textContent = t("settingsTitle");
@@ -491,6 +569,8 @@ function renderGeneralTab(parent) {
   subtitle.className = "subtitle";
   subtitle.textContent = t("settingsSubtitle");
   parent.appendChild(subtitle);
+
+  parent.appendChild(buildUserCard());
 
   // Section: Appearance
   parent.appendChild(buildSection(t("sectionAppearance"), [
