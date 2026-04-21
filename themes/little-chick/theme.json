@@ -60,11 +60,14 @@
   },
 
   "states": {
-    "idle": ["idle-follow.svg"],
-    "thinking": ["thinking.svg"],
-    "working": ["typing.svg"],
-    "sleeping": ["sleeping.svg"],
-    "waking": ["waking.svg"]
+    "idle":         ["idle-follow.svg"],
+    "thinking":     ["thinking.svg"],
+    "working":      ["typing.svg"],
+    "error":        ["error.svg"],
+    "attention":    ["happy.svg"],
+    "notification": ["notification.svg"],
+    "sleeping":     ["sleeping.svg"],
+    "waking":       ["waking.svg"]
   },
 
   "timings": {
