@@ -838,6 +838,8 @@ const _menuCtx = {
   openSettingsWindow: () => openSettingsWindow(),
   logout: () => {
     tokenStore.clear();
+    const _cacheDir = path.join(app.getPath("userData"), "theme-cache");
+    try { require("fs").rmSync(_cacheDir, { recursive: true, force: true }); } catch (_e) {}
     app.relaunch();
     app.exit(0);
   },
