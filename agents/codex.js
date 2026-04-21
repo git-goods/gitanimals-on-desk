@@ -1,6 +1,9 @@
 // Codex CLI agent configuration
 // Windows hooks completely disabled — uses JSONL log polling instead
 
+/** @typedef {import("../src/types/contracts").AgentDefinition} AgentDefinition */
+
+/** @type {AgentDefinition} */
 module.exports = {
   id: "codex",
   name: "Codex CLI",

@@ -8,7 +8,7 @@ export type AgentId =
   | "kiro-cli"
   | "opencode";
 
-export type AgentEventSource = "hook" | "log-poll" | "plugin";
+export type AgentEventSource = "hook" | "log-poll" | "plugin" | "plugin-event";
 
 export type PetState =
   | "idle"

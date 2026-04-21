@@ -17,10 +17,13 @@ const AGENTS = [claudeCode, codex, copilotCli, geminiCli, cursorAgent, codebuddy
 const AGENT_MAP = new Map(AGENTS.map((a) => [a.id, a]));
 
 module.exports = {
+  /** @returns {AgentDefinition[]} */
   getAllAgents: () => AGENTS,
+  /** @param {string} id */
   getAgent: (id) => AGENT_MAP.get(id),
 
   // Aggregate all agent process names for detectRunningAgentProcesses()
+  /** @returns {{ name: string, agentId: string }[]} */
   getAllProcessNames: () => {
     const isWin = process.platform === "win32";
     const isLinux = process.platform === "linux";

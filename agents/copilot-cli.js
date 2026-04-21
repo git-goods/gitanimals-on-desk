@@ -1,6 +1,9 @@
 // Copilot CLI agent configuration
 // Hooks work on Windows + macOS, similar architecture to Claude Code
 
+/** @typedef {import("../src/types/contracts").AgentDefinition} AgentDefinition */
+
+/** @type {AgentDefinition} */
 module.exports = {
   id: "copilot-cli",
   name: "Copilot CLI",

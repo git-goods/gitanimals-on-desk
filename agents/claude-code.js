@@ -1,6 +1,9 @@
 // Claude Code agent configuration
 // Extracted from hardcoded constants in main.js and gitanimals-hook.js
 
+/** @typedef {import("../src/types/contracts").AgentDefinition} AgentDefinition */
+
+/** @type {AgentDefinition} */
 module.exports = {
   id: "claude-code",
   name: "Claude Code",
