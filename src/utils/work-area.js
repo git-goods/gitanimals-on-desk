@@ -13,6 +13,7 @@ const SYNTHETIC_WORK_AREA = { x: 0, y: 0, width: 1920, height: 1080 };
 
 function findNearestWorkArea(displays, primaryWa, cx, cy) {
   if (!Array.isArray(displays) || displays.length === 0) {
+    try { require("../core/telemetry").bc("workarea", "synthetic-fallback", { reason: "displays-empty" }); } catch {}
     return primaryWa || SYNTHETIC_WORK_AREA;
   }
   let nearest = displays[0].workArea;
@@ -42,6 +43,7 @@ function computeLooseClamp(displays, primaryWa, x, y, w, h) {
   // guard, minX/maxX stay at Infinity/-Infinity and the Math.max/min below
   // produce NaN, which makes setBounds() throw or land off-screen.
   if (minX === Infinity) {
+    try { require("../core/telemetry").bc("workarea", "synthetic-fallback", { reason: "no-valid-workarea" }); } catch {}
     const wa = primaryWa || SYNTHETIC_WORK_AREA;
     minX = wa.x;
     minY = wa.y;

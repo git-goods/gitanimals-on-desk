@@ -1413,6 +1413,29 @@ function createWindow() {
   guardAlwaysOnTop(win);
   startTopmostWatchdog();
 
+  function _reportIfOffscreen(cause) {
+    if (!win || win.isDestroyed()) return;
+    setTimeout(() => {
+      try {
+        if (!win || win.isDestroyed()) return;
+        const b = win.getBounds();
+        const displays = screen.getAllDisplays();
+        const inside = displays.some((d) => {
+          const wa = d.workArea;
+          return b.x + b.width > wa.x && b.x < wa.x + wa.width
+              && b.y + b.height > wa.y && b.y < wa.y + wa.height;
+        });
+        if (!inside) {
+          report("[window] offscreen after " + cause, "error", {
+            cause, bounds: b, visible: win.isVisible(),
+            displayCount: displays.length,
+            workAreas: displays.map((d) => d.workArea),
+          });
+        }
+      } catch {}
+    }, 300);
+  }
+
   // ── Display change: re-clamp window to prevent off-screen ──
   // In proportional mode, also recalculate size based on the new work area.
   screen.on("display-metrics-changed", (_event, display, changedMetrics) => {
@@ -1425,6 +1448,7 @@ function createWindow() {
         miniMode: _mini.getMiniMode(),
       });
     } catch {}
+    _reportIfOffscreen("display-metrics-changed");
     reapplyMacVisibility();
     if (!win || win.isDestroyed()) return;
     if (_mini.getMiniMode()) {
@@ -1449,6 +1473,7 @@ function createWindow() {
         miniMode: _mini.getMiniMode(),
       });
     } catch {}
+    _reportIfOffscreen("display-removed");
     reapplyMacVisibility();
     if (!win || win.isDestroyed()) return;
     if (_mini.getMiniMode()) {
@@ -1753,9 +1778,15 @@ if (!gotTheLock) {
     // wake" / "pet disappears after switching Space" reports.
     try {
       powerMonitor.on("suspend",       () => bc("power", "suspend"));
-      powerMonitor.on("resume",        () => bc("power", "resume", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
+      powerMonitor.on("resume", () => {
+        bc("power", "resume", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null });
+        _reportIfOffscreen("resume");
+      });
       powerMonitor.on("lock-screen",   () => bc("power", "lock-screen"));
-      powerMonitor.on("unlock-screen", () => bc("power", "unlock-screen", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
+      powerMonitor.on("unlock-screen", () => {
+        bc("power", "unlock-screen", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null });
+        _reportIfOffscreen("unlock-screen");
+      });
       app.on("did-become-active",      () => bc("app", "did-become-active", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
       app.on("did-resign-active",      () => bc("app", "did-resign-active"));
       app.on("child-process-gone", (_e, details) => {
