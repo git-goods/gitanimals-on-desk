@@ -27,11 +27,18 @@
     "idle":         ["idle-follow.svg"],
     "thinking":     ["thinking.svg"],
     "working":      ["typing.svg"],
+    "juggling":     ["typing.svg"],
+    "carrying":     ["idle-follow.svg"],
+    "sweeping":     ["typing.svg"],
     "error":        ["error.svg"],
     "attention":    ["happy.svg"],
     "notification": ["notification.svg"],
     "sleeping":     ["sleeping.svg"],
-    "waking":       ["waking.svg"]
+    "waking":       ["waking.svg"],
+    "idle-look":    ["idle-follow.svg"],
+    "yawning":      ["sleeping.svg"],
+    "dozing":       ["sleeping.svg"],
+    "collapsing":   ["sleeping.svg"]
   },
 
   "timings": {
