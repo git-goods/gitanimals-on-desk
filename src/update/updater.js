@@ -236,7 +236,7 @@ function initUpdater(ctx, deps = {}) {
     return new Promise((resolve, reject) => {
       const req = httpsGet({
         hostname: "api.github.com",
-        path: "/repos/git-goods/gitaniamals-on-desk/releases/latest",
+        path: "/repos/git-goods/gitanimals-on-desk/releases/latest",
         headers: { "User-Agent": "GitAnimals-on-Desk" },
       }, (res) => {
         let data = "";
