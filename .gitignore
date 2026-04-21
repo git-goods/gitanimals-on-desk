@@ -30,6 +30,8 @@ docs/*
 !docs/setup-guide.zh-CN.md
 !docs/known-limitations.md
 !docs/known-limitations.zh-CN.md
+!docs/superpowers/
+!docs/superpowers/**
 
 # Temp files from testing
 .tmp_*
@@ -61,6 +63,8 @@ scripts/*
 !scripts/validate-theme.js
 !scripts/dev.js
 !scripts/clean-cache.js
+!scripts/preview-server.js
+!scripts/preview/
 
 # oh-my-cursor state
 .omc/

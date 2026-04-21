@@ -70,7 +70,24 @@
   },
   "sleepingHitboxFiles": ["sleeping.svg"],
 
-  "miniMode": { "supported": false },
+  "miniMode": {
+    "supported": true,
+    "offsetRatio": 0.3,
+    "flipAssets": true,
+    "states": {
+      "mini-idle":        ["mini-idle.svg"],
+      "mini-alert":       ["mini-idle.svg"],
+      "mini-happy":       ["mini-idle.svg"],
+      "mini-enter":       ["mini-idle.svg"],
+      "mini-peek":        ["mini-idle.svg"],
+      "mini-enter-sleep": ["mini-sleep.svg"],
+      "mini-sleep":       ["mini-sleep.svg"]
+    },
+    "timings": {
+      "minDisplay": { "mini-alert": 4000, "mini-happy": 4000 },
+      "autoReturn": { "mini-alert": 4000, "mini-happy": 4000 }
+    }
+  },
 
   "objectScale": {
     "widthRatio": 1.9,

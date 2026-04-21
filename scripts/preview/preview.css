@@ -1,0 +1,238 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #16213e;
+  border-bottom: 1px solid #333;
+  flex-wrap: wrap;
+}
+
+.toolbar label {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toolbar select {
+  padding: 6px 10px;
+  background: #0f3460;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.state-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.state-btn {
+  padding: 5px 10px;
+  background: #0f3460;
+  color: #ccc;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.state-btn:hover { background: #1a4a8a; }
+.state-btn.active { background: #e94560; color: #fff; border-color: #e94560; }
+
+.main-area {
+  display: flex;
+  gap: 0;
+  height: calc(100vh - 52px);
+}
+
+/* Preview panel */
+.preview-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  position: relative;
+}
+
+.preview-container {
+  width: 200px;
+  height: 200px;
+  position: relative;
+  border: 1px dashed #333;
+}
+
+.preview-container object,
+.preview-container img {
+  position: absolute;
+  width: 190%;
+  height: 130%;
+  left: -45%;
+  bottom: 5%;
+}
+
+/* Controls panel */
+.controls-panel {
+  width: 320px;
+  background: #16213e;
+  border-left: 1px solid #333;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.controls-panel h3 {
+  font-size: 13px;
+  color: #e94560;
+  margin: 16px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.controls-panel h3:first-child { margin-top: 0; }
+
+.accessory-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.accessory-item input[type="checkbox"] {
+  accent-color: #e94560;
+}
+
+.slider-group {
+  margin: 8px 0;
+}
+
+.slider-group label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 2px;
+}
+
+.slider-group label span {
+  color: #e94560;
+  font-weight: bold;
+}
+
+.slider-group input[type="range"] {
+  width: 100%;
+  accent-color: #e94560;
+}
+
+.copy-btn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-top: 12px;
+  background: #e94560;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.copy-btn:hover { background: #c73652; }
+.copy-btn.copied { background: #27ae60; }
+
+.transform-output {
+  margin-top: 8px;
+  padding: 8px;
+  background: #0a0a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #4fc3f7;
+  word-break: break-all;
+}
+
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 12px;
+  background: #0f3460;
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  justify-content: space-between;
+}
+
+.status-bar .connected { color: #27ae60; }
+.status-bar .disconnected { color: #e94560; }
+
+/* Gallery mode */
+.gallery-mode {
+  padding: 20px;
+  overflow-y: auto;
+  height: calc(100vh - 52px);
+}
+
+.gallery-theme {
+  margin-bottom: 24px;
+}
+
+.gallery-theme-title {
+  font-size: 14px;
+  color: #e94560;
+  margin-bottom: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #333;
+}
+
+.gallery-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gallery-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gallery-cell-label {
+  font-size: 10px;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.gallery-cell-container {
+  width: 120px;
+  height: 120px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.gallery-cell-container object {
+  position: absolute;
+  width: 190%;
+  height: 130%;
+  left: -45%;
+  bottom: 5%;
+}

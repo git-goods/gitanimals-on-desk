@@ -196,6 +196,12 @@ function collectFiles() {
       if (f) files.add(f);
     }
   }
+  // Accessories
+  if (raw.accessories) {
+    for (const acc of Object.values(raw.accessories)) {
+      if (acc && acc.file) files.add(acc.file);
+    }
+  }
   return files;
 }
 
@@ -309,6 +315,53 @@ if (raw.miniMode && raw.miniMode.supported) {
       warn(false, `miniMode.supported=true but missing miniMode.states.${s}`);
     }
   }
+}
+
+// ── 5. Accessories ──
+if (raw.accessories && typeof raw.accessories === "object" && Object.keys(raw.accessories).length > 0) {
+  console.log(`\n${C}[Accessories]${D}`);
+  for (const [accName, acc] of Object.entries(raw.accessories)) {
+    if (!acc || typeof acc !== "object") {
+      check(false, `accessories.${accName} is a valid object`);
+      continue;
+    }
+    check(acc.file && typeof acc.file === "string", `accessories.${accName}.file is set`);
+    if (acc.file) {
+      check(acc.file.endsWith(".svg"), `accessories.${accName}.file is .svg (got: "${acc.file}")`);
+    }
+    check(acc.anchors && typeof acc.anchors === "object", `accessories.${accName}.anchors is set`);
+    if (acc.anchors) {
+      warn(acc.anchors["*"] != null, `accessories.${accName}.anchors has "*" fallback`);
+      for (const [state, anchor] of Object.entries(acc.anchors)) {
+        if (anchor === null) continue; // null = hidden in this state
+        if (typeof anchor === "object") {
+          check(!!anchor.parentId, `accessories.${accName}.anchors["${state}"].parentId is set`);
+        } else {
+          check(false, `accessories.${accName}.anchors["${state}"] must be object or null`);
+        }
+      }
+    }
+  }
+}
+
+// ── 6. Variants ──
+if (raw.variants && Array.isArray(raw.variants) && raw.variants.length > 0) {
+  console.log(`\n${C}[Variants]${D}`);
+  const variantIds = new Set();
+  for (const v of raw.variants) {
+    check(v.id && typeof v.id === "string", `variant has id (got: "${v.id || ""}")`);
+    check(v.name && typeof v.name === "string", `variant "${v.id || "?"}" has name`);
+    if (v.id) {
+      check(!variantIds.has(v.id), `variant id "${v.id}" is unique`);
+      variantIds.add(v.id);
+    }
+    if (Array.isArray(v.accessories) && raw.accessories) {
+      for (const accRef of v.accessories) {
+        check(!!raw.accessories[accRef], `variant "${v.id}" → accessory "${accRef}" exists`);
+      }
+    }
+  }
+  console.log(`  ${PASS} ${raw.variants.length} variant(s) defined`);
 }
 
 // ── Summary ──

@@ -42,8 +42,8 @@ Shell 테스트 스크립트 (개발용): `test-demo.sh`, `test-mini.sh`, `test-
 공통 Hook 흐름 (Claude Code / Copilot / Cursor / Gemini / CodeBuddy / Kiro):
   Agent 이벤트 → hooks/*-hook.js (제로 의존성, stdin JSON → 상태 매핑)
     → HTTP POST 127.0.0.1:23333/state { state, session_id, event, source_pid, cwd }
-    → src/server.js → src/state.js 상태 머신 (다중 세션 + 우선순위 + 수면 시퀀스)
-    → IPC state-change → src/renderer.js (SVG 프리로드 + 페이드 전환 + 눈동자 추적)
+    → src/server/server.js → src/core/state.js 상태 머신 (다중 세션 + 우선순위 + 수면 시퀀스)
+    → IPC state-change → src/core/renderer.js (SVG 프리로드 + 페이드 전환 + 눈동자 추적)
 
 Codex CLI (JSONL 로그 폴링, ~1.5s 지연):
   ~/.codex/sessions/ → agents/codex-log-monitor.js (증분 읽기 + 중복 제거) → 상태 머신
@@ -87,17 +87,17 @@ opencode (in-process plugin, ~0ms):
 
 | 파일                         | 역할                                                       |
 | ---------------------------- | ---------------------------------------------------------- |
-| `src/main.js`                | Electron 메인 프로세스: 윈도우, IPC, ctx, 앱 생명주기      |
-| `src/state.js`               | 상태 머신: 다중 세션, 우선순위, 수면 시퀀스, DND           |
-| `src/server.js`              | HTTP 서버: /state, /permission, 포트 디스커버리, hook 등록 |
-| `src/theme-loader.js`        | 테마 로더: theme.json 파싱, SVG 해석 (9개 핫패스 참조)     |
-| `src/settings-controller.js` | 설정 패널: 단일 쓰기 패턴 (prefs 변경의 유일 진입점)       |
+| `src/core/main.js`           | Electron 메인 프로세스: 윈도우, IPC, ctx, 앱 생명주기      |
+| `src/core/state.js`          | 상태 머신: 다중 세션, 우선순위, 수면 시퀀스, DND           |
+| `src/server/server.js`       | HTTP 서버: /state, /permission, 포트 디스커버리, hook 등록 |
+| `src/theme/loader.js`        | 테마 로더: theme.json 파싱, SVG 해석 (9개 핫패스 참조)     |
+| `src/settings/controller.js` | 설정 패널: 단일 쓰기 패턴 (prefs 변경의 유일 진입점)       |
 | `agents/registry.js`         | 에이전트 레지스트리: 8개 에이전트 ID/프로세스명 조회       |
 | `hooks/server-config.js`     | 공유: 포트 상수, 런타임 설정, HTTP 헬퍼, 서비스 디스커버리 |
 
 디렉토리별 전체 파일 목록: `src/CLAUDE.md`, `hooks/CLAUDE.md`, `agents/CLAUDE.md`
 
-## 상태 머신 (state.js)
+## 상태 머신 (core/state.js)
 
 - **다중 세션**: `sessions` Map — session_id별 독립 상태, `resolveDisplayState()` 최고 우선순위 선택
 - **우선순위**: error(8) > notification(7) > sweeping(6) > attention(5) > carrying/juggling(4) > working(3) > thinking(2) > idle(1) > sleeping(0)
@@ -136,6 +136,7 @@ opencode (in-process plugin, ~0ms):
 
 ## 개발 규범
 
+- **PR 베이스 브랜치는 `main`** (origin/HEAD가 `remote-img`로 잡혀 있더라도 PR/머지 타깃은 `main`)
 - 민감 정보는 `.env`만, 하드코딩 금지
 - Hook 등록 시 기존 배열에 **추가** (덮어쓰기 금지)
 - HTTP 포트 `127.0.0.1:23333-23337`, 런타임 포트 `~/.clawd/runtime.json` 기록, 종료 시 정리
