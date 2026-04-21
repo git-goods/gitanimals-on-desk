@@ -467,7 +467,9 @@ module.exports = function initMenu(ctx) {
         enabled: false,
       },
       { type: "separator" },
-      { label: t("logout"), click: () => ctx.logout && ctx.logout() },
+      ctx.isAuthenticated && ctx.isAuthenticated()
+        ? { label: t("logout"), click: () => ctx.logout && ctx.logout() }
+        : { label: t("signIn"), click: () => ctx.logout && ctx.logout() },
       { label: t("quit"), click: () => requestAppQuit() },
     );
     if (process.env.GITANIMALS_DEBUG) {

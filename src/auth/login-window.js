@@ -18,6 +18,7 @@ class LoginWindow extends EventEmitter {
     this._win = null;
     this._cbServer = null;
     this._ipcRegistered = false;
+    this._authenticated = false;
   }
 
   async open() {
@@ -39,7 +40,7 @@ class LoginWindow extends EventEmitter {
       },
     });
     this._win.setMenuBarVisibility(false);
-    this._win.on("closed", () => { this._win = null; });
+    this._win.on("closed", () => { this._win = null; if (!this._authenticated) this.emit("closed"); });
 
     if (!this._ipcRegistered) {
       ipcMain.on("auth:open-browser", () => this._openBrowser());
@@ -65,6 +66,7 @@ class LoginWindow extends EventEmitter {
       try {
         tokenStore.set(token);
         bc("auth", "login.success");
+        this._authenticated = true;
         this._closeWin();
         this.emit("authenticated", token);
       } catch (err) {

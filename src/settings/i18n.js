@@ -70,6 +70,7 @@ const i18n = {
     settings: "Settings…",
     toggleShortcut: "Toggle Shortcut: {shortcut}",
     logout: "Sign Out",
+    signIn: "Sign In",
     quit: "Quit",
   },
   zh: {
@@ -136,6 +137,7 @@ const i18n = {
     settings: "设置…",
     toggleShortcut: "切换快捷键: {shortcut}",
     logout: "退出登录",
+    signIn: "登录",
     quit: "退出",
   },
   ko: {
@@ -202,6 +204,7 @@ const i18n = {
     settings: "설정…",
     toggleShortcut: "단축키: {shortcut}",
     logout: "로그아웃",
+    signIn: "로그인",
     quit: "종료",
   },
 };

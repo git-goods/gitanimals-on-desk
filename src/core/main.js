@@ -851,6 +851,7 @@ const _menuCtx = {
     app.relaunch();
     app.exit(0);
   },
+  isAuthenticated: () => !!tokenStore.get(),
 };
 const _menu = require("./menu")(_menuCtx);
 const { t, buildContextMenu, buildTrayMenu, rebuildAllMenus, createTray,
@@ -1843,6 +1844,10 @@ if (!gotTheLock) {
       _loginWin.once("authenticated", () => {
         _loginWin.cleanup();
         _bootApp();
+      });
+      _loginWin.once("closed", () => {
+        try { bc("auth", "login.dismissed-at-boot"); } catch {}
+        app.quit();
       });
       await _loginWin.open();
     } else {
