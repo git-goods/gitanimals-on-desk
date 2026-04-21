@@ -17,6 +17,9 @@
     "src/types/**/*.d.ts",
     "src/settings/prefs.js",
     "src/settings/agent-gate.js",
+    "src/settings/actions.js",
+    "src/settings/store.js",
+    "src/settings/controller.js",
     "agents/**/*.js",
     "hooks/json-utils.js",
     "hooks/shared-process.js"

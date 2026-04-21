@@ -60,6 +60,12 @@ const { createStore } = require("./store");
 const prefsModule = require("./prefs");
 const defaultActions = require("./actions");
 
+/** @typedef {import("../types/settings").CreateSettingsControllerOptions} CreateSettingsControllerOptions */
+/** @typedef {import("../types/settings").SettingsResult} SettingsResult */
+
+/**
+ * @param {CreateSettingsControllerOptions} [options]
+ */
 function createSettingsController({
   prefsPath,
   prefs = prefsModule,
