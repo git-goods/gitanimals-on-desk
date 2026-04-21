@@ -55,6 +55,7 @@ jobs:
           name: mac-installer
           path: |
             dist/*.dmg
+            dist/*.zip
             dist/latest-mac.yml
 
   build-linux:

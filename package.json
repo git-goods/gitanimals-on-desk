@@ -1,6 +1,6 @@
 {
   "name": "gitanimals-on-desk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A desktop pet that reacts to your Claude Code sessions in real-time.",
   "main": "src/core/main.js",
   "scripts": {
@@ -40,6 +40,13 @@
       "target": [
         {
           "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "x64",
             "arm64"
@@ -119,7 +126,7 @@
       {
         "provider": "github",
         "owner": "git-goods",
-        "repo": "gitanimals-on-desk"
+        "repo": "gitaniamals-on-desk"
       }
     ]
   },
