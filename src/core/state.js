@@ -5,6 +5,13 @@ let screen, nativeImage;
 try { ({ screen, nativeImage } = require("electron")); } catch { screen = null; nativeImage = null; }
 const path = require("path");
 const fs = require("fs");
+const {
+  resolveDisplayStateFromSessions,
+  pickDisplayHint,
+  countInteractiveSessions,
+  selectTieredSvg,
+  getWinningSessionDisplayHint,
+} = require("./state-selectors");
 const { bc, report } = (() => {
   try { return require("./telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
@@ -377,18 +384,6 @@ function wakeFromDoze() {
   }, 350);
 }
 
-function pickDisplayHint(state, existing, incoming) {
-  if (state !== "working" && state !== "thinking" && state !== "juggling") {
-    return null;
-  }
-  if (incoming !== undefined) {
-    if (incoming === null || incoming === "") return null;
-    if (DISPLAY_HINT_MAP[incoming] != null) return incoming;
-    return existing && existing.displayHint != null ? existing.displayHint : null;
-  }
-  return existing && existing.displayHint != null ? existing.displayHint : null;
-}
-
 // ── Session management ──
 function updateSession(sessionId, state, event, sourcePid, cwd, editor, pidChain, agentPid, agentId, host, headless, displayHint) {
   if (startupRecoveryActive) {
@@ -473,9 +468,19 @@ function updateSession(sessionId, state, event, sourcePid, cwd, editor, pidChain
   } else {
     if (existing && existing.state === "juggling" && state === "working" && event !== "SubagentStop" && event !== "subagentStop") {
       existing.updatedAt = Date.now();
-      existing.displayHint = pickDisplayHint("juggling", existing, displayHint);
+      existing.displayHint = pickDisplayHint({
+        state: "juggling",
+        existingDisplayHint: existing.displayHint,
+        incomingDisplayHint: displayHint,
+        displayHintMap: DISPLAY_HINT_MAP,
+      });
     } else {
-      const dh = pickDisplayHint(state, existing, displayHint);
+      const dh = pickDisplayHint({
+        state,
+        existingDisplayHint: existing && existing.displayHint,
+        incomingDisplayHint: displayHint,
+        displayHintMap: DISPLAY_HINT_MAP,
+      });
       sessions.set(sessionId, { state, updatedAt: Date.now(), displayHint: dh, ...base });
     }
   }
@@ -617,24 +622,11 @@ function stopStaleCleanup() {
 }
 
 function resolveDisplayState() {
-  let best;
-  if (sessions.size === 0) {
-    best = "idle";
-  } else {
-    best = "sleeping";
-    let hasNonHeadless = false;
-    for (const [, s] of sessions) {
-      if (s.headless) continue;
-      hasNonHeadless = true;
-      if ((STATE_PRIORITY[s.state] || 0) > (STATE_PRIORITY[best] || 0)) best = s.state;
-    }
-    if (!hasNonHeadless) best = "idle";
-  }
-  // Update overlay participates in priority — won't override higher-priority agent states
-  if (updateVisualState && (STATE_PRIORITY[updateVisualState] || 0) >= (STATE_PRIORITY[best] || 0)) {
-    return updateVisualState;
-  }
-  return best;
+  return resolveDisplayStateFromSessions({
+    sessions,
+    statePriority: STATE_PRIORITY,
+    updateVisualState,
+  });
 }
 
 function setUpdateVisualState(kind) {
@@ -649,37 +641,18 @@ function setUpdateVisualState(kind) {
 }
 
 function getActiveWorkingCount() {
-  let n = 0;
-  for (const [, s] of sessions) {
-    if (!s.headless && (s.state === "working" || s.state === "thinking" || s.state === "juggling")) n++;
-  }
-  return n;
+  return countInteractiveSessions(
+    sessions,
+    new Set(["working", "thinking", "juggling"])
+  );
 }
 
 function getWorkingSvg() {
-  const n = getActiveWorkingCount();
-  if (theme.workingTiers) {
-    for (const tier of theme.workingTiers) {
-      if (n >= tier.minSessions) return tier.file;
-    }
-  }
-  return STATE_SVGS.working[0];
-}
-
-function getWinningSessionDisplayHint(targetState) {
-  let best = null;
-  let bestAt = -1;
-  for (const [, s] of sessions) {
-    if (s.headless || s.state !== targetState) continue;
-    if (s.updatedAt >= bestAt) {
-      bestAt = s.updatedAt;
-      best = s;
-    }
-  }
-  if (!best || !best.displayHint) return null;
-  // Resolve semantic hint token through displayHintMap
-  const resolved = DISPLAY_HINT_MAP[best.displayHint];
-  return resolved || null;
+  return selectTieredSvg({
+    count: getActiveWorkingCount(),
+    tiers: theme.workingTiers,
+    fallback: STATE_SVGS.working[0],
+  });
 }
 
 function getSvgOverride(state) {
@@ -688,17 +661,29 @@ function getSvgOverride(state) {
   }
   if (state === "idle") return SVG_IDLE_FOLLOW;
   if (state === "working") {
-    const hinted = getWinningSessionDisplayHint("working");
+    const hinted = getWinningSessionDisplayHint({
+      sessions,
+      targetState: "working",
+      displayHintMap: DISPLAY_HINT_MAP,
+    });
     if (hinted) return hinted;
     return getWorkingSvg();
   }
   if (state === "juggling") {
-    const hinted = getWinningSessionDisplayHint("juggling");
+    const hinted = getWinningSessionDisplayHint({
+      sessions,
+      targetState: "juggling",
+      displayHintMap: DISPLAY_HINT_MAP,
+    });
     if (hinted) return hinted;
     return getJugglingSvg();
   }
   if (state === "thinking") {
-    const hinted = getWinningSessionDisplayHint("thinking");
+    const hinted = getWinningSessionDisplayHint({
+      sessions,
+      targetState: "thinking",
+      displayHintMap: DISPLAY_HINT_MAP,
+    });
     if (hinted) return hinted;
     return STATE_SVGS.thinking[0];
   }
@@ -706,16 +691,11 @@ function getSvgOverride(state) {
 }
 
 function getJugglingSvg() {
-  let n = 0;
-  for (const [, s] of sessions) {
-    if (!s.headless && s.state === "juggling") n++;
-  }
-  if (theme.jugglingTiers) {
-    for (const tier of theme.jugglingTiers) {
-      if (n >= tier.minSessions) return tier.file;
-    }
-  }
-  return STATE_SVGS.juggling[0];
+  return selectTieredSvg({
+    count: countInteractiveSessions(sessions, new Set(["juggling"])),
+    tiers: theme.jugglingTiers,
+    fallback: STATE_SVGS.juggling[0],
+  });
 }
 
 // ── Session Dashboard ──
