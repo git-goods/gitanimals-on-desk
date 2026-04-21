@@ -143,8 +143,16 @@ const _settingsController = createSettingsController({
     getDiscoveredThemes: () => themeLoader.discoverThemes(),
     getActiveThemeId: () => (activeTheme ? activeTheme._id : "fox"),
     resyncPersonas: () => personaSync.syncAll({ force: true }),
+    logout: () => {
+      tokenStore.clear();
+      const _cacheDir = path.join(app.getPath("userData"), "theme-cache");
+      try { require("fs").rmSync(_cacheDir, { recursive: true, force: true }); } catch (_e) {}
+      setTimeout(() => { app.relaunch(); app.exit(0); }, 200);
+    },
   },
 });
+
+let _userCache = null; // { username: string } — cached after first settings:get-user call
 
 // Mirror of `_settingsController.get("lang")` so existing sync read sites in
 // menu.js / state.js / etc. don't have to round-trip through the controller.
@@ -977,6 +985,18 @@ ipcMain.handle("settings:list-themes", () => {
   } catch (err) {
     console.warn("GitAnimals: settings:list-themes failed:", err && err.message);
     return [];
+  }
+});
+
+ipcMain.handle("settings:get-user", async () => {
+  if (_userCache) return { username: _userCache.username };
+  try {
+    const { getUser } = require("../api/gitanimals-client");
+    const u = await getUser();
+    if (u && u.username) _userCache = { username: u.username };
+    return _userCache ? { username: _userCache.username } : null;
+  } catch (_e) {
+    return null;
   }
 });
 

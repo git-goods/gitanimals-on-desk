@@ -388,6 +388,16 @@ const commandRegistry = {
   setAgentFlag,
   togglePinnedTheme,
   refreshThemes,
+  logout(_payload, deps) {
+    if (typeof deps.logout !== "function") return { status: "error", message: "logout: dep not available" };
+    deps.logout();
+    return { status: "ok" };
+  },
+  signIn(_payload, deps) {
+    if (typeof deps.logout !== "function") return { status: "error", message: "signIn: dep not available" };
+    deps.logout();
+    return { status: "ok" };
+  },
 };
 
 module.exports = {
