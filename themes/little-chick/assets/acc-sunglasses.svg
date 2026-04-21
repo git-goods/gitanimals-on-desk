@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+  <!--
+    Little Chick accessory — Sunglasses
+    14 pixel-art rects: black frames + white reflections
+    All rotated -13.8199deg for a tilted cool look
+    Position is controlled by theme.json anchors, not this file
+  -->
+  <g>
+    <!-- Left lens frame -->
+    <rect x="2.85233" y="4.42468" width="3.85714" height="0.428571" transform="rotate(-13.8199 2.85233 4.42468)" fill="black"/>
+    <rect x="2.33379" y="4.1109" width="0.428571" height="0.428571" transform="rotate(-13.8199 2.33379 4.1109)" fill="black"/>
+    <rect x="1.81525" y="3.79712" width="0.428571" height="0.428571" transform="rotate(-13.8199 1.81525 3.79712)" fill="black"/>
+    <rect x="1.29671" y="3.48331" width="0.428571" height="0.428571" transform="rotate(-13.8199 1.29671 3.48331)" fill="black"/>
+    <rect x="0.778168" y="3.16953" width="0.428571" height="0.428571" transform="rotate(-13.8199 0.778168 3.16953)" fill="black"/>
+    <rect x="3.37086" y="4.73849" width="3" height="0.428571" transform="rotate(-13.8199 3.37086 4.73849)" fill="black"/>
+    <rect x="3.8894" y="5.05228" width="2.14286" height="0.428571" transform="rotate(-13.8199 3.8894 5.05228)" fill="black"/>
+    <!-- Right lens frame -->
+    <rect x="6.59781" y="3.50333" width="3.85714" height="0.428571" transform="rotate(-13.8199 6.59781 3.50333)" fill="black"/>
+    <rect x="7.11635" y="3.81711" width="3" height="0.428571" transform="rotate(-13.8199 7.11635 3.81711)" fill="black"/>
+    <rect x="7.63489" y="4.13092" width="2.14286" height="0.428571" transform="rotate(-13.8199 7.63489 4.13092)" fill="black"/>
+    <!-- Left lens shine -->
+    <rect x="3.78702" y="4.63611" width="0.428571" height="0.428571" transform="rotate(-13.8199 3.78702 4.63611)" fill="white"/>
+    <rect x="4.30556" y="4.94989" width="0.428571" height="0.428571" transform="rotate(-13.8199 4.30556 4.94989)" fill="white"/>
+    <!-- Right lens shine -->
+    <rect x="7.5325" y="3.71475" width="0.428571" height="0.428571" transform="rotate(-13.8199 7.5325 3.71475)" fill="white"/>
+    <rect x="8.05104" y="4.02853" width="0.428571" height="0.428571" transform="rotate(-13.8199 8.05104 4.02853)" fill="white"/>
+  </g>
+</svg>

@@ -12,7 +12,7 @@
 const { describe, it, beforeEach } = require("node:test");
 const assert = require("node:assert");
 
-const initState = require("../src/state");
+const initState = require("../src/core/state");
 
 // Minimal theme good enough for refreshTheme + applyState to run.
 function makeTheme(overrides = {}) {

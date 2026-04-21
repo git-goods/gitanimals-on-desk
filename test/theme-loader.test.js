@@ -12,7 +12,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const themeLoader = require("../src/theme-loader");
+const themeLoader = require("../src/theme/loader");
 
 const tempDirs = [];
 

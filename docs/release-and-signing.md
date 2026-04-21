@@ -243,7 +243,7 @@ signtool verify /pa /v "C:\path\to\Clawd-on-Desk-Setup-X.Y.Z.exe"
 
 #### macOS 자동 업데이트 활성화 ✅
 
-완료됨. `src/updater.js` 의 macOS 분기를 제거하고 Windows와 동일하게 `autoUpdater.downloadUpdate()` 를 사용하도록 통합했습니다. 테스트: `test/updater.test.js` "uses the same autoUpdater download path on macOS as on Windows".
+완료됨. `src/update/updater.js` 의 macOS 분기를 제거하고 Windows와 동일하게 `autoUpdater.downloadUpdate()` 를 사용하도록 통합했습니다. 테스트: `test/update/updater.test.js` "uses the same autoUpdater download path on macOS as on Windows".
 
 ---
 
