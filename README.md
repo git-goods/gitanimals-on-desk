@@ -1,194 +1,93 @@
 <p align="center">
-  <img src="assets/tray-icon.png" width="128" alt="Clawd">
+  <img src="assets/tray-icon.png" width="128" alt="GitAnimals on Desk">
 </p>
-<h1 align="center">Clawd on Desk</h1>
-<p align="center">
-  <a href="README.zh-CN.md">中文版</a>
-</p>
+<h1 align="center">GitAnimals on Desk</h1>
 
-A desktop pet that reacts to your AI coding agent sessions in real-time. Clawd lives on your screen — thinking when you prompt, typing when tools run, juggling subagents, reviewing permissions, celebrating when tasks complete, and sleeping when you're away. Ships with two built-in themes: **Clawd** (pixel crab) and **Calico** (三花猫), with full support for custom themes.
+AI 코딩 에이전트의 작업 상태를 실시간으로 감지해 화면 위에서 살아 움직이는 데스크톱 펫입니다. 프롬프트를 입력하면 생각하고, 툴이 실행되면 타이핑하고, 서브에이전트가 늘어나면 저글링하고, 작업이 완료되면 기뻐하고, 자리를 비우면 잠드는 — 당신의 코딩 세션을 함께하는 동반자입니다.
 
-> Supports Windows 11, macOS, and Ubuntu/Linux. Requires Node.js. Works with **Claude Code**, **Codex CLI**, **Copilot CLI**, **Gemini CLI**, **Cursor Agent**, **Kiro CLI**, and **opencode**.
+[GitAnimals](https://gitanimals.org) 캐릭터를 활용하며, [clawd-on-desk](https://github.com/rullerzhou-afk/clawd-on-desk)를 기반으로 만들어졌습니다.
 
-## Features
+> Windows 11, macOS, Ubuntu/Linux를 지원합니다.
 
-### Multi-Agent Support
-- **Claude Code** — full integration via command hooks + HTTP permission hooks
-- **Codex CLI** — automatic JSONL log polling (`~/.codex/sessions/`), no configuration needed
-- **Copilot CLI** — command hooks via `~/.copilot/hooks/hooks.json`
-- **Gemini CLI** — command hooks via `~/.gemini/settings.json` (registered automatically when Clawd starts, or run `npm run install:gemini-hooks`)
-- **Cursor Agent** — [Cursor IDE hooks](https://cursor.com/docs/agent/hooks) in `~/.cursor/hooks.json` (registered automatically when Clawd starts, or run `npm run install:cursor-hooks`)
-- **Kiro CLI** — command hooks injected into custom agent configs under `~/.kiro/agents/`, plus an auto-created `clawd` agent that is re-synced from Kiro's built-in `kiro_default` whenever Clawd starts, so you can opt into hooks with minimal behavior drift via `kiro-cli --agent clawd` or `/agent swap clawd` (registered automatically when Clawd starts, or run `npm run install:kiro-hooks`). State hooks have been verified on macOS.
-- **opencode** — [plugin integration](https://opencode.ai/docs/plugins) via `~/.config/opencode/opencode.json` (registered automatically when Clawd starts); zero-latency event streaming, permission bubbles with Allow/Always/Deny, and building animations when parallel subagents are spawned via the `task` tool
-- **Multi-agent coexistence** — run all agents simultaneously; Clawd tracks each session independently
+## 설치
 
-### Animations & Interaction
-- **Real-time state awareness** — agent hooks and log polling drive Clawd's animations automatically
-- **12 animated states** — idle, thinking, typing, building, juggling, conducting, error, happy, notification, sweeping, carrying, sleeping
-- **Eye tracking** — Clawd follows your cursor in idle state, with body lean and shadow stretch
-- **Sleep sequence** — yawning, dozing, collapsing, sleeping after 60s idle; mouse movement triggers a startled wake-up animation
-- **Click reactions** — double-click for a poke, 4 clicks for a flail
-- **Drag from any state** — grab Clawd anytime (Pointer Capture prevents fast-flick drops), release to resume
-- **Mini mode** — drag to right edge or right-click "Mini Mode"; Clawd hides at screen edge with peek-on-hover, mini alerts/celebrations, and parabolic jump transitions
+[Releases 페이지](https://github.com/git-goods/gitaniamals-on-desk/releases)에서 운영체제에 맞는 패키지를 다운로드하세요.
 
-### Permission Bubble
-- **In-app permission review** — when Claude Code requests tool permissions, Clawd pops a floating bubble card instead of waiting in the terminal
-- **Allow / Deny / Suggestions** — one-click approve, reject, or apply permission rules (e.g. "Always allow Read")
-- **Global hotkeys** — `Ctrl+Shift+Y` to Allow, `Ctrl+Shift+N` to Deny the latest permission bubble (only registered while bubbles are visible)
-- **Stacking layout** — multiple permission requests stack upward from the bottom-right corner
-- **Auto-dismiss** — if you answer in the terminal first, the bubble disappears automatically
+| OS | 파일 |
+|----|------|
+| Windows | `.exe` (NSIS 인스톨러) |
+| macOS | `.dmg` |
+| Linux | `.AppImage` / `.deb` |
 
-### Session Intelligence
-- **Multi-session tracking** — sessions across all agents resolve to the highest-priority state
-- **Subagent awareness** — juggling for 1 subagent, conducting for 2+
-- **Terminal focus** — right-click Clawd → Sessions menu to jump to a specific session's terminal window; notification/attention states auto-focus the relevant terminal
-- **Process liveness detection** — detects crashed/exited agent processes (Claude Code, Codex, Copilot) and cleans up orphan sessions
-- **Startup recovery** — if Clawd restarts while any agent is running, it stays awake instead of falling asleep
+## 주요 기능
 
-### System
-- **Click-through** — transparent areas pass clicks to windows below; only Clawd's body is interactive
-- **Position memory** — Clawd remembers where you left it across restarts (including mini mode)
-- **Single instance lock** — prevents duplicate Clawd windows
-- **Auto-start** — Claude Code's SessionStart hook can launch Clawd automatically if it's not running
-- **Do Not Disturb** — right-click or tray menu to enter sleep mode; all hook events are silenced until you wake Clawd. Permission bubbles are suppressed during DND — opencode falls back to its built-in TUI prompt, and Claude Code will handle permissions automatically
-- **Sound effects** — short audio cues on task completion and permission requests (toggle via right-click menu; 10s cooldown, auto-muted during DND)
-- **System tray** — resize (S/M/L), DND mode, language switch, auto-start, check for updates
-- **i18n** — English and Chinese UI; switch via right-click menu or tray
-- **Auto-update** — checks GitHub releases; Windows installs NSIS updates on quit, macOS/Linux `git pull` + restart when running from a cloned repo
+### 지원 에이전트
 
-## Animations
+- **Claude Code** — command hook + HTTP 권한 hook 완전 통합, 앱 시작 시 자동 등록
+- **Codex CLI** — `~/.codex/sessions/` JSONL 로그 자동 폴링, 별도 설정 불필요
 
-<table>
-  <tr>
-    <td align="center"><img src="assets/gif/clawd-idle.gif" width="100"><br><sub>Idle</sub></td>
-    <td align="center"><img src="assets/gif/clawd-thinking.gif" width="100"><br><sub>Thinking</sub></td>
-    <td align="center"><img src="assets/gif/clawd-typing.gif" width="100"><br><sub>Typing</sub></td>
-    <td align="center"><img src="assets/gif/clawd-building.gif" width="100"><br><sub>Building</sub></td>
-    <td align="center"><img src="assets/gif/clawd-juggling.gif" width="100"><br><sub>Juggling</sub></td>
-    <td align="center"><img src="assets/gif/clawd-conducting.gif" width="100"><br><sub>Conducting</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="assets/gif/clawd-error.gif" width="100"><br><sub>Error</sub></td>
-    <td align="center"><img src="assets/gif/clawd-happy.gif" width="100"><br><sub>Happy</sub></td>
-    <td align="center"><img src="assets/gif/clawd-notification.gif" width="100"><br><sub>Notification</sub></td>
-    <td align="center"><img src="assets/gif/clawd-sweeping.gif" width="100"><br><sub>Sweeping</sub></td>
-    <td align="center"><img src="assets/gif/clawd-carrying.gif" width="100"><br><sub>Carrying</sub></td>
-    <td align="center"><img src="assets/gif/clawd-sleeping.gif" width="100"><br><sub>Sleeping</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="assets/gif/calico-idle.gif" width="80"><br><sub>Calico Idle</sub></td>
-    <td align="center"><img src="assets/gif/calico-thinking.gif" width="80"><br><sub>Calico Thinking</sub></td>
-    <td align="center"><img src="assets/gif/calico-typing.gif" width="80"><br><sub>Calico Typing</sub></td>
-    <td align="center"><img src="assets/gif/calico-building.gif" width="80"><br><sub>Calico Building</sub></td>
-    <td align="center"><img src="assets/gif/calico-juggling.gif" width="80"><br><sub>Calico Juggling</sub></td>
-    <td align="center"><img src="assets/gif/calico-conducting.gif" width="80"><br><sub>Calico Conducting</sub></td>
-  </tr>
-</table>
+에이전트 설정 상세 및 원격 SSH·WSL 환경: **[docs/setup-guide.md](docs/setup-guide.md)**
 
-Full event-to-state mapping, mini mode, and click reactions: **[docs/state-mapping.md](docs/state-mapping.md)**
+### 애니메이션 & 인터랙션
 
-## Quick Start
+- **12가지 애니메이션 상태** — idle, thinking, typing, building, juggling, conducting, error, happy, notification, sweeping, carrying, sleeping
+- **수면 시퀀스** — 60초 유휴 시 하품 → 꾸벅 → 쓰러짐 → 수면; 마우스 움직임에 깜짝 기상
+- **드래그** — 어떤 상태에서도 잡아서 이동 가능, 놓으면 즉시 복귀
+- **미니 모드** — 화면 오른쪽 끝으로 드래그하거나 우클릭 → 미니 모드; 가장자리에 숨고 마우스를 올리면 나타남
 
-```bash
-# Clone the repo
-git clone https://github.com/rullerzhou-afk/clawd-on-desk.git
-cd clawd-on-desk
+<!-- TODO: 애니메이션 GIF 테이블 추가 예정 -->
 
-# Install dependencies
-npm install
+전체 이벤트→상태 매핑 및 클릭 반응 상세: **[docs/state-mapping.md](docs/state-mapping.md)**
 
-# Start Clawd (auto-registers Claude Code hooks on launch)
-npm start
-```
+### 권한 버블
 
-**Claude Code** and **Codex CLI** work out of the box. Other agents (Copilot, Kiro, etc.) need one-time setup. Also covers remote SSH, WSL, and platform-specific notes (macOS / Linux): **[docs/setup-guide.md](docs/setup-guide.md)**
+Claude Code가 툴 실행 권한을 요청할 때, 터미널 대신 화면에 플로팅 카드가 나타납니다.
 
-## Known Limitations
+- **Allow / Deny / Suggestion** — 원클릭 승인·거부, 권한 규칙 적용 (예: "Always allow Read")
+- **글로벌 단축키** — `Ctrl+Shift+Y` (허용) / `Ctrl+Shift+N` (거부), 버블이 표시될 때만 활성화
+- **스택 레이아웃** — 여러 권한 요청이 화면 우하단에서 위로 쌓임
+- **자동 닫힘** — 터미널에서 먼저 응답하면 버블이 자동으로 사라짐
 
-Some agents have feature gaps (no permission bubble, polling latency, no terminal focus). See the full table: **[docs/known-limitations.md](docs/known-limitations.md)**
+### 세션 인텔리전스
 
-## Custom Themes
+- **다중 세션 추적** — 모든 에이전트의 세션을 독립적으로 추적, 최고 우선순위 상태를 표시
+- **서브에이전트 감지** — 서브에이전트 1개: juggling, 2개 이상: conducting
+- **터미널 포커스** — 우클릭 → Sessions 메뉴에서 특정 세션의 터미널 창으로 바로 이동
+- **프로세스 생존 감지** — 에이전트 비정상 종료·크래시 감지 후 고아 세션 자동 정리
+- **재시작 복구** — 에이전트 실행 중 앱이 재시작되면 유휴 상태 대신 활성 상태 유지
 
-Clawd supports custom themes — replace the default crab with your own character and animations.
+### 시스템
 
-**Quick start:**
-1. Copy `reference/themes/template/` to your themes directory:
-   - Windows: `%APPDATA%/clawd-on-desk/themes/my-theme/`
-   - macOS: `~/Library/Application Support/clawd-on-desk/themes/my-theme/`
-   - Linux: `~/.config/clawd-on-desk/themes/my-theme/`
-2. Edit `theme.json` and create your assets (SVG, GIF, APNG, or WebP)
-3. Right-click Clawd → Theme → select your theme
+- **클릭 통과** — 투명 영역은 클릭이 아래 창으로 전달됨; 캐릭터 몸통만 인터랙티브
+- **위치 기억** — 재시작해도 마지막 위치 유지 (미니 모드 포함)
+- **중복 실행 방지** — 단일 인스턴스 잠금
+- **자동 시작** — Claude Code의 SessionStart hook이 앱이 꺼져 있으면 자동으로 실행
+- **방해 금지(DND)** — 우클릭 또는 트레이 메뉴에서 수면 모드 진입, 모든 hook 이벤트 차단
+- **사운드 이펙트** — 작업 완료·권한 요청 시 짧은 효과음 (우클릭 메뉴에서 토글, 10초 쿨다운, DND 시 자동 음소거)
+- **시스템 트레이** — 크기(S/M/L), DND, 자동 시작, 업데이트 확인
+- **다국어** — 영어·중국어 UI; 우클릭 메뉴 또는 트레이에서 전환
+- **자동 업데이트** — GitHub 릴리스 확인; Windows는 종료 시 설치, macOS/Linux는 `git pull` + 재시작
 
-**Minimum viable theme:** 1 SVG (idle with eye tracking) + 7 GIF/APNG files (thinking, working, error, happy, notification, sleeping, waking). Eye tracking can be disabled to use any format for all states.
+에이전트별 제한사항 전체 목록: **[docs/known-limitations.md](docs/known-limitations.md)**
 
-Validate your theme before distributing:
-```bash
-node scripts/validate-theme.js path/to/your-theme
-```
+## 로드맵
 
-See [docs/guide-theme-creation.md](docs/guide-theme-creation.md) for the full creation guide with tiered paths (beginner → advanced), `theme.json` field reference, and asset guidelines.
+- 눈동자 추적 — idle 상태에서 커서를 따라 시선 이동
+- 클릭 반응 — 더블클릭 콕콕, 4회 연속 클릭 발버둥
 
-> Third-party SVG files are automatically sanitized for security.
+## 기여
 
-### Roadmap
-
-Some things we'd like to explore in the future:
-
-- Codex terminal focus via process tree lookup from `codex.exe` PID
-- Auto-registration of Copilot CLI hooks (like we do for Claude Code)
-- Theme registry and in-app download
-- Hook uninstall script for clean app removal
-
-## Contributing
-
-Clawd on Desk is a community-driven project. Bug reports, feature ideas, and pull requests are all welcome — open an [issue](https://github.com/rullerzhou-afk/clawd-on-desk/issues) to discuss or submit a PR directly.
-
-### Contributors
-
-Thanks to everyone who has helped make Clawd better:
-
-<table>
-  <tr>
-    <td align="center"><a href="https://github.com/PixelCookie-zyf"><img src="https://github.com/PixelCookie-zyf.png" width="50" style="border-radius:50%" /><br /><sub>PixelCookie-zyf</sub></a></td>
-    <td align="center"><a href="https://github.com/yujiachen-y"><img src="https://github.com/yujiachen-y.png" width="50" style="border-radius:50%" /><br /><sub>yujiachen-y</sub></a></td>
-    <td align="center"><a href="https://github.com/AooooooZzzz"><img src="https://github.com/AooooooZzzz.png" width="50" style="border-radius:50%" /><br /><sub>AooooooZzzz</sub></a></td>
-    <td align="center"><a href="https://github.com/purefkh"><img src="https://github.com/purefkh.png" width="50" style="border-radius:50%" /><br /><sub>purefkh</sub></a></td>
-    <td align="center"><a href="https://github.com/Tobeabellwether"><img src="https://github.com/Tobeabellwether.png" width="50" style="border-radius:50%" /><br /><sub>Tobeabellwether</sub></a></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="https://github.com/Jasonhonghh"><img src="https://github.com/Jasonhonghh.png" width="50" style="border-radius:50%" /><br /><sub>Jasonhonghh</sub></a></td>
-    <td align="center"><a href="https://github.com/crashchen"><img src="https://github.com/crashchen.png" width="50" style="border-radius:50%" /><br /><sub>crashchen</sub></a></td>
-    <td align="center"><a href="https://github.com/hongbigtou"><img src="https://github.com/hongbigtou.png" width="50" style="border-radius:50%" /><br /><sub>hongbigtou</sub></a></td>
-    <td align="center"><a href="https://github.com/InTimmyDate"><img src="https://github.com/InTimmyDate.png" width="50" style="border-radius:50%" /><br /><sub>InTimmyDate</sub></a></td>
-    <td align="center"><a href="https://github.com/NeizhiTouhu"><img src="https://github.com/NeizhiTouhu.png" width="50" style="border-radius:50%" /><br /><sub>NeizhiTouhu</sub></a></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="https://github.com/xu3stones-cmd"><img src="https://github.com/xu3stones-cmd.png" width="50" style="border-radius:50%" /><br /><sub>xu3stones-cmd</sub></a></td>
-    <td align="center"><a href="https://github.com/androidZzT"><img src="https://github.com/androidZzT.png" width="50" style="border-radius:50%" /><br /><sub>androidZzT</sub></a></td>
-    <td align="center"><a href="https://github.com/Ye-0413"><img src="https://github.com/Ye-0413.png" width="50" style="border-radius:50%" /><br /><sub>Ye-0413</sub></a></td>
-    <td align="center"><a href="https://github.com/WanfengzzZ"><img src="https://github.com/WanfengzzZ.png" width="50" style="border-radius:50%" /><br /><sub>WanfengzzZ</sub></a></td>
-    <td align="center"><a href="https://github.com/TaoXieSZ"><img src="https://github.com/TaoXieSZ.png" width="50" style="border-radius:50%" /><br /><sub>TaoXieSZ</sub></a></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="https://github.com/ssly"><img src="https://github.com/ssly.png" width="50" style="border-radius:50%" /><br /><sub>ssly</sub></a></td>
-    <td align="center"><a href="https://github.com/stickycandy"><img src="https://github.com/stickycandy.png" width="50" style="border-radius:50%" /><br /><sub>stickycandy</sub></a></td>
-    <td align="center"><a href="https://github.com/Rladmsrl"><img src="https://github.com/Rladmsrl.png" width="50" style="border-radius:50%" /><br /><sub>Rladmsrl</sub></a></td>
-    <td align="center"><a href="https://github.com/YOIMIYA66"><img src="https://github.com/YOIMIYA66.png" width="50" style="border-radius:50%" /><br /><sub>YOIMIYA66</sub></a></td>
-    <td align="center"><a href="https://github.com/Kevin7Qi"><img src="https://github.com/Kevin7Qi.png" width="50" style="border-radius:50%" /><br /><sub>Kevin7Qi</sub></a></td>
-  </tr>
-</table>
+버그 리포트, 기능 제안, Pull Request 모두 환영합니다. [이슈](https://github.com/git-goods/gitaniamals-on-desk/issues)를 열어 논의하거나 PR을 바로 보내주세요.
 
 ## Acknowledgments
 
-- Clawd pixel art reference from [clawd-tank](https://github.com/marciogranzotto/clawd-tank) by [@marciogranzotto](https://github.com/marciogranzotto)
-- Shared on [LINUX DO](https://linux.do/) community
+- 이 프로젝트는 [clawd-on-desk](https://github.com/rullerzhou-afk/clawd-on-desk) by [@rullerzhou-afk](https://github.com/rullerzhou-afk)를 기반으로 만들어졌습니다.
+- 캐릭터는 [GitAnimals](https://gitanimals.org)의 아트워크를 사용합니다.
 
 ## License
 
-Source code is licensed under the [MIT License](LICENSE).
+소스 코드는 [MIT License](LICENSE)로 배포됩니다.
 
-**Artwork (assets/) is NOT covered by MIT.** All rights reserved by their respective copyright holders. See [assets/LICENSE](assets/LICENSE) for details.
+**아트워크(assets/)는 MIT 라이선스에 포함되지 않습니다.** 저작권은 각 권리자에게 있습니다. 자세한 내용은 [assets/LICENSE](assets/LICENSE)를 참고하세요.
 
-- **Clawd** character is the property of [Anthropic](https://www.anthropic.com). This is an unofficial fan project, not affiliated with or endorsed by Anthropic.
-- **Calico cat (三花猫)** artwork by 鹿鹿 ([@rullerzhou-afk](https://github.com/rullerzhou-afk)). All rights reserved.
-- **Third-party contributions**: copyright retained by respective artists.
+- **GitAnimals** 캐릭터 아트워크의 저작권은 [GitAnimals](https://gitanimals.org)에 있습니다.
