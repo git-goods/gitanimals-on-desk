@@ -1,6 +1,6 @@
 {
   "name": "gitanimals-on-desk",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "A desktop pet that reacts to your Claude Code sessions in real-time.",
   "main": "src/core/main.js",
   "scripts": {
