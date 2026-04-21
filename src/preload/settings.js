@@ -35,6 +35,13 @@ ipcRenderer.on("settings:set-tab", (_event, tab) => {
   }
 });
 
+const sessionExpiredListeners = new Set();
+ipcRenderer.on("auth:session-expired", () => {
+  for (const cb of sessionExpiredListeners) {
+    try { cb(); } catch (err) { console.warn("settings onSessionExpired listener threw:", err); }
+  }
+});
+
 contextBridge.exposeInMainWorld("settingsAPI", {
   getSnapshot: () => ipcRenderer.invoke("settings:get-snapshot"),
   update: (key, value) => ipcRenderer.invoke("settings:update", { key, value }),
@@ -47,5 +54,8 @@ contextBridge.exposeInMainWorld("settingsAPI", {
   },
   onSetTab: (cb) => {
     if (typeof cb === "function") tabListeners.add(cb);
+  },
+  onSessionExpired: (cb) => {
+    if (typeof cb === "function") sessionExpiredListeners.add(cb);
   },
 });

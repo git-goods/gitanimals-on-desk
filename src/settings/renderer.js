@@ -73,6 +73,7 @@ const STRINGS = {
     userCardLoading: "Loading account…",
     userCardSignOut: "Sign out",
     userCardSignInAgain: "Sign in again",
+    sessionExpiredToast: "Session expired — please sign in again.",
   },
   zh: {
     settingsTitle: "设置",
@@ -132,6 +133,7 @@ const STRINGS = {
     userCardLoading: "加载账号…",
     userCardSignOut: "退出登录",
     userCardSignInAgain: "重新登录",
+    sessionExpiredToast: "会话已过期 — 请重新登录。",
   },
   ko: {
     settingsTitle: "설정",
@@ -191,6 +193,7 @@ const STRINGS = {
     userCardLoading: "계정 정보 불러오는 중…",
     userCardSignOut: "로그아웃",
     userCardSignInAgain: "다시 로그인",
+    sessionExpiredToast: "세션이 만료되었습니다 — 다시 로그인해 주세요.",
   },
 };
 
@@ -799,5 +802,11 @@ if (typeof window.settingsAPI.onSetTab === "function") {
   window.settingsAPI.onSetTab((tab) => {
     const valid = SIDEBAR_TABS.find(s => s.id === tab && s.available);
     if (valid) { activeTab = tab; renderSidebar(); renderContent(); }
+  });
+}
+
+if (typeof window.settingsAPI.onSessionExpired === "function") {
+  window.settingsAPI.onSessionExpired(() => {
+    showToast(t("sessionExpiredToast"), { error: true, ttl: 8000 });
   });
 }
