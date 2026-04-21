@@ -370,6 +370,16 @@ function togglePinnedTheme(payload, deps) {
   return { status: "ok", commit: { pinnedThemes: next } };
 }
 
+async function refreshThemes(_payload, deps) {
+  if (typeof deps.resyncPersonas === "function") {
+    try { await deps.resyncPersonas(); }
+    catch (err) {
+      return { status: "error", message: `refreshThemes: ${err && err.message}` };
+    }
+  }
+  return { status: "ok" };
+}
+
 const commandRegistry = {
   removeTheme: notImplemented("removeTheme"),
   installHooks: notImplemented("installHooks"),
@@ -377,6 +387,7 @@ const commandRegistry = {
   registerShortcut: notImplemented("registerShortcut"),
   setAgentFlag,
   togglePinnedTheme,
+  refreshThemes,
 };
 
 module.exports = {

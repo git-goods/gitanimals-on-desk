@@ -62,6 +62,10 @@ const STRINGS = {
     themeTabTitle: "Theme",
     themeTabSubtitle: "Pinned themes appear in the right-click Persona submenu. At least one must stay pinned.",
     themeColPin: "Pin",
+    themeRefresh: "Refresh",
+    themeRefreshing: "Refreshing…",
+    themeRefreshDone: "Themes refreshed.",
+    themeRefreshFailed: "Refresh failed: ",
     toastActiveLocked: "Cannot unpin the active theme.",
     toastMinOneRequired: "At least one theme must remain pinned.",
   },
@@ -112,6 +116,10 @@ const STRINGS = {
     themeTabTitle: "主题",
     themeTabSubtitle: "已固定的主题会出现在右键菜单的「角色」子菜单中。至少保留一个固定主题。",
     themeColPin: "固定",
+    themeRefresh: "刷新",
+    themeRefreshing: "刷新中…",
+    themeRefreshDone: "主题已刷新。",
+    themeRefreshFailed: "刷新失败：",
     toastActiveLocked: "无法取消固定当前使用的主题。",
     toastMinOneRequired: "至少需要保留一个固定主题。",
   },
@@ -300,10 +308,23 @@ function buildAgentSwitchRow({ agent, flag, extraClass, buildText }) {
   return row;
 }
 
+let _themeRefreshing = false;
+
 function renderThemeTab(parent) {
+  const header = document.createElement("div");
+  header.className = "tab-header";
   const h1 = document.createElement("h1");
   h1.textContent = t("themeTabTitle");
-  parent.appendChild(h1);
+  header.appendChild(h1);
+
+  const refreshBtn = document.createElement("button");
+  refreshBtn.className = "btn";
+  refreshBtn.type = "button";
+  refreshBtn.textContent = _themeRefreshing ? t("themeRefreshing") : t("themeRefresh");
+  refreshBtn.disabled = _themeRefreshing;
+  refreshBtn.addEventListener("click", () => _handleThemeRefresh());
+  header.appendChild(refreshBtn);
+  parent.appendChild(header);
 
   const subtitle = document.createElement("p");
   subtitle.className = "subtitle";
@@ -322,6 +343,31 @@ function renderThemeTab(parent) {
   const pinned = (snapshot && snapshot.pinnedThemes) || {};
   const rows = themeMetadata.map(theme => buildThemePinRow(theme, activeId, pinned));
   parent.appendChild(buildSection("", rows));
+}
+
+async function _handleThemeRefresh() {
+  if (_themeRefreshing) return;
+  _themeRefreshing = true;
+  if (activeTab === "theme") renderContent();
+  try {
+    const result = await window.settingsAPI.command("refreshThemes");
+    if (result && result.status !== "ok") {
+      showToast(t("themeRefreshFailed") + (result.message || result.status), { error: true });
+    } else {
+      showToast(t("themeRefreshDone"));
+    }
+    if (typeof window.settingsAPI.listThemes === "function") {
+      try {
+        const list = await window.settingsAPI.listThemes();
+        themeMetadata = Array.isArray(list) ? list : [];
+      } catch (e) { console.warn("settings: listThemes failed", e); }
+    }
+  } catch (err) {
+    showToast(t("themeRefreshFailed") + (err && err.message), { error: true });
+  } finally {
+    _themeRefreshing = false;
+    if (activeTab === "theme") renderContent();
+  }
 }
 
 function buildThemePinRow(theme, activeId, pinned) {

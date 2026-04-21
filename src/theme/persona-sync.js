@@ -77,7 +77,7 @@ async function _syncAllInternal({ force = false } = {}) {
     return;
   }
 
-  const { getMe, getAssets, downloadBuffer, UnauthorizedError } = require("../api/gitanimals-client");
+  const { getUser, getUserPersonas, getAssets, downloadBuffer, UnauthorizedError } = require("../api/gitanimals-client");
 
   fs.mkdirSync(themeCacheDir, { recursive: true });
 
@@ -91,13 +91,15 @@ async function _syncAllInternal({ force = false } = {}) {
   const shouldFetchList = force || _isStale(cachedMeta.fetchedAt);
   if (shouldFetchList) {
     try {
-      const me = await getMe();
-      if (!me || !Array.isArray(me.personas)) throw new Error("unexpected /users/me shape");
-      personas = me.personas.map(_toPersonaEntry).filter(Boolean);
+      const me = await getUser();
+      if (!me || typeof me.username !== "string") throw new Error("unexpected /users shape (no username)");
+      const userData = await getUserPersonas(me.username);
+      if (!userData || !Array.isArray(userData.personas)) throw new Error("unexpected /users/{username} shape");
+      personas = userData.personas.map(_toPersonaEntry).filter(Boolean);
       fs.writeFileSync(metaPath, JSON.stringify({ fetchedAt: Date.now(), personas }, null, 2), "utf8");
     } catch (e) {
       if (e instanceof UnauthorizedError) { _notifyUnauthorized(); return; }
-      console.warn("[persona-sync] /users/me fetch failed:", e.message);
+      console.warn("[persona-sync] persona list fetch failed:", e.message);
       // Fall through: try syncing with whatever is in cache
     }
   }
