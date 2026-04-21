@@ -110,6 +110,8 @@
 
 - `main.js` 책임 축소
 - `state.js`에서 순수 계산을 테스트 가능한 함수로 분리
+- Step 7의 첫 분리 대상은 settings/runtime flush + open-at-login hydration이다.
+- 분리 순서는 OS-backed settings sync 같은 저위험 orchestration부터 시작하고, window/server/state orchestration은 그 다음 단계로 미룬다.
 
 ### Step 9
 
