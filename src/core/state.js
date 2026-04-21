@@ -234,11 +234,6 @@ function applyState(state, svgOverride) {
   }
 
   // Phase 1 invariant: "pet is always showing some SVG".
-  // If the primary lookup produced nothing (theme missing the state, empty
-  // pool, or a buggy override), fall back to the idle pool, then the cached
-  // SVG_IDLE_FOLLOW constant. Fire Phase 0 warning first so Sentry still
-  // captures the primary-lookup failure — the fallback is the safety net,
-  // not a silencer.
   const primaryEmpty = !svg;
   if (primaryEmpty) {
     try {
@@ -257,6 +252,36 @@ function applyState(state, svgOverride) {
     svg = (STATE_SVGS.idle && STATE_SVGS.idle.length) ? STATE_SVGS.idle[0] : SVG_IDLE_FOLLOW;
   }
   currentSvg = svg;
+
+  // Diagnostics — only emit when state actually changes, plus always warn on
+  // missing SVG (the central hypothesis for macOS "pet disappears" reports).
+  if (previousState !== state || (svgOverride && svgOverride !== svg)) {
+    try {
+      bc("state", "applyState", {
+        from: previousState,
+        to: state,
+        svg,
+        sessions: sessions.size,
+        dnd: !!ctx.doNotDisturb,
+        miniMode: !!ctx.miniMode,
+      });
+    } catch {}
+  }
+  if (!svg) {
+    try {
+      report("[state] applyState produced empty svg", "warning", {
+        state,
+        svgOverride,
+        hasStateSvgs: !!STATE_SVGS[state],
+        stateSvgsLen: Array.isArray(STATE_SVGS[state]) ? STATE_SVGS[state].length : null,
+        hasIdleSvgs: !!STATE_SVGS.idle,
+        idleSvgsLen: Array.isArray(STATE_SVGS.idle) ? STATE_SVGS.idle.length : null,
+        sessions: sessions.size,
+        dnd: !!ctx.doNotDisturb,
+        miniMode: !!ctx.miniMode,
+      });
+    } catch {}
+  }
 
   // Force eye resend after SVG load completes (~300ms)
   // After sweeping → idle, pause eye tracking briefly so eyes stay centered before resuming
