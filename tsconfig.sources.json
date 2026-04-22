@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "checkJs": false,
+    "noEmit": false,
+    "noEmitOnError": true,
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": [
+    "src/core/state-selectors.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".worktrees",
+    ".tsbuild",
+    "tools/preview"
+  ]
+}

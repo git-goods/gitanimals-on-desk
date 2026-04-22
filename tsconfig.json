@@ -21,7 +21,7 @@
     "src/settings/store.js",
     "src/settings/controller.js",
     "src/preload/settings-bridge.js",
-    "src/core/state-selectors.js",
+    "src/core/state-selectors.ts",
     "src/core/telemetry.js",
     "src/theme/loader.js",
     "src/theme/remote-sync.js",

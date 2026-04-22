@@ -74,4 +74,4 @@ scripts/*
 # Cursor local config (MCP, rules from omc setup)
 .cursor/
 .bkit
-
+src/core/state-selectors.js
