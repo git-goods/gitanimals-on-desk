@@ -1,15 +1,63 @@
-"use strict";
+type SettingsController = {
+  get(key: string): unknown;
+  hydrate(partial: Record<string, unknown>): { status: string; message?: string } | null | undefined;
+  applyBulk(partial: Record<string, unknown>): unknown;
+};
 
-function createSettingsRuntime({
+type LoginItemHelpers = {
+  linuxSetOpenAtLogin(enabled: boolean, options: { execCmd: string }): void;
+  linuxGetOpenAtLogin(): boolean;
+  getLoginItemSettings(options: {
+    isPackaged: boolean;
+    openAtLogin: boolean;
+    execPath: string;
+    appPath: string;
+  }): unknown;
+};
+
+type MiniState = {
+  getMiniMode(): boolean;
+  getMiniEdge(): string;
+  getPreMiniX(): number;
+  getPreMiniY(): number;
+};
+
+type ElectronAppLike = {
+  isPackaged: boolean;
+  setLoginItemSettings(options: unknown): void;
+  getLoginItemSettings(options?: { path: string; args: string[] } | Record<string, never>): {
+    openAtLogin: boolean;
+  };
+  getAppPath(): string;
+  getPath?(name: string): string;
+};
+
+type BrowserWindowLike = {
+  isDestroyed(): boolean;
+  getBounds(): { x: number; y: number };
+};
+
+interface CreateSettingsRuntimeOptions {
+  app: ElectronAppLike;
+  isLinux?: boolean;
+  loginItemHelpers: LoginItemHelpers;
+  settingsController: SettingsController;
+  getLaunchScriptPath?: () => string;
+  getWin: () => BrowserWindowLike | null;
+  getCurrentSize: () => string;
+  mini: MiniState;
+}
+
+export function createSettingsRuntime({
   app,
   isLinux,
   loginItemHelpers,
   settingsController,
-  getLaunchScriptPath,
+  getLaunchScriptPath = () => "",
   getWin,
   getCurrentSize,
   mini,
-} = {}) {
+}: CreateSettingsRuntimeOptions) {
   if (!app) throw new TypeError("createSettingsRuntime: app is required");
   if (!loginItemHelpers) {
     throw new TypeError("createSettingsRuntime: loginItemHelpers is required");
@@ -25,11 +73,11 @@ function createSettingsRuntime({
   }
   if (!mini) throw new TypeError("createSettingsRuntime: mini is required");
 
-  function writeSystemOpenAtLogin(enabled) {
+  function writeSystemOpenAtLogin(enabled: boolean): void {
     if (isLinux) {
       const launchScript = getLaunchScriptPath();
       const execCmd = app.isPackaged
-        ? `"${process.env.APPIMAGE || app.getPath("exe")}"`
+        ? `"${process.env.APPIMAGE || app.getPath?.("exe") || process.execPath}"`
         : `node "${launchScript}"`;
       loginItemHelpers.linuxSetOpenAtLogin(enabled, { execCmd });
       return;
@@ -44,14 +92,14 @@ function createSettingsRuntime({
     );
   }
 
-  function readSystemOpenAtLogin() {
+  function readSystemOpenAtLogin(): boolean {
     if (isLinux) return loginItemHelpers.linuxGetOpenAtLogin();
     return app.getLoginItemSettings(
       app.isPackaged ? {} : { path: process.execPath, args: [app.getAppPath()] }
     ).openAtLogin;
   }
 
-  function hydrateSystemBackedSettings() {
+  function hydrateSystemBackedSettings(): void {
     if (settingsController.get("openAtLoginHydrated")) return;
     let systemValue = false;
     try {
@@ -59,7 +107,7 @@ function createSettingsRuntime({
     } catch (err) {
       console.warn(
         "GitAnimals: failed to read system openAtLogin during hydration:",
-        err && err.message
+        (err as Error | undefined)?.message
       );
     }
     const result = settingsController.hydrate({
@@ -71,7 +119,7 @@ function createSettingsRuntime({
     }
   }
 
-  function flushRuntimeStateToPrefs() {
+  function flushRuntimeStateToPrefs(): void {
     const win = getWin();
     if (!win || win.isDestroyed()) return;
     const bounds = win.getBounds();
@@ -94,5 +142,3 @@ function createSettingsRuntime({
     flushRuntimeStateToPrefs,
   };
 }
-
-module.exports = { createSettingsRuntime };
