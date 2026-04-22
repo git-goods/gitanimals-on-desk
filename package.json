@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node launch.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "transpile:runtime": "rm -rf .tsbuild/runtime && tsc -p tsconfig.runtime.json",
+    "verify:runtime-transpile": "npm run transpile:runtime && node scripts/verify-ts-runtime.js",
     "build": "electron-builder --win",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
