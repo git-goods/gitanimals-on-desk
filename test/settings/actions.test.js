@@ -208,6 +208,57 @@ describe("updateRegistry cross-field validators (showTray/showDock)", () => {
   });
 });
 
+describe("update discovery validators", () => {
+  it("autoCheckForUpdates accepts boolean", () => {
+    const entry = updateRegistry.autoCheckForUpdates;
+    const validate = typeof entry === "function" ? entry : entry.validate;
+    assert.deepStrictEqual(validate(true, { snapshot: prefs.getDefaults() }), { status: "ok" });
+    assert.deepStrictEqual(validate(false, { snapshot: prefs.getDefaults() }), { status: "ok" });
+  });
+
+  it("autoCheckForUpdates rejects non-boolean", () => {
+    const entry = updateRegistry.autoCheckForUpdates;
+    const validate = typeof entry === "function" ? entry : entry.validate;
+    const result = validate("yes", { snapshot: prefs.getDefaults() });
+    assert.strictEqual(result.status, "error");
+  });
+
+  it("lastUpdateCheckAt accepts finite number", () => {
+    const validate = typeof updateRegistry.lastUpdateCheckAt === "function"
+      ? updateRegistry.lastUpdateCheckAt
+      : updateRegistry.lastUpdateCheckAt.validate;
+    assert.deepStrictEqual(validate(Date.now(), { snapshot: prefs.getDefaults() }), { status: "ok" });
+  });
+
+  it("lastUpdateCheckAt rejects NaN", () => {
+    const validate = typeof updateRegistry.lastUpdateCheckAt === "function"
+      ? updateRegistry.lastUpdateCheckAt
+      : updateRegistry.lastUpdateCheckAt.validate;
+    assert.strictEqual(validate(NaN, { snapshot: prefs.getDefaults() }).status, "error");
+  });
+
+  it("pendingUpdateVersion accepts empty string", () => {
+    const validate = typeof updateRegistry.pendingUpdateVersion === "function"
+      ? updateRegistry.pendingUpdateVersion
+      : updateRegistry.pendingUpdateVersion.validate;
+    assert.deepStrictEqual(validate("", { snapshot: prefs.getDefaults() }), { status: "ok" });
+  });
+
+  it("pendingUpdateVersion accepts version string", () => {
+    const validate = typeof updateRegistry.pendingUpdateVersion === "function"
+      ? updateRegistry.pendingUpdateVersion
+      : updateRegistry.pendingUpdateVersion.validate;
+    assert.deepStrictEqual(validate("1.2.3", { snapshot: prefs.getDefaults() }), { status: "ok" });
+  });
+
+  it("pendingUpdateVersion rejects non-string", () => {
+    const validate = typeof updateRegistry.pendingUpdateVersion === "function"
+      ? updateRegistry.pendingUpdateVersion
+      : updateRegistry.pendingUpdateVersion.validate;
+    assert.strictEqual(validate(123, { snapshot: prefs.getDefaults() }).status, "error");
+  });
+});
+
 describe("version validator", () => {
   it("accepts the current version", () => {
     const r = updateRegistry.version(prefs.CURRENT_VERSION, { snapshot: prefs.getDefaults() });
