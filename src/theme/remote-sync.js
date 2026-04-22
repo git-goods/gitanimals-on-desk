@@ -26,6 +26,7 @@ const DEFAULT_REGISTRY_BASE_URL = "https://gitanimals-themes.example.com";
 let themeCacheDir = null; // {userData}/theme-cache/
 let _syncCompleteListeners = [];
 let _syncInFlight = false;
+let _fetchBufferImpl = _httpsGetBuffer;
 
 // ── Public API ──
 
@@ -40,6 +41,10 @@ function getRemoteRegistryBaseUrl() {
 
 function onSyncComplete(fn) {
   if (typeof fn === "function") _syncCompleteListeners.push(fn);
+}
+
+function _setFetchBufferForTests(fn) {
+  _fetchBufferImpl = typeof fn === "function" ? fn : _httpsGetBuffer;
 }
 
 function _notifySyncComplete() {
@@ -132,7 +137,7 @@ async function _syncAllInternal({ force = false } = {}) {
  */
 async function _syncRegistry() {
   const base = getRemoteRegistryBaseUrl();
-  const buf = await _httpsGetBuffer(`${base}/themes/index.json`);
+  const buf = await _fetchBufferImpl(`${base}/themes/index.json`);
   const raw = JSON.parse(buf.toString("utf8"));
   if (!Array.isArray(raw)) throw new Error("registry must be an array");
   const themes = raw.filter(_isValidRegistryEntry);
@@ -160,7 +165,7 @@ async function _syncTheme(themeId, baseUrl, { force = false } = {}) {
 
   // 1. Fetch theme.json
   const themeJsonUrl = `${baseUrl}/themes/${themeId}/theme.json`;
-  const themeBuf = await _httpsGetBuffer(themeJsonUrl);
+  const themeBuf = await _fetchBufferImpl(themeJsonUrl);
   const themeRaw = JSON.parse(themeBuf.toString("utf8"));
   if (!themeRaw || typeof themeRaw !== "object") throw new Error("theme.json not an object");
   if (!themeRaw.states || !themeRaw.states.idle) throw new Error("theme.json missing states.idle");
@@ -191,7 +196,7 @@ async function _syncTheme(themeId, baseUrl, { force = false } = {}) {
     }
     try {
       const svgUrl = `${baseUrl}/themes/${themeId}/${filename}`;
-      const buf = await _httpsGetBuffer(svgUrl);
+      const buf = await _fetchBufferImpl(svgUrl);
       const sanitized = sanitizeSvg(buf.toString("utf8"));
       fs.writeFileSync(destPath, sanitized, "utf8");
       newFilesMeta[filename] = { size: buf.length };
@@ -311,6 +316,7 @@ module.exports = {
   _extractThemeFileList,
   _isStale,
   _httpsGetBuffer,
+  _setFetchBufferForTests,
   _syncRegistry,
   _syncTheme,
   _constants: { REMOTE_TTL_MS, THEME_ID_RE, MAX_BODY_BYTES, DEFAULT_REGISTRY_BASE_URL },
