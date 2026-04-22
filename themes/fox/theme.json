@@ -89,6 +89,27 @@
     }
   },
 
+  "accessories": {
+    "zzz": {
+      "name": "Zzz",
+      "file": "shared:acc-zzz.svg",
+      "anchors": {
+        "sleeping":         { "parentId": "root", "transform": "translate(12, -2)" },
+        "mini-sleep":       { "parentId": "root", "transform": "translate(15, -2)" },
+        "mini-enter-sleep": { "parentId": "root", "transform": "translate(15, -2)" },
+        "*": null
+      }
+    }
+  },
+
+  "variants": [
+    {
+      "id": "fox",
+      "name": "Dessert Fox",
+      "accessories": ["zzz"]
+    }
+  ],
+
   "objectScale": {
     "widthRatio": 1.9,
     "heightRatio": 1.3,
