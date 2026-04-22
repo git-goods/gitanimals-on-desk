@@ -176,7 +176,7 @@ let _miniFlipAssets = false; // theme's mini assets drawn in reverse direction
 let _inMiniMode = false;
 
 function applyMiniFlip(el) {
-  if (!el || el.tagName !== "IMG") return;
+  if (!el || (el.tagName !== "IMG" && el.tagName !== "OBJECT")) return;
   el.style.transform = (_miniFlipAssets && _inMiniMode) ? "scaleX(-1)" : "";
 }
 
@@ -228,13 +228,13 @@ let dndEnabled = false;
 let miniLeftFlip = false;
 let flipMode = false;
 
-function isFlipped() { return miniLeftFlip || flipMode; }
+function isFlipped() { return miniLeftFlip || (!_inMiniMode && flipMode); }
 
 window.electronAPI.onDndChange((enabled) => { dndEnabled = enabled; });
 
 window.electronAPI.onFlipChange((enabled) => {
   flipMode = enabled;
-  container.classList.toggle("flip", flipMode);
+  container.classList.toggle("flip", !_inMiniMode && flipMode);
   if (isFlipped()) {
     applyGlyphFlipCompensation(petEl);
   } else {
@@ -246,6 +246,7 @@ window.electronAPI.onMiniModeChange((enabled, edge) => {
   _inMiniMode = enabled;
   miniLeftFlip = enabled && edge === "left";
   container.classList.toggle("mini-left", miniLeftFlip);
+  container.classList.toggle("flip", !enabled && flipMode);
   applyMiniFlip(petEl);
   if (isFlipped()) {
     applyGlyphFlipCompensation(petEl);
@@ -460,6 +461,7 @@ function swapToFile(file, state, useObjectChannel) {
     next.id = "gitanimals";
     next.style.opacity = "0";
     applyObjectScaleStyle(next, file);
+    applyMiniFlip(next);
 
     const swap = () => {
       if (pendingNext !== next) return;
