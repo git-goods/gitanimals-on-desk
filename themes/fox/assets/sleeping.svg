@@ -21,37 +21,13 @@
         0%, 100% { transform: translate(3px, 9.5px) scaleX(1); }
         50%      { transform: translate(3px, 9.5px) scaleX(1.03); }
       }
-      /* Zzz: float up-right, growing, fade in/out */
-      @keyframes dfox-sleep-zzz {
-        0%   { transform: translate(12px, -2px) scale(0.5); opacity: 0; }
-        10%  { opacity: 1; }
-        50%  { transform: translate(16px, -8px) scale(0.8); opacity: 1; }
-        90%  { opacity: 0.7; }
-        100% { transform: translate(20px, -14px) scale(1.1); opacity: 0; }
-      }
-
       #dfox-sleep-obj {
         animation: dfox-sleep-obj 4.5s ease-in-out infinite;
       }
       #dfox-sleep-shadow {
         animation: dfox-sleep-shadow 4.5s ease-in-out infinite;
       }
-      .dfox-sleep-z {
-        opacity: 0;
-        animation: dfox-sleep-zzz 6s ease-in-out infinite;
-      }
-      .dfox-sleep-z1 { animation-delay: 0s; }
-      .dfox-sleep-z2 { animation-delay: 2s; }
-      .dfox-sleep-z3 { animation-delay: 4s; }
     </style>
-
-    <!-- Pixel-art "Z" (4x4 grid) -->
-    <g id="dfox-sleep-pixel-z">
-      <rect x="0" y="0" width="4" height="1"/>
-      <rect x="2" y="1" width="1" height="1"/>
-      <rect x="1" y="2" width="1" height="1"/>
-      <rect x="0" y="3" width="4" height="1"/>
-    </g>
   </defs>
 
   <!-- Shadow -->
@@ -140,8 +116,5 @@
     </g>
   </g>
 
-  <!-- Zzz particles (outside obj — float in world space) -->
-  <use href="#dfox-sleep-pixel-z" class="dfox-sleep-z dfox-sleep-z1" fill="#90A4AE"/>
-  <use href="#dfox-sleep-pixel-z" class="dfox-sleep-z dfox-sleep-z2" fill="#B0BEC5"/>
-  <use href="#dfox-sleep-pixel-z" class="dfox-sleep-z dfox-sleep-z3" fill="#CFD8DC"/>
+  <!-- Zzz injected via shared accessory (acc-zzz.svg) -->
 </svg>

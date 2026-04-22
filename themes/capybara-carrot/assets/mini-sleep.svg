@@ -3,23 +3,6 @@
     Capybara Carrot — mini sleep (peeking from edge, asleep)
     Head + carrot + partial body, closed eyes + Zzz
   -->
-  <style>
-    @keyframes cap-mini-sleep-z1 {
-      0%, 100%  { transform: translate(15px, -2px); opacity: 0; }
-      5%        { transform: translate(15px, -2px); opacity: 1; }
-      80%       { transform: translate(15px, -6px); opacity: 1; }
-      95%       { transform: translate(15px, -8px); opacity: 0; }
-    }
-    @keyframes cap-mini-sleep-z2 {
-      0%, 100%  { transform: translate(17px, -5px); opacity: 0; }
-      5%        { transform: translate(17px, -5px); opacity: 1; }
-      80%       { transform: translate(17px, -10px); opacity: 1; }
-      95%       { transform: translate(17px, -12px); opacity: 0; }
-    }
-    #cap-mini-sleep-z1 { opacity: 0; animation: cap-mini-sleep-z1 3s ease-in-out infinite; }
-    #cap-mini-sleep-z2 { opacity: 0; animation: cap-mini-sleep-z2 3s ease-in-out 1s infinite; }
-  </style>
-
   <g>
     <g transform="translate(-3.2, 6.1)">
       <path d="M9.98971 0.876343H3.32993V4.59799H9.98971V0.876343Z" fill="#C17B46"/>
@@ -48,11 +31,5 @@
     </g>
   </g>
 
-  <!-- Zzz -->
-  <g id="cap-mini-sleep-z1">
-    <text font-family="Arial, sans-serif" font-weight="bold" font-size="2.5" fill="#999">z</text>
-  </g>
-  <g id="cap-mini-sleep-z2">
-    <text font-family="Arial, sans-serif" font-weight="bold" font-size="3.5" fill="#BBB">z</text>
-  </g>
+  <!-- Zzz injected via shared accessory (acc-zzz.svg) -->
 </svg>
