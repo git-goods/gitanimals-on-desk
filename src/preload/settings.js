@@ -2,60 +2,15 @@
 
 try { require("@sentry/electron/renderer").init({}); } catch (_e) { /* telemetry disabled */ }
 
-// ── Settings panel preload ──
-//
-// Surface: window.settingsAPI
-//
-//   getSnapshot()                       Promise<snapshot>
-//   update(key, value)                  Promise<{ status, message? }>
-//   command(action, payload)            Promise<{ status, message? }>
-//   listAgents()                        Promise<Array<{id, name, ...}>>
-//   onChanged(cb)                       cb({ changes, snapshot? }) — fires for
-//                                       every settings-changed broadcast
-//
-// All writes go through ipcMain.handle("settings:update") in main.js, which
-// routes through the controller. The renderer never owns state — it always
-// re-renders from the snapshot delivered via onChanged broadcasts (or the
-// initial getSnapshot() call). This is the unidirectional flow contract from
-// plan-settings-panel.md §4.2.
-
 const { contextBridge, ipcRenderer } = require("electron");
+const { createSettingsBridge } = require("./settings-bridge");
 
-const listeners = new Set();
-ipcRenderer.on("settings-changed", (_event, payload) => {
-  for (const cb of listeners) {
-    try { cb(payload); } catch (err) { console.warn("settings onChanged listener threw:", err); }
-  }
-});
-
-const tabListeners = new Set();
-ipcRenderer.on("settings:set-tab", (_event, tab) => {
-  for (const cb of tabListeners) {
-    try { cb(tab); } catch (err) { console.warn("settings onSetTab listener threw:", err); }
-  }
-});
-
-const sessionExpiredListeners = new Set();
-ipcRenderer.on("auth:session-expired", () => {
-  for (const cb of sessionExpiredListeners) {
-    try { cb(); } catch (err) { console.warn("settings onSessionExpired listener threw:", err); }
-  }
-});
-
-contextBridge.exposeInMainWorld("settingsAPI", {
-  getSnapshot: () => ipcRenderer.invoke("settings:get-snapshot"),
-  update: (key, value) => ipcRenderer.invoke("settings:update", { key, value }),
-  command: (action, payload) => ipcRenderer.invoke("settings:command", { action, payload }),
-  listAgents: () => ipcRenderer.invoke("settings:list-agents"),
-  listThemes: () => ipcRenderer.invoke("settings:list-themes"),
-  getUser: () => ipcRenderer.invoke("settings:get-user"),
-  onChanged: (cb) => {
-    if (typeof cb === "function") listeners.add(cb);
-  },
-  onSetTab: (cb) => {
-    if (typeof cb === "function") tabListeners.add(cb);
-  },
-  onSessionExpired: (cb) => {
-    if (typeof cb === "function") sessionExpiredListeners.add(cb);
+const settingsAPI = createSettingsBridge({
+  invoke: (channel, payload) => ipcRenderer.invoke(channel, payload),
+  subscribe: (channel, handler) => {
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
   },
 });
+
+contextBridge.exposeInMainWorld("settingsAPI", settingsAPI);
