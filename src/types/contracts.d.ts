@@ -66,6 +66,7 @@ export interface SettingsSnapshot {
   hideBubbles: boolean;
   showSessionId: boolean;
   soundMuted: boolean;
+  flip: boolean;
   sendDiagnostics: boolean;
   theme: string;
   agents: Record<string, Partial<AgentFlags>>;

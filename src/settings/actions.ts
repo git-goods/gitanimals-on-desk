@@ -77,6 +77,7 @@ export const updateRegistry: SettingsUpdateRegistry = {
   positionSaved: requireBoolean("positionSaved"),
   lang: requireEnum("lang", ["en", "zh", "ko"]),
   soundMuted: requireBoolean("soundMuted"),
+  flip: requireBoolean("flip"),
   bubbleFollowPet: requireBoolean("bubbleFollowPet"),
   hideBubbles: requireBoolean("hideBubbles"),
   showSessionId: requireBoolean("showSessionId"),

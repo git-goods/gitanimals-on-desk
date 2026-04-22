@@ -226,15 +226,28 @@ let reactTimer = null;
 let currentIdleSvg = null;    // tracks which SVG is currently showing
 let dndEnabled = false;
 let miniLeftFlip = false;
+let flipMode = false;
+
+function isFlipped() { return miniLeftFlip || flipMode; }
 
 window.electronAPI.onDndChange((enabled) => { dndEnabled = enabled; });
+
+window.electronAPI.onFlipChange((enabled) => {
+  flipMode = enabled;
+  container.classList.toggle("flip", flipMode);
+  if (isFlipped()) {
+    applyGlyphFlipCompensation(petEl);
+  } else {
+    removeGlyphFlipCompensation(petEl);
+  }
+});
 
 window.electronAPI.onMiniModeChange((enabled, edge) => {
   _inMiniMode = enabled;
   miniLeftFlip = enabled && edge === "left";
   container.classList.toggle("mini-left", miniLeftFlip);
   applyMiniFlip(petEl);
-  if (miniLeftFlip) {
+  if (isFlipped()) {
     applyGlyphFlipCompensation(petEl);
   } else {
     removeGlyphFlipCompensation(petEl);
@@ -477,7 +490,7 @@ function swapToFile(file, state, useObjectChannel) {
       if (state && needsObjectChannel(state, file)) {
         attachEyeTracking(next);
       }
-      if (miniLeftFlip) applyGlyphFlipCompensation(next);
+      if (isFlipped()) applyGlyphFlipCompensation(next);
       if (_activeAccessories.length > 0) {
         injectAccessories(next, state);
       }
@@ -967,7 +980,7 @@ function detachEyeTracking() {
 }
 
 window.electronAPI.onEyeMove((dx, dy) => {
-  const effectiveDx = miniLeftFlip ? -dx : dx;
+  const effectiveDx = isFlipped() ? -dx : dx;
   lastEyeDx = effectiveDx;
   lastEyeDy = dy;
 

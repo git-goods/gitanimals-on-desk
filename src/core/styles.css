@@ -38,6 +38,7 @@ html, body {
   pointer-events: none;
 }
 
-#pet-container.mini-left {
+#pet-container.mini-left,
+#pet-container.flip {
   transform: scaleX(-1);
 }

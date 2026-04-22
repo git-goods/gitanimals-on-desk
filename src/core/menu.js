@@ -129,6 +129,12 @@ module.exports = function initMenu(ctx) {
         checked: ctx.showSessionId,
         click: (menuItem) => { ctx.showSessionId = menuItem.checked; },
       },
+      {
+        label: t("flip"),
+        type: "checkbox",
+        checked: ctx.flip,
+        click: (menuItem) => { ctx.flip = menuItem.checked; },
+      },
       { type: "separator" },
       {
         label: t("theme"),
@@ -423,6 +429,12 @@ module.exports = function initMenu(ctx) {
       {
         label: ctx.doNotDisturb ? t("wake") : t("sleep"),
         click: () => ctx.doNotDisturb ? ctx.disableDoNotDisturb() : ctx.enableDoNotDisturb(),
+      },
+      {
+        label: t("flip"),
+        type: "checkbox",
+        checked: ctx.flip,
+        click: (menuItem) => { ctx.flip = menuItem.checked; },
       },
       { type: "separator" },
       {
