@@ -5,6 +5,7 @@
   "main": "src/core/main.js",
   "scripts": {
     "start": "node launch.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "electron-builder --win",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
@@ -131,8 +132,10 @@
     ]
   },
   "devDependencies": {
+    "@types/node": "^22.19.17",
     "electron": "^41.0.2",
-    "electron-builder": "^26.8.1"
+    "electron-builder": "^26.8.1",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@sentry/electron": "^7.11.0",
