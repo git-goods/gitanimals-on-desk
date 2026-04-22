@@ -102,6 +102,7 @@
 
 - settings/theme/agents 계층에 타입 계약 연결
 - 런타임 동작 변화 없이 구조 안전성 향상
+- 우선순위는 `settings` data/controller 레이어 -> theme loader -> agent registry 순서
 
 ### Step 7-8
 
