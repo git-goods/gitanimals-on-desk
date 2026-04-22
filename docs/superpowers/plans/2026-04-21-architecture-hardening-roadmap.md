@@ -134,6 +134,7 @@
 - `JS 실행 유지 -> TS/JS transpile 산출물 검증 -> 실제 런타임 전환 -> allowJs 제거` 순서로 진행한다.
 - 첫 단계는 선택된 안전 모듈에 대해 실행 가능한 JS 산출물을 만드는 transpile 경로를 추가하는 것이다.
 - 런타임 진입점(`launch.js`, `src/core/main.js`)은 즉시 바꾸지 않고, shadow runtime 검증을 먼저 통과시킨다.
+- 첫 실제 `.ts` source 전환은 leaf 모듈부터 시작하고, `npm start/test/build`가 해당 `.ts`를 adjacent `.js`로 먼저 생성하도록 연결한다.
 
 ## PR 운영 규칙
 
