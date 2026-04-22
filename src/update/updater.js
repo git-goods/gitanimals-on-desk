@@ -461,6 +461,12 @@ function initUpdater(ctx, deps = {}) {
       const remoteHead = await gitCmd(["rev-parse", `origin/${branch}`], repoRoot);
 
       if (localHead === remoteHead) {
+        if (pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" && ctx.getPendingUpdateVersion())) {
+          pendingVersion = "";
+          if (typeof ctx.savePendingState === "function") {
+            ctx.savePendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
+          }
+        }
         updateStatus = "idle";
         manualUpdateCheck = false;
         rebuildMenus();
@@ -638,6 +644,10 @@ function initUpdater(ctx, deps = {}) {
       return;
     }
 
+    if (typeof ctx.savePendingState === "function") {
+      ctx.savePendingState({ lastUpdateCheckAt: Date.now() });
+    }
+
     const repoRoot = getRepoRoot();
     if (repoRoot) return gitCheckForUpdates(repoRoot, manual);
 
@@ -673,6 +683,12 @@ function initUpdater(ctx, deps = {}) {
     }
 
     if (compareVersions(currentVersion, latestVersion) >= 0) {
+      if (pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" && ctx.getPendingUpdateVersion())) {
+        pendingVersion = "";
+        if (typeof ctx.savePendingState === "function") {
+          ctx.savePendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
+        }
+      }
       updateStatus = "idle";
       manualUpdateCheck = false;
       rebuildMenus();
@@ -697,6 +713,14 @@ function initUpdater(ctx, deps = {}) {
         });
       }
       return;
+    }
+
+    const currentPending = pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" ? ctx.getPendingUpdateVersion() : "");
+    if (currentPending && compareVersions(currentPending, latestVersion) < 0) {
+      pendingVersion = "";
+      if (typeof ctx.savePendingState === "function") {
+        ctx.savePendingState({ updateSnoozeUntil: 0, pendingUpdateVersion: "" });
+      }
     }
 
     try {

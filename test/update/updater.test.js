@@ -437,6 +437,68 @@ describe("menu reflects available state", () => {
   });
 });
 
+describe("pending version cleanup", () => {
+  beforeEach(() => {
+    mock.restoreAll();
+    delete require.cache[require.resolve("../../src/update/updater")];
+    initUpdater = require("../../src/update/updater");
+  });
+
+  it("clears pendingUpdateVersion when current version is up-to-date", async () => {
+    const savedState = {};
+    const ctx = makeCtx({
+      showUpdateBubble: (p) => "dismiss",
+      savePendingState(partial) { Object.assign(savedState, partial); },
+      getPendingUpdateVersion: () => "0.5.10",
+      getUpdateSnoozeUntil: () => 0,
+    });
+    const updater = initUpdater(ctx, makeDeps({
+      app: { isPackaged: true, getVersion: () => "0.5.10", relaunch() {}, exit() {} },
+      httpsGetImpl: (options, cb) => {
+        const res = {
+          statusCode: 200,
+          on(evt, fn) {
+            if (evt === "data") fn(JSON.stringify({ tag_name: "v0.5.10" }));
+            if (evt === "end") fn();
+          },
+        };
+        cb(res);
+        return { on() {}, setTimeout() {} };
+      },
+    }));
+    updater.setupAutoUpdater();
+    await updater.checkForUpdates(false);
+
+    assert.strictEqual(savedState.pendingUpdateVersion, "");
+  });
+
+  it("persists lastUpdateCheckAt on check start", async () => {
+    const savedState = {};
+    const before = Date.now();
+    const ctx = makeCtx({
+      showUpdateBubble: (p) => "dismiss",
+      savePendingState(partial) { Object.assign(savedState, partial); },
+    });
+    const updater = initUpdater(ctx, makeDeps({
+      httpsGetImpl: (options, cb) => {
+        const res = {
+          statusCode: 200,
+          on(evt, fn) {
+            if (evt === "data") fn(JSON.stringify({ tag_name: "v0.5.10" }));
+            if (evt === "end") fn();
+          },
+        };
+        cb(res);
+        return { on() {}, setTimeout() {} };
+      },
+    }));
+    updater.setupAutoUpdater();
+    await updater.checkForUpdates(false);
+
+    assert.ok(savedState.lastUpdateCheckAt >= before, "should persist check timestamp");
+  });
+});
+
 describe("snooze", () => {
   beforeEach(() => {
     mock.restoreAll();
