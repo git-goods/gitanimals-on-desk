@@ -20,6 +20,9 @@
     "src/settings/actions.js",
     "src/settings/store.js",
     "src/settings/controller.js",
+    "src/core/telemetry.js",
+    "src/theme/loader.js",
+    "src/theme/remote-sync.js",
     "agents/**/*.js",
     "hooks/json-utils.js",
     "hooks/shared-process.js"
