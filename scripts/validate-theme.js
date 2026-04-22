@@ -209,9 +209,17 @@ const referencedFiles = collectFiles();
 let missingCount = 0;
 let presentCount = 0;
 
+const SHARED_PREFIX = "shared:";
+const sharedAccessoriesDir = path.resolve(__dirname, "../themes/_shared/accessories");
+
 if (assetsDirExists) {
   for (const file of [...referencedFiles].sort()) {
-    const filePath = path.join(assetsDir, file);
+    let filePath;
+    if (file.startsWith(SHARED_PREFIX)) {
+      filePath = path.join(sharedAccessoriesDir, file.slice(SHARED_PREFIX.length));
+    } else {
+      filePath = path.join(assetsDir, file);
+    }
     if (fs.existsSync(filePath)) {
       presentCount++;
     } else {

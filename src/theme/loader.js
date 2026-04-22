@@ -10,6 +10,13 @@ const { bc, report } = (() => {
 /** @typedef {import("../types/contracts").ThemeCatalogEntry} ThemeCatalogEntry */
 /** @typedef {import("../types/contracts").ThemeManifest} ThemeManifest */
 
+// ── Shared accessory pool ──
+const SHARED_PREFIX = "shared:";
+const SHARED_ACCESSORIES_PATH = "../../themes/_shared/accessories";
+const sharedAccessoriesDir = path.join(__dirname, "../../themes/_shared/accessories");
+const isSharedRef = (f) => typeof f === "string" && f.startsWith(SHARED_PREFIX);
+const stripShared = (f) => f.slice(SHARED_PREFIX.length);
+
 // ── Defaults (used when theme.json omits optional fields) ──
 
 const DEFAULT_SOUNDS = {
@@ -482,6 +489,9 @@ function resolveHint(hookFilename) {
  * @returns {string} absolute file path
  */
 function getAssetPath(filename) {
+  if (isSharedRef(filename)) {
+    return path.join(sharedAccessoriesDir, path.basename(stripShared(filename)));
+  }
   filename = path.basename(filename);
   if (!activeTheme) return path.join(assetsSvgDir, filename);
 
@@ -588,6 +598,7 @@ function getRendererConfig() {
     transitions: t.transitions || {},
     accessories: t.accessories || {},
     activeAccessories: t._activeVariantAccessories || [],
+    sharedAssetsPath: SHARED_ACCESSORIES_PATH,
   };
 }
 
@@ -853,7 +864,13 @@ function mergeDefaults(raw, themeId, isBuiltin) {
   if (Array.isArray(theme.sleepingHitboxFiles)) theme.sleepingHitboxFiles = theme.sleepingHitboxFiles.map(bn);
   if (theme.accessories) {
     for (const acc of Object.values(theme.accessories)) {
-      if (acc && acc.file) acc.file = bn(acc.file);
+      if (acc && acc.file) {
+        if (isSharedRef(acc.file)) {
+          acc.file = SHARED_PREFIX + path.basename(stripShared(acc.file));
+        } else {
+          acc.file = bn(acc.file);
+        }
+      }
     }
   }
 

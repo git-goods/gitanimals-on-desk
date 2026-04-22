@@ -48,6 +48,7 @@ function initWithConfig(cfg) {
   _layout = tc.layout || null;
   _assetsPath = tc.assetsPath || "../../assets/svg";
   _sourceAssetsPath = tc.sourceAssetsPath || null;
+  _sharedAssetsPath = tc.sharedAssetsPath || null;
   _eyeIds = (tc.eyeTracking && tc.eyeTracking.ids) || { eyes: "eyes-js", body: "body-js", shadow: "shadow-js", dozeEyes: "eyes-doze" };
   _bodyScale = (tc.eyeTracking && tc.eyeTracking.bodyScale) || 0.33;
   _shadowStretch = (tc.eyeTracking && tc.eyeTracking.shadowStretch) || 0.15;
@@ -156,6 +157,7 @@ function applyNormalizedLayoutStyle(el, file) {
 
 let _assetsPath;
 let _sourceAssetsPath;
+let _sharedAssetsPath;
 let _viewBox;
 let _layout;
 let _eyeIds;
@@ -299,6 +301,9 @@ function needsObjectChannel(state, file) {
  */
 function getAssetUrl(file) {
   if (!file) return "";
+  if (file.startsWith("shared:") && _sharedAssetsPath) {
+    return `${_sharedAssetsPath}/${file.slice("shared:".length)}`;
+  }
   if (file.endsWith(".svg") || !_sourceAssetsPath) {
     return `${_assetsPath}/${file}`;
   }

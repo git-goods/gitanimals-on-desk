@@ -24,7 +24,7 @@
   "accessories": {
     "sunglasses": {
       "name": "선글라스",
-      "file": "acc-sunglasses.svg",
+      "file": "shared:acc-sunglasses.svg",
       "anchors": {
         "*": {
           "parentId": "little-chick-head",
@@ -36,7 +36,7 @@
     },
     "notebook": {
       "name": "노트북",
-      "file": "acc-notebook.svg",
+      "file": "shared:acc-notebook.svg",
       "anchors": {
         "*": null,
         "working": { "parentId": "root", "transform": "translate(7, 5)" }
