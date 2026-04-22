@@ -284,6 +284,7 @@ function applyState(state, svgOverride) {
       currentHitBox = HIT_BOXES.default;
     }
 
+    console.log(`[state] ${state} (${svg})`);
     ctx.sendToRenderer("state-change", state, svg);
     ctx.syncHitWin();
     ctx.sendToHitWin("hit-state-sync", { currentSvg: svg, currentState: state });

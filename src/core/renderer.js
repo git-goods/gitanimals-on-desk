@@ -395,6 +395,7 @@ function endDragReaction() {
 // --- Generic swap function: handles both <object> and <img> channels ---
 let currentDisplayedSvg = getObjectSvgName(petEl);
 let pendingSvgFile = null; // tracks the SVG currently being loaded (for dedup)
+let _isFallbackAttempt = false;
 currentIdleSvg = currentDisplayedSvg;
 
 /**
@@ -484,9 +485,16 @@ function swapToFile(file, state, useObjectChannel) {
 
     next.addEventListener("load", swap, { once: true });
     next.addEventListener("error", () => {
+      const canFallback = !_isFallbackAttempt && _idleFollowSvg && file !== _idleFollowSvg;
       reportAssetLoadFailed({
         state, file, url, channel: "object", failureMode: "error-event",
+        fellBack: canFallback,
       });
+      console.warn(`[render] load failed: ${file} (object/error)${canFallback ? " → fallback to idle" : ""}`);
+      if (canFallback && pendingNext === next) {
+        _isFallbackAttempt = true;
+        swapToFile(_idleFollowSvg, "idle", true);
+      }
     }, { once: true });
     next.data = url;
     container.appendChild(next);
@@ -495,11 +503,19 @@ function swapToFile(file, state, useObjectChannel) {
       if (pendingNext !== next) return;
       try {
         if (!next.contentDocument) {
+          const canFallback = !_isFallbackAttempt && _idleFollowSvg && file !== _idleFollowSvg;
           reportAssetLoadFailed({
             state, file, url, channel: "object",
             failureMode: "timeout-no-contentdocument",
+            fellBack: canFallback,
           });
-          releaseObject(next); pendingNext = null; return;
+          console.warn(`[render] load failed: ${file} (object/timeout)${canFallback ? " → fallback to idle" : ""}`);
+          releaseObject(next); pendingNext = null;
+          if (canFallback) {
+            _isFallbackAttempt = true;
+            swapToFile(_idleFollowSvg, "idle", true);
+          }
+          return;
         }
       } catch {}
       swap();
@@ -542,23 +558,36 @@ function swapToFile(file, state, useObjectChannel) {
 
     next.addEventListener("load", swap, { once: true });
     next.addEventListener("error", () => {
+      const canFallback = !_isFallbackAttempt && _idleFollowSvg && file !== _idleFollowSvg;
       reportAssetLoadFailed({
         state, file, url, channel: "img", failureMode: "error-event",
+        fellBack: canFallback,
       });
+      console.warn(`[render] load failed: ${file} (img/error)${canFallback ? " → fallback to idle" : ""}`);
+      if (canFallback && pendingNext === next) {
+        _isFallbackAttempt = true;
+        swapToFile(_idleFollowSvg, "idle", true);
+      }
     }, { once: true });
     next.src = url;
     container.appendChild(next);
     pendingNext = next;
-    // Timeout fallback for images that fail to load
     setTimeout(() => {
       if (pendingNext !== next) return;
-      // naturalWidth === 0 on a "complete" image means load failed silently
-      // (e.g. error event didn't fire before timeout).
       if (next.complete && next.naturalWidth === 0) {
+        const canFallback = !_isFallbackAttempt && _idleFollowSvg && file !== _idleFollowSvg;
         reportAssetLoadFailed({
           state, file, url, channel: "img",
           failureMode: "timeout-naturalwidth-zero",
+          fellBack: canFallback,
         });
+        console.warn(`[render] load failed: ${file} (img/timeout)${canFallback ? " → fallback to idle" : ""}`);
+        if (canFallback) {
+          _isFallbackAttempt = true;
+          releaseImg(next); pendingNext = null;
+          swapToFile(_idleFollowSvg, "idle", true);
+          return;
+        }
       }
       swap();
     }, 3000);
@@ -568,6 +597,7 @@ function swapToFile(file, state, useObjectChannel) {
 // --- State change → switch animation (preload + instant swap) ---
 window.electronAPI.onStateChange((state, svg) => {
   cancelReaction();
+  _isFallbackAttempt = false;
 
   // Dedup: same file already displayed OR currently loading → don't re-swap
   const alreadyDisplayed = petEl && petEl.isConnected && currentDisplayedSvg === svg;

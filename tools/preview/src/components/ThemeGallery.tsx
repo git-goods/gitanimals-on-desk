@@ -25,18 +25,22 @@ export default function ThemeGallery({ themes, refreshKey }: Props) {
     Promise.all(
       themes.map(async (theme) => {
         try {
-          const res = await fetch(`/api/themes/${encodeURIComponent(theme.id)}/config`);
+          const res = await fetch(
+            `/api/themes/${encodeURIComponent(theme.id)}/config`,
+          );
           const config: ThemeConfig = await res.json();
           if (config.error) return null;
 
           const mainStates = [...MAIN_STATES].filter((s) => config.states?.[s]);
-          const miniStates = config.miniMode?.states ? Object.keys(config.miniMode.states) : [];
+          const miniStates = config.miniMode?.states
+            ? Object.keys(config.miniMode.states)
+            : [];
 
           return { theme, config, allStates: [...mainStates, ...miniStates] };
         } catch {
           return null;
         }
-      })
+      }),
     ).then((results) => {
       setEntries(results.filter(Boolean) as ThemeEntry[]);
       setLoading(false);
@@ -44,11 +48,15 @@ export default function ThemeGallery({ themes, refreshKey }: Props) {
   }, [themes, refreshKey]);
 
   if (loading) {
-    return <div style={{ padding: 20, color: "#888" }}>Loading all themes...</div>;
+    return (
+      <div style={{ padding: 20, color: "#888" }}>Loading all themes...</div>
+    );
   }
 
   return (
-    <div style={{ padding: 20, overflowY: "auto", height: "calc(100vh - 52px)" }}>
+    <div
+      style={{ padding: 20, overflowY: "auto", height: "calc(100vh - 52px)" }}
+    >
       {entries.map(({ theme, config, allStates }) => (
         <div key={theme.id} style={{ marginBottom: 24 }}>
           <div
@@ -63,14 +71,16 @@ export default function ThemeGallery({ themes, refreshKey }: Props) {
             {theme.name}
             <span style={{ color: "#666", fontSize: 12, marginLeft: 8 }}>
               {theme.id}
-              {config.activeAccessories?.length > 0 && ` + ${config.activeAccessories.join(", ")}`}
+              {config.activeAccessories?.length > 0 &&
+                ` + ${config.activeAccessories.join(", ")}`}
             </span>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {allStates.map((state) => {
               let file: string | null = null;
               if (config.states?.[state]) file = config.states[state][0];
-              if (!file && config.miniMode?.states?.[state]) file = config.miniMode.states[state][0];
+              if (!file && config.miniMode?.states?.[state])
+                file = config.miniMode.states[state][0];
               if (!file) return null;
 
               return (

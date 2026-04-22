@@ -1,10 +1,24 @@
-const { app, BrowserWindow, screen, Menu, ipcMain, globalShortcut, nativeTheme, powerMonitor, Notification } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  screen,
+  Menu,
+  ipcMain,
+  globalShortcut,
+  nativeTheme,
+  powerMonitor,
+  Notification,
+} = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { applyStationaryCollectionBehavior } = require("./mac-window");
 const { createSettingsRuntime } = require("./settings-runtime");
 const hitGeometry = require("../hit/geometry");
-const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("../utils/work-area");
+const {
+  findNearestWorkArea,
+  computeLooseClamp,
+  SYNTHETIC_WORK_AREA,
+} = require("../utils/work-area");
 const telemetry = require("./telemetry");
 const { bc, report, captureException } = telemetry;
 
@@ -15,12 +29,19 @@ telemetry.init();
 
 // Global exception handlers — main process crashes bubble up here.
 process.on("uncaughtException", (err) => {
-  try { captureException(err, { where: "main/uncaughtException" }); } catch {}
+  try {
+    captureException(err, { where: "main/uncaughtException" });
+  } catch {}
   // eslint-disable-next-line no-console
-  console.error("GitAnimals uncaughtException:", err && err.stack || err);
+  console.error("GitAnimals uncaughtException:", (err && err.stack) || err);
 });
 process.on("unhandledRejection", (reason) => {
-  try { captureException(reason instanceof Error ? reason : new Error(String(reason)), { where: "main/unhandledRejection" }); } catch {}
+  try {
+    captureException(
+      reason instanceof Error ? reason : new Error(String(reason)),
+      { where: "main/unhandledRejection" },
+    );
+  } catch {}
   // eslint-disable-next-line no-console
   console.error("GitAnimals unhandledRejection:", reason);
 });
@@ -34,19 +55,22 @@ const isLinux = process.platform === "linux";
 const isWin = process.platform === "win32";
 const LINUX_WINDOW_TYPE = "toolbar";
 
-
 // ── Windows: AllowSetForegroundWindow via FFI ──
 let _allowSetForeground = null;
 if (isWin) {
   try {
     const koffi = require("koffi");
     const user32 = koffi.load("user32.dll");
-    _allowSetForeground = user32.func("bool __stdcall AllowSetForegroundWindow(int dwProcessId)");
+    _allowSetForeground = user32.func(
+      "bool __stdcall AllowSetForegroundWindow(int dwProcessId)",
+    );
   } catch (err) {
-    console.warn("GitAnimals: koffi/AllowSetForegroundWindow not available:", err.message);
+    console.warn(
+      "GitAnimals: koffi/AllowSetForegroundWindow not available:",
+      err.message,
+    );
   }
 }
-
 
 // ── Window size presets ──
 const SIZES = {
@@ -107,7 +131,8 @@ const _settingsController = createSettingsController({
   injectedDeps: {
     installAutoStart: _installAutoStartHook,
     uninstallAutoStart: _uninstallAutoStartHook,
-    setOpenAtLogin: (...args) => _settingsRuntime.writeSystemOpenAtLogin(...args),
+    setOpenAtLogin: (...args) =>
+      _settingsRuntime.writeSystemOpenAtLogin(...args),
     startMonitorForAgent: _deferredStartMonitorForAgent,
     stopMonitorForAgent: _deferredStopMonitorForAgent,
     clearSessionsByAgent: _deferredClearSessionsByAgent,
@@ -119,8 +144,13 @@ const _settingsController = createSettingsController({
     logout: () => {
       tokenStore.clear();
       const _cacheDir = path.join(app.getPath("userData"), "theme-cache");
-      try { require("fs").rmSync(_cacheDir, { recursive: true, force: true }); } catch (_e) {}
-      setTimeout(() => { app.relaunch(); app.exit(0); }, 200);
+      try {
+        require("fs").rmSync(_cacheDir, { recursive: true, force: true });
+      } catch (_e) {}
+      setTimeout(() => {
+        app.relaunch();
+        app.exit(0);
+      }, 200);
     },
   },
 });
@@ -134,8 +164,8 @@ let _lastUnauthorizedNotifiedAt = 0; // epoch ms — debounce OS notification (3
 // assign directly.
 let lang = _settingsController.get("lang");
 
-let _codexMonitor = null;          // Codex CLI JSONL log polling instance
-let _geminiMonitor = null;         // Gemini CLI session JSON polling instance
+let _codexMonitor = null; // Codex CLI JSONL log polling instance
+let _geminiMonitor = null; // Gemini CLI session JSON polling instance
 
 // Hook-based agents have no module-level monitor — they're gated at the
 // HTTP route layer. Only log-poll agents hit these branches.
@@ -155,7 +185,7 @@ themeLoader.init(path.join(__dirname, ".."), app.getPath("userData"));
 {
   const _pinned = _settingsController.get("pinnedThemes");
   if (!_pinned || Object.keys(_pinned).length === 0) {
-    const _builtins = themeLoader.discoverThemes().filter(t => t.builtin);
+    const _builtins = themeLoader.discoverThemes().filter((t) => t.builtin);
     if (_builtins.length > 0) {
       const _backfill = {};
       for (const _t of _builtins) _backfill[_t.id] = true;
@@ -171,18 +201,28 @@ const { shouldShowLogin } = require("../auth/gate");
 const { LoginWindow } = require("../auth/login-window");
 const tokenStore = require("../auth/token-store");
 
-let activeTheme = themeLoader.loadTheme(_settingsController.get("theme") || "fox");
+let activeTheme = themeLoader.loadTheme(
+  _settingsController.get("theme") || "fox",
+);
 
 // ── CSS <object> sizing (from theme) ──
 function getObjRect(bounds) {
   const state = _state.getCurrentState();
-  const file = _state.getCurrentSvg() || (activeTheme && activeTheme.states && activeTheme.states.idle[0]);
-  return hitGeometry.getAssetRectScreen(activeTheme, bounds, state, file)
-    || { x: bounds.x, y: bounds.y, w: bounds.width, h: bounds.height };
+  const file =
+    _state.getCurrentSvg() ||
+    (activeTheme && activeTheme.states && activeTheme.states.idle[0]);
+  return (
+    hitGeometry.getAssetRectScreen(activeTheme, bounds, state, file) || {
+      x: bounds.x,
+      y: bounds.y,
+      w: bounds.width,
+      h: bounds.height,
+    }
+  );
 }
 
 let win;
-let hitWin;  // input window — small opaque rect over hitbox, receives all pointer events
+let hitWin; // input window — small opaque rect over hitbox, receives all pointer events
 let tray = null;
 let contextMenuOwner = null;
 // Mirror of _settingsController.get("size") — initialized from disk, kept in
@@ -196,7 +236,10 @@ let _settingsRuntime;
 const PROPORTIONAL_RATIOS = [8, 10, 12, 15];
 
 function isProportionalMode(size) {
-  return typeof (size || currentSize) === "string" && (size || currentSize).startsWith("P:");
+  return (
+    typeof (size || currentSize) === "string" &&
+    (size || currentSize).startsWith("P:")
+  );
 }
 
 function getProportionalRatio(size) {
@@ -212,7 +255,7 @@ function getCurrentPixelSize(overrideWa) {
     wa = getNearestWorkArea(x + width / 2, y + height / 2);
   }
   if (!wa) wa = getPrimaryWorkAreaSafe() || SYNTHETIC_WORK_AREA;
-  const px = Math.round(wa.width * ratio / 100);
+  const px = Math.round((wa.width * ratio) / 100);
   return { width: px, height: px };
 }
 let contextMenu;
@@ -276,7 +319,10 @@ function registerToggleShortcut() {
   try {
     globalShortcut.register(DEFAULT_TOGGLE_SHORTCUT, togglePetVisibility);
   } catch (err) {
-    console.warn("GitAnimals: failed to register global shortcut:", err.message);
+    console.warn(
+      "GitAnimals: failed to register global shortcut:",
+      err.message,
+    );
   }
 }
 
@@ -290,7 +336,8 @@ function sendToRenderer(channel, ...args) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, ...args);
 }
 function sendToHitWin(channel, ...args) {
-  if (hitWin && !hitWin.isDestroyed()) hitWin.webContents.send(channel, ...args);
+  if (hitWin && !hitWin.isDestroyed())
+    hitWin.webContents.send(channel, ...args);
 }
 
 function syncHitStateAfterLoad() {
@@ -359,7 +406,8 @@ function resetSoundCooldown() {
 
 // Sync input window position to match render window's hitbox.
 // Called manually after every win position/size change + event-level safety net.
-let _lastHitW = 0, _lastHitH = 0;
+let _lastHitW = 0,
+  _lastHitH = 0;
 function syncHitWin() {
   if (!hitWin || hitWin.isDestroyed() || !win || win.isDestroyed()) return;
   const bounds = win.getBounds();
@@ -372,7 +420,8 @@ function syncHitWin() {
   hitWin.setBounds({ x, y, width: w, height: h });
   // Update shape if hitbox dimensions changed (e.g. after resize)
   if (w !== _lastHitW || h !== _lastHitH) {
-    _lastHitW = w; _lastHitH = h;
+    _lastHitW = w;
+    _lastHitH = h;
     hitWin.setShape([{ x: 0, y: 0, width: w, height: h }]);
   }
 }
@@ -408,39 +457,78 @@ function _finishThemeReload() {
 // Initialized after state module (needs applyState, resolveDisplayState, etc.)
 // See _mini initialization below
 
-
 // ── Permission bubble — delegated to src/permission.js ──
-const { isAgentEnabled: _isAgentEnabled, isAgentPermissionsEnabled: _isAgentPermissionsEnabled } = require("../settings/agent-gate");
+const {
+  isAgentEnabled: _isAgentEnabled,
+  isAgentPermissionsEnabled: _isAgentPermissionsEnabled,
+} = require("../settings/agent-gate");
 const _permCtx = {
-  get win() { return win; },
-  get lang() { return lang; },
-  get sessions() { return sessions; },
-  get bubbleFollowPet() { return bubbleFollowPet; },
-  get permDebugLog() { return permDebugLog; },
-  get doNotDisturb() { return doNotDisturb; },
-  get hideBubbles() { return hideBubbles; },
-  get petHidden() { return petHidden; },
+  get win() {
+    return win;
+  },
+  get lang() {
+    return lang;
+  },
+  get sessions() {
+    return sessions;
+  },
+  get bubbleFollowPet() {
+    return bubbleFollowPet;
+  },
+  get permDebugLog() {
+    return permDebugLog;
+  },
+  get doNotDisturb() {
+    return doNotDisturb;
+  },
+  get hideBubbles() {
+    return hideBubbles;
+  },
+  get petHidden() {
+    return petHidden;
+  },
   getNearestWorkArea,
   getHitRectScreen,
   guardAlwaysOnTop,
   reapplyMacVisibility,
   isAgentPermissionsEnabled: (agentId) =>
-    _isAgentPermissionsEnabled({ agents: _settingsController.get("agents") }, agentId),
+    _isAgentPermissionsEnabled(
+      { agents: _settingsController.get("agents") },
+      agentId,
+    ),
   focusTerminalForSession: (sessionId) => {
     const s = sessions.get(sessionId);
-    if (s && s.sourcePid) focusTerminalWindow(s.sourcePid, s.cwd, s.editor, s.pidChain);
+    if (s && s.sourcePid)
+      focusTerminalWindow(s.sourcePid, s.cwd, s.editor, s.pidChain);
   },
 };
 const _perm = require("../server/permission")(_permCtx);
-const { showPermissionBubble, resolvePermissionEntry, sendPermissionResponse, repositionBubbles, permLog, PASSTHROUGH_TOOLS, showCodexNotifyBubble, clearCodexNotifyBubbles, syncPermissionShortcuts, replyOpencodePermission } = _perm;
+const {
+  showPermissionBubble,
+  resolvePermissionEntry,
+  sendPermissionResponse,
+  repositionBubbles,
+  permLog,
+  PASSTHROUGH_TOOLS,
+  showCodexNotifyBubble,
+  clearCodexNotifyBubbles,
+  syncPermissionShortcuts,
+  replyOpencodePermission,
+} = _perm;
 const pendingPermissions = _perm.pendingPermissions;
 let permDebugLog = null; // set after app.whenReady()
 let updateDebugLog = null; // set after app.whenReady()
 
 const _updateBubbleCtx = {
-  get win() { return win; },
-  get bubbleFollowPet() { return bubbleFollowPet; },
-  get petHidden() { return petHidden; },
+  get win() {
+    return win;
+  },
+  get bubbleFollowPet() {
+    return bubbleFollowPet;
+  },
+  get petHidden() {
+    return petHidden;
+  },
   getPendingPermissions: () => pendingPermissions,
   getNearestWorkArea,
   getHitRectScreen,
@@ -491,25 +579,63 @@ function reapplyMacVisibility() {
 
 // ── State machine — delegated to src/state.js ──
 const _stateCtx = {
-  get theme() { return activeTheme; },
-  get win() { return win; },
-  get hitWin() { return hitWin; },
-  get doNotDisturb() { return doNotDisturb; },
-  set doNotDisturb(v) { doNotDisturb = v; },
-  get miniMode() { return _mini.getMiniMode(); },
-  get miniTransitioning() { return _mini.getMiniTransitioning(); },
-  get mouseOverPet() { return mouseOverPet; },
-  get miniSleepPeeked() { return _mini.getMiniSleepPeeked(); },
-  set miniSleepPeeked(v) { _mini.setMiniSleepPeeked(v); },
-  get miniPeeked() { return _mini.getMiniPeeked(); },
-  set miniPeeked(v) { _mini.setMiniPeeked(v); },
-  get idlePaused() { return idlePaused; },
-  set idlePaused(v) { idlePaused = v; },
-  get forceEyeResend() { return forceEyeResend; },
-  set forceEyeResend(v) { forceEyeResend = v; },
-  get mouseStillSince() { return _tick ? _tick._mouseStillSince : Date.now(); },
-  get pendingPermissions() { return pendingPermissions; },
-  get showSessionId() { return showSessionId; },
+  get theme() {
+    return activeTheme;
+  },
+  get win() {
+    return win;
+  },
+  get hitWin() {
+    return hitWin;
+  },
+  get doNotDisturb() {
+    return doNotDisturb;
+  },
+  set doNotDisturb(v) {
+    doNotDisturb = v;
+  },
+  get miniMode() {
+    return _mini.getMiniMode();
+  },
+  get miniTransitioning() {
+    return _mini.getMiniTransitioning();
+  },
+  get mouseOverPet() {
+    return mouseOverPet;
+  },
+  get miniSleepPeeked() {
+    return _mini.getMiniSleepPeeked();
+  },
+  set miniSleepPeeked(v) {
+    _mini.setMiniSleepPeeked(v);
+  },
+  get miniPeeked() {
+    return _mini.getMiniPeeked();
+  },
+  set miniPeeked(v) {
+    _mini.setMiniPeeked(v);
+  },
+  get idlePaused() {
+    return idlePaused;
+  },
+  set idlePaused(v) {
+    idlePaused = v;
+  },
+  get forceEyeResend() {
+    return forceEyeResend;
+  },
+  set forceEyeResend(v) {
+    forceEyeResend = v;
+  },
+  get mouseStillSince() {
+    return _tick ? _tick._mouseStillSince : Date.now();
+  },
+  get pendingPermissions() {
+    return pendingPermissions;
+  },
+  get showSessionId() {
+    return showSessionId;
+  },
   sendToRenderer,
   sendToHitWin,
   syncHitWin,
@@ -538,17 +664,31 @@ const _stateCtx = {
   },
 };
 const _state = require("./state")(_stateCtx);
-const { setState, applyState, updateSession, resolveDisplayState, getSvgOverride,
-        enableDoNotDisturb, disableDoNotDisturb, startStaleCleanup, stopStaleCleanup,
-        startWakePoll, stopWakePoll, detectRunningAgentProcesses, buildSessionSubmenu,
-        startStartupRecovery: _startStartupRecovery } = _state;
+const {
+  setState,
+  applyState,
+  updateSession,
+  resolveDisplayState,
+  getSvgOverride,
+  enableDoNotDisturb,
+  disableDoNotDisturb,
+  startStaleCleanup,
+  stopStaleCleanup,
+  startWakePoll,
+  stopWakePoll,
+  detectRunningAgentProcesses,
+  buildSessionSubmenu,
+  startStartupRecovery: _startStartupRecovery,
+} = _state;
 const sessions = _state.sessions;
 const STATE_PRIORITY = _state.STATE_PRIORITY;
 
 // ── Hit-test: SVG bounding box → screen coordinates ──
 function getHitRectScreen(bounds) {
   const state = _state.getCurrentState();
-  const file = _state.getCurrentSvg() || (activeTheme && activeTheme.states && activeTheme.states.idle[0]);
+  const file =
+    _state.getCurrentSvg() ||
+    (activeTheme && activeTheme.states && activeTheme.states.idle[0]);
   const hit = hitGeometry.getHitRectScreen(
     activeTheme,
     bounds,
@@ -558,32 +698,77 @@ function getHitRectScreen(bounds) {
     {
       padX: _mini.getMiniMode() ? _mini.PEEK_OFFSET : 0,
       padY: _mini.getMiniMode() ? 8 : 0,
+    },
+  );
+  return (
+    hit || {
+      left: bounds.x,
+      top: bounds.y,
+      right: bounds.x + bounds.width,
+      bottom: bounds.y + bounds.height,
     }
   );
-  return hit || { left: bounds.x, top: bounds.y, right: bounds.x + bounds.width, bottom: bounds.y + bounds.height };
 }
 
 // ── Main tick — delegated to src/tick.js ──
 const _tickCtx = {
-  get theme() { return activeTheme; },
-  get win() { return win; },
-  get currentState() { return _state.getCurrentState(); },
-  get currentSvg() { return _state.getCurrentSvg(); },
-  get miniMode() { return _mini.getMiniMode(); },
-  get miniTransitioning() { return _mini.getMiniTransitioning(); },
-  get dragLocked() { return dragLocked; },
-  get menuOpen() { return menuOpen; },
-  get idlePaused() { return idlePaused; },
-  get isAnimating() { return _mini.getIsAnimating(); },
-  get miniSleepPeeked() { return _mini.getMiniSleepPeeked(); },
-  set miniSleepPeeked(v) { _mini.setMiniSleepPeeked(v); },
-  get miniPeeked() { return _mini.getMiniPeeked(); },
-  set miniPeeked(v) { _mini.setMiniPeeked(v); },
-  get mouseOverPet() { return mouseOverPet; },
-  set mouseOverPet(v) { mouseOverPet = v; },
-  get forceEyeResend() { return forceEyeResend; },
-  set forceEyeResend(v) { forceEyeResend = v; },
-  get startupRecoveryActive() { return _state.getStartupRecoveryActive(); },
+  get theme() {
+    return activeTheme;
+  },
+  get win() {
+    return win;
+  },
+  get currentState() {
+    return _state.getCurrentState();
+  },
+  get currentSvg() {
+    return _state.getCurrentSvg();
+  },
+  get miniMode() {
+    return _mini.getMiniMode();
+  },
+  get miniTransitioning() {
+    return _mini.getMiniTransitioning();
+  },
+  get dragLocked() {
+    return dragLocked;
+  },
+  get menuOpen() {
+    return menuOpen;
+  },
+  get idlePaused() {
+    return idlePaused;
+  },
+  get isAnimating() {
+    return _mini.getIsAnimating();
+  },
+  get miniSleepPeeked() {
+    return _mini.getMiniSleepPeeked();
+  },
+  set miniSleepPeeked(v) {
+    _mini.setMiniSleepPeeked(v);
+  },
+  get miniPeeked() {
+    return _mini.getMiniPeeked();
+  },
+  set miniPeeked(v) {
+    _mini.setMiniPeeked(v);
+  },
+  get mouseOverPet() {
+    return mouseOverPet;
+  },
+  set mouseOverPet(v) {
+    mouseOverPet = v;
+  },
+  get forceEyeResend() {
+    return forceEyeResend;
+  },
+  set forceEyeResend(v) {
+    forceEyeResend = v;
+  },
+  get startupRecoveryActive() {
+    return _state.getStartupRecoveryActive();
+  },
   sendToRenderer,
   sendToHitWin,
   setState,
@@ -598,19 +783,43 @@ const { startMainTick, resetIdleTimer } = _tick;
 
 // ── Terminal focus — delegated to src/focus.js ──
 const _focus = require("./focus")({ _allowSetForeground });
-const { initFocusHelper, killFocusHelper, focusTerminalWindow, clearMacFocusCooldownTimer } = _focus;
+const {
+  initFocusHelper,
+  killFocusHelper,
+  focusTerminalWindow,
+  clearMacFocusCooldownTimer,
+} = _focus;
 
 // ── HTTP server — delegated to src/server.js ──
 const _serverCtx = {
-  get autoStartWithClaude() { return autoStartWithClaude; },
-  get doNotDisturb() { return doNotDisturb; },
-  get hideBubbles() { return hideBubbles; },
-  get pendingPermissions() { return pendingPermissions; },
-  get PASSTHROUGH_TOOLS() { return PASSTHROUGH_TOOLS; },
-  get STATE_SVGS() { return _state.STATE_SVGS; },
-  get sessions() { return sessions; },
-  isAgentEnabled: (agentId) => _isAgentEnabled({ agents: _settingsController.get("agents") }, agentId),
-  isAgentPermissionsEnabled: (agentId) => _isAgentPermissionsEnabled({ agents: _settingsController.get("agents") }, agentId),
+  get autoStartWithClaude() {
+    return autoStartWithClaude;
+  },
+  get doNotDisturb() {
+    return doNotDisturb;
+  },
+  get hideBubbles() {
+    return hideBubbles;
+  },
+  get pendingPermissions() {
+    return pendingPermissions;
+  },
+  get PASSTHROUGH_TOOLS() {
+    return PASSTHROUGH_TOOLS;
+  },
+  get STATE_SVGS() {
+    return _state.STATE_SVGS;
+  },
+  get sessions() {
+    return sessions;
+  },
+  isAgentEnabled: (agentId) =>
+    _isAgentEnabled({ agents: _settingsController.get("agents") }, agentId),
+  isAgentPermissionsEnabled: (agentId) =>
+    _isAgentPermissionsEnabled(
+      { agents: _settingsController.get("agents") },
+      agentId,
+    ),
   setState,
   updateSession,
   resolvePermissionEntry,
@@ -627,7 +836,7 @@ const { startHttpServer, getHookServerPort } = _server;
 // path — it does NOT fire when Explorer/Start menu/Gallery silently reorder windows.
 // So we keep the event listener for the cases it does catch (Alt/Win key), and add
 // a slow watchdog (20s) to recover from silent shell-initiated z-order drops.
-const WIN_TOPMOST_LEVEL = "pop-up-menu";  // above taskbar-level UI
+const WIN_TOPMOST_LEVEL = "pop-up-menu"; // above taskbar-level UI
 const MAC_TOPMOST_LEVEL = "screen-saver"; // above fullscreen apps on macOS
 const TOPMOST_WATCHDOG_MS = 5_000;
 let topmostWatchdog = null;
@@ -645,7 +854,8 @@ function scheduleHwndRecovery() {
     if (!win || win.isDestroyed()) return;
     // Just restore z-order — input routing is handled by hitWin now
     win.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
-    if (hitWin && !hitWin.isDestroyed()) hitWin.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
+    if (hitWin && !hitWin.isDestroyed())
+      hitWin.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
     forceEyeResend = true;
   }, 1000);
 }
@@ -678,17 +888,25 @@ function startTopmostWatchdog() {
       hitWin.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
     }
     for (const perm of pendingPermissions) {
-      if (perm.bubble && !perm.bubble.isDestroyed() && perm.bubble.isVisible()) perm.bubble.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
+      if (perm.bubble && !perm.bubble.isDestroyed() && perm.bubble.isVisible())
+        perm.bubble.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
     }
     const updateBubbleWin = _updateBubble.getBubbleWindow();
-    if (updateBubbleWin && !updateBubbleWin.isDestroyed() && updateBubbleWin.isVisible()) {
+    if (
+      updateBubbleWin &&
+      !updateBubbleWin.isDestroyed() &&
+      updateBubbleWin.isVisible()
+    ) {
       updateBubbleWin.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
     }
   }, TOPMOST_WATCHDOG_MS);
 }
 
 function stopTopmostWatchdog() {
-  if (topmostWatchdog) { clearInterval(topmostWatchdog); topmostWatchdog = null; }
+  if (topmostWatchdog) {
+    clearInterval(topmostWatchdog);
+    topmostWatchdog = null;
+  }
 }
 
 function updateLog(msg) {
@@ -706,43 +924,113 @@ function updateLog(msg) {
 // `syncPermissionShortcuts()` for hideBubbles) are now reactive and live in
 // the subscriber too.
 const _menuCtx = {
-  get win() { return win; },
-  get sessions() { return sessions; },
-  get currentSize() { return currentSize; },
-  set currentSize(v) { _settingsController.applyUpdate("size", v); },
-  get doNotDisturb() { return doNotDisturb; },
-  get lang() { return lang; },
-  set lang(v) { _settingsController.applyUpdate("lang", v); },
-  get showTray() { return showTray; },
-  set showTray(v) { _settingsController.applyUpdate("showTray", v); },
-  get showDock() { return showDock; },
-  set showDock(v) { _settingsController.applyUpdate("showDock", v); },
-  get autoStartWithClaude() { return autoStartWithClaude; },
-  set autoStartWithClaude(v) { _settingsController.applyUpdate("autoStartWithClaude", v); },
-  get openAtLogin() { return openAtLogin; },
-  set openAtLogin(v) { _settingsController.applyUpdate("openAtLogin", v); },
-  get bubbleFollowPet() { return bubbleFollowPet; },
-  set bubbleFollowPet(v) { _settingsController.applyUpdate("bubbleFollowPet", v); },
-  get hideBubbles() { return hideBubbles; },
-  set hideBubbles(v) { _settingsController.applyUpdate("hideBubbles", v); },
-  get showSessionId() { return showSessionId; },
-  set showSessionId(v) { _settingsController.applyUpdate("showSessionId", v); },
-  get soundMuted() { return soundMuted; },
-  set soundMuted(v) { _settingsController.applyUpdate("soundMuted", v); },
-  get pendingPermissions() { return pendingPermissions; },
+  get win() {
+    return win;
+  },
+  get sessions() {
+    return sessions;
+  },
+  get currentSize() {
+    return currentSize;
+  },
+  set currentSize(v) {
+    _settingsController.applyUpdate("size", v);
+  },
+  get doNotDisturb() {
+    return doNotDisturb;
+  },
+  get lang() {
+    return lang;
+  },
+  set lang(v) {
+    _settingsController.applyUpdate("lang", v);
+  },
+  get showTray() {
+    return showTray;
+  },
+  set showTray(v) {
+    _settingsController.applyUpdate("showTray", v);
+  },
+  get showDock() {
+    return showDock;
+  },
+  set showDock(v) {
+    _settingsController.applyUpdate("showDock", v);
+  },
+  get autoStartWithClaude() {
+    return autoStartWithClaude;
+  },
+  set autoStartWithClaude(v) {
+    _settingsController.applyUpdate("autoStartWithClaude", v);
+  },
+  get openAtLogin() {
+    return openAtLogin;
+  },
+  set openAtLogin(v) {
+    _settingsController.applyUpdate("openAtLogin", v);
+  },
+  get bubbleFollowPet() {
+    return bubbleFollowPet;
+  },
+  set bubbleFollowPet(v) {
+    _settingsController.applyUpdate("bubbleFollowPet", v);
+  },
+  get hideBubbles() {
+    return hideBubbles;
+  },
+  set hideBubbles(v) {
+    _settingsController.applyUpdate("hideBubbles", v);
+  },
+  get showSessionId() {
+    return showSessionId;
+  },
+  set showSessionId(v) {
+    _settingsController.applyUpdate("showSessionId", v);
+  },
+  get soundMuted() {
+    return soundMuted;
+  },
+  set soundMuted(v) {
+    _settingsController.applyUpdate("soundMuted", v);
+  },
+  get pendingPermissions() {
+    return pendingPermissions;
+  },
   repositionBubbles: () => repositionFloatingBubbles(),
-  get petHidden() { return petHidden; },
+  get petHidden() {
+    return petHidden;
+  },
   togglePetVisibility: () => togglePetVisibility(),
-  get isQuitting() { return isQuitting; },
-  set isQuitting(v) { isQuitting = v; },
-  get menuOpen() { return menuOpen; },
-  set menuOpen(v) { menuOpen = v; },
-  get tray() { return tray; },
-  set tray(v) { tray = v; },
-  get contextMenuOwner() { return contextMenuOwner; },
-  set contextMenuOwner(v) { contextMenuOwner = v; },
-  get contextMenu() { return contextMenu; },
-  set contextMenu(v) { contextMenu = v; },
+  get isQuitting() {
+    return isQuitting;
+  },
+  set isQuitting(v) {
+    isQuitting = v;
+  },
+  get menuOpen() {
+    return menuOpen;
+  },
+  set menuOpen(v) {
+    menuOpen = v;
+  },
+  get tray() {
+    return tray;
+  },
+  set tray(v) {
+    tray = v;
+  },
+  get contextMenuOwner() {
+    return contextMenuOwner;
+  },
+  set contextMenuOwner(v) {
+    contextMenuOwner = v;
+  },
+  get contextMenu() {
+    return contextMenu;
+  },
+  set contextMenu(v) {
+    contextMenu = v;
+  },
   enableDoNotDisturb: () => enableDoNotDisturb(),
   disableDoNotDisturb: () => disableDoNotDisturb(),
   enterMiniViaMenu: () => enterMiniViaMenu(),
@@ -757,7 +1045,7 @@ const _menuCtx = {
   // The settings controller is the only writer of persisted prefs. Toggle
   // setters above route through it; resize/sendToDisplay use
   // flushRuntimeStateToPrefs to capture window bounds after movement.
-  flushRuntimeStateToPrefs,
+  flushRuntimeStateToPrefs: (...args) => _settingsRuntime.flushRuntimeStateToPrefs(...args),
   settings: _settingsController,
   syncHitWin,
   getCurrentPixelSize,
@@ -769,22 +1057,34 @@ const _menuCtx = {
   reapplyMacVisibility,
   switchTheme: (id) => switchTheme(id),
   discoverThemes: () => themeLoader.discoverThemes(),
-  getActiveThemeId: () => activeTheme ? activeTheme._id : "fox",
+  getActiveThemeId: () => (activeTheme ? activeTheme._id : "fox"),
   getPinnedThemes: () => _settingsController.get("pinnedThemes") || {},
   openSettingsWindow: (initialTab) => openSettingsWindow(initialTab),
   logout: () => {
     tokenStore.clear();
     const _cacheDir = path.join(app.getPath("userData"), "theme-cache");
-    try { require("fs").rmSync(_cacheDir, { recursive: true, force: true }); } catch (_e) {}
+    try {
+      require("fs").rmSync(_cacheDir, { recursive: true, force: true });
+    } catch (_e) {}
     app.relaunch();
     app.exit(0);
   },
   isAuthenticated: () => !!tokenStore.get(),
 };
 const _menu = require("./menu")(_menuCtx);
-const { t, buildContextMenu, buildTrayMenu, rebuildAllMenus, createTray,
-        destroyTray, showPetContextMenu, popupMenuAt, ensureContextMenuOwner,
-        requestAppQuit, applyDockVisibility } = _menu;
+const {
+  t,
+  buildContextMenu,
+  buildTrayMenu,
+  rebuildAllMenus,
+  createTray,
+  destroyTray,
+  showPetContextMenu,
+  popupMenuAt,
+  ensureContextMenuOwner,
+  requestAppQuit,
+  applyDockVisibility,
+} = _menu;
 
 // ── Settings subscribers ──
 //
@@ -795,8 +1095,18 @@ const { t, buildContextMenu, buildTrayMenu, rebuildAllMenus, createTray,
 // route writes through the controller, so menu clicks and IPC updates
 // from a future settings panel land here identically.
 const MENU_AFFECTING_KEYS = new Set([
-  "lang", "soundMuted", "bubbleFollowPet", "hideBubbles", "showSessionId",
-  "autoStartWithClaude", "openAtLogin", "showTray", "showDock", "theme", "size", "pinnedThemes",
+  "lang",
+  "soundMuted",
+  "bubbleFollowPet",
+  "hideBubbles",
+  "showSessionId",
+  "autoStartWithClaude",
+  "openAtLogin",
+  "showTray",
+  "showDock",
+  "theme",
+  "size",
+  "pinnedThemes",
 ]);
 function wireSettingsSubscribers() {
   _settingsController.subscribe(({ changes }) => {
@@ -805,14 +1115,21 @@ function wireSettingsSubscribers() {
     if ("size" in changes) currentSize = changes.size;
     if ("showTray" in changes) {
       showTray = changes.showTray;
-      try { changes.showTray ? createTray() : destroyTray(); } catch (err) {
+      try {
+        changes.showTray ? createTray() : destroyTray();
+      } catch (err) {
         console.warn("GitAnimals: tray toggle failed:", err && err.message);
       }
     }
     if ("showDock" in changes) {
       showDock = changes.showDock;
-      try { applyDockVisibility(); } catch (err) {
-        console.warn("GitAnimals: applyDockVisibility failed:", err && err.message);
+      try {
+        applyDockVisibility();
+      } catch (err) {
+        console.warn(
+          "GitAnimals: applyDockVisibility failed:",
+          err && err.message,
+        );
       }
     }
     // autoStartWithClaude / openAtLogin are object-form pre-commit gates in
@@ -833,13 +1150,23 @@ function wireSettingsSubscribers() {
 
     // 2. Reactive side effects (mirror what the legacy setters / click handlers used to do).
     if ("hideBubbles" in changes) {
-      try { syncPermissionShortcuts(); } catch (err) {
-        console.warn("GitAnimals: syncPermissionShortcuts failed:", err && err.message);
+      try {
+        syncPermissionShortcuts();
+      } catch (err) {
+        console.warn(
+          "GitAnimals: syncPermissionShortcuts failed:",
+          err && err.message,
+        );
       }
     }
     if ("bubbleFollowPet" in changes) {
-      try { repositionFloatingBubbles(); } catch (err) {
-        console.warn("GitAnimals: repositionFloatingBubbles failed:", err && err.message);
+      try {
+        repositionFloatingBubbles();
+      } catch (err) {
+        console.warn(
+          "GitAnimals: repositionFloatingBubbles failed:",
+          err && err.message,
+        );
       }
     }
 
@@ -847,8 +1174,13 @@ function wireSettingsSubscribers() {
     //    window position / mini state changes.
     for (const key of Object.keys(changes)) {
       if (MENU_AFFECTING_KEYS.has(key)) {
-        try { rebuildAllMenus(); } catch (err) {
-          console.warn("GitAnimals: rebuildAllMenus failed:", err && err.message);
+        try {
+          rebuildAllMenus();
+        } catch (err) {
+          console.warn(
+            "GitAnimals: rebuildAllMenus failed:",
+            err && err.message,
+          );
         }
         break;
       }
@@ -857,12 +1189,22 @@ function wireSettingsSubscribers() {
     // 4. Broadcast to all renderer windows for the future settings panel.
     try {
       for (const bw of BrowserWindow.getAllWindows()) {
-        if (!bw.isDestroyed() && bw.webContents && !bw.webContents.isDestroyed()) {
-          bw.webContents.send("settings-changed", { changes, snapshot: _settingsController.getSnapshot() });
+        if (
+          !bw.isDestroyed() &&
+          bw.webContents &&
+          !bw.webContents.isDestroyed()
+        ) {
+          bw.webContents.send("settings-changed", {
+            changes,
+            snapshot: _settingsController.getSnapshot(),
+          });
         }
       }
     } catch (err) {
-      console.warn("GitAnimals: settings-changed broadcast failed:", err && err.message);
+      console.warn(
+        "GitAnimals: settings-changed broadcast failed:",
+        err && err.message,
+      );
     }
   });
 }
@@ -871,16 +1213,24 @@ wireSettingsSubscribers();
 // ── IPC: settings panel write entry points ──
 // Renderer-side callers (the future settings panel) use these. Menu/main code
 // in this process calls _settingsController directly — no IPC round-trip.
-ipcMain.handle("settings:get-snapshot", () => _settingsController.getSnapshot());
+ipcMain.handle("settings:get-snapshot", () =>
+  _settingsController.getSnapshot(),
+);
 ipcMain.handle("settings:update", (_event, payload) => {
   if (!payload || typeof payload !== "object") {
-    return { status: "error", message: "settings:update payload must be { key, value }" };
+    return {
+      status: "error",
+      message: "settings:update payload must be { key, value }",
+    };
   }
   return _settingsController.applyUpdate(payload.key, payload.value);
 });
 ipcMain.handle("settings:command", async (_event, payload) => {
   if (!payload || typeof payload !== "object") {
-    return { status: "error", message: "settings:command payload must be { action, payload }" };
+    return {
+      status: "error",
+      message: "settings:command payload must be { action, payload }",
+    };
   }
   return _settingsController.applyCommand(payload.action, payload.payload);
 });
@@ -900,20 +1250,26 @@ ipcMain.handle("settings:list-agents", () => {
       capabilities: a.capabilities || {},
     }));
   } catch (err) {
-    console.warn("GitAnimals: settings:list-agents failed:", err && err.message);
+    console.warn(
+      "GitAnimals: settings:list-agents failed:",
+      err && err.message,
+    );
     return [];
   }
 });
 
 ipcMain.handle("settings:list-themes", () => {
   try {
-    return themeLoader.discoverThemes().map(t => ({
+    return themeLoader.discoverThemes().map((t) => ({
       id: t.id,
       name: t.name,
       builtin: t.builtin || false,
     }));
   } catch (err) {
-    console.warn("GitAnimals: settings:list-themes failed:", err && err.message);
+    console.warn(
+      "GitAnimals: settings:list-themes failed:",
+      err && err.message,
+    );
     return [];
   }
 });
@@ -932,10 +1288,18 @@ ipcMain.handle("settings:get-user", async () => {
 
 // ── Auto-updater — delegated to src/updater.js ──
 const _updaterCtx = {
-  get doNotDisturb() { return doNotDisturb; },
-  get miniMode() { return _mini.getMiniMode(); },
-  get lang() { return lang; },
-  t, rebuildAllMenus, updateLog,
+  get doNotDisturb() {
+    return doNotDisturb;
+  },
+  get miniMode() {
+    return _mini.getMiniMode();
+  },
+  get lang() {
+    return lang;
+  },
+  t,
+  rebuildAllMenus,
+  updateLog,
   showUpdateBubble: (payload) => showUpdateBubble(payload),
   hideUpdateBubble: () => hideUpdateBubble(),
   setUpdateVisualState: (kind) => _state.setUpdateVisualState(kind),
@@ -945,7 +1309,12 @@ const _updaterCtx = {
   resetSoundCooldown: () => resetSoundCooldown(),
 };
 const _updater = require("../update/updater")(_updaterCtx);
-const { setupAutoUpdater, checkForUpdates, getUpdateMenuItem, getUpdateMenuLabel } = _updater;
+const {
+  setupAutoUpdater,
+  checkForUpdates,
+  getUpdateMenuItem,
+  getUpdateMenuLabel,
+} = _updater;
 
 // ── Settings panel window ──
 //
@@ -977,7 +1346,8 @@ function openSettingsWindow(initialTab) {
     if (settingsWindow.isMinimized()) settingsWindow.restore();
     settingsWindow.show();
     settingsWindow.focus();
-    if (initialTab) settingsWindow.webContents.send("settings:set-tab", initialTab);
+    if (initialTab)
+      settingsWindow.webContents.send("settings:set-tab", initialTab);
     return;
   }
   const iconPath = getSettingsWindowIcon();
@@ -1008,11 +1378,14 @@ function openSettingsWindow(initialTab) {
   if (iconPath) opts.icon = iconPath;
   settingsWindow = new BrowserWindow(opts);
   settingsWindow.setMenuBarVisibility(false);
-  settingsWindow.loadFile(path.join(__dirname, "..", "settings", "settings.html"));
+  settingsWindow.loadFile(
+    path.join(__dirname, "..", "settings", "settings.html"),
+  );
   settingsWindow.once("ready-to-show", () => {
     settingsWindow.show();
     settingsWindow.focus();
-    if (initialTab) settingsWindow.webContents.send("settings:set-tab", initialTab);
+    if (initialTab)
+      settingsWindow.webContents.send("settings:set-tab", initialTab);
   });
   settingsWindow.on("closed", () => {
     settingsWindow = null;
@@ -1029,7 +1402,7 @@ function createWindow() {
   if (SIZES[prefs.size]) {
     const wa = getPrimaryWorkAreaSafe() || SYNTHETIC_WORK_AREA;
     const px = SIZES[prefs.size].width;
-    const ratio = Math.round(px / wa.width * 100);
+    const ratio = Math.round((px / wa.width) * 100);
     const migrated = `P:${Math.max(1, Math.min(75, ratio))}`;
     _settingsController.applyUpdate("size", migrated); // subscriber updates currentSize mirror
   }
@@ -1095,7 +1468,9 @@ function createWindow() {
       miniMode: !!(prefs && prefs.miniMode),
       size: prefs && prefs.size,
     });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Watchdog (Linux only): prevent accidental window close.
   // render-process-gone is handled by the global crash-recovery handler below.
@@ -1138,18 +1513,20 @@ function createWindow() {
   if (!isMac || showTray) createTray();
   ensureContextMenuOwner();
 
-
-
   // ── Create input window (hitWin) — small rect over hitbox, receives all pointer events ──
   {
     const initBounds = win.getBounds();
     const initHit = getHitRectScreen(initBounds);
-    const hx = Math.round(initHit.left), hy = Math.round(initHit.top);
+    const hx = Math.round(initHit.left),
+      hy = Math.round(initHit.top);
     const hw = Math.round(initHit.right - initHit.left);
     const hh = Math.round(initHit.bottom - initHit.top);
 
     hitWin = new BrowserWindow({
-      width: hw, height: hh, x: hx, y: hy,
+      width: hw,
+      height: hh,
+      x: hx,
+      y: hy,
       frame: false,
       transparent: true,
       alwaysOnTop: true,
@@ -1160,19 +1537,20 @@ function createWindow() {
       enableLargerThanScreen: true,
       ...(isLinux ? { type: LINUX_WINDOW_TYPE } : {}),
       ...(isMac ? { type: "panel", roundedCorners: false } : {}),
-      focusable: !isLinux,  // KEY EXPERIMENT: allow activation to avoid WS_EX_NOACTIVATE input routing bugs (Windows-only issue)
+      focusable: !isLinux, // KEY EXPERIMENT: allow activation to avoid WS_EX_NOACTIVATE input routing bugs (Windows-only issue)
       webPreferences: {
         preload: path.join(__dirname, "..", "preload", "hit.js"),
         backgroundThrottling: false,
         additionalArguments: [
-          "--hit-theme-config=" + JSON.stringify(themeLoader.getHitRendererConfig()),
+          "--hit-theme-config=" +
+            JSON.stringify(themeLoader.getHitRendererConfig()),
         ],
       },
     });
     // setShape: native hit region, no per-pixel alpha dependency.
     // hitWin has no visual content — clipping is irrelevant.
     hitWin.setShape([{ x: 0, y: 0, width: hw, height: hh }]);
-    hitWin.setIgnoreMouseEvents(false);  // PERMANENT — never toggle
+    hitWin.setIgnoreMouseEvents(false); // PERMANENT — never toggle
     if (isMac) hitWin.setFocusable(false);
     hitWin.showInactive();
     // Linux WMs may reset skipTaskbar after showInactive — re-apply explicitly
@@ -1196,7 +1574,12 @@ function createWindow() {
 
     // hitWin ready handshake: hit-renderer.js signals after all IPC listeners registered
     ipcMain.on("hit-renderer-ready", (event) => {
-      if (!hitWin || hitWin.isDestroyed() || event.sender !== hitWin.webContents) return;
+      if (
+        !hitWin ||
+        hitWin.isDestroyed() ||
+        event.sender !== hitWin.webContents
+      )
+        return;
       sendToHitWin("theme-config", themeLoader.getHitRendererConfig());
       if (themeReloadInProgress) {
         _onHitReady();
@@ -1239,18 +1622,30 @@ function createWindow() {
     const size = getCurrentPixelSize();
     // During drag: allow free movement across screens, only prevent
     // the pet from going completely off-screen (keep 25% visible).
-    const newX = x + dx, newY = y + dy;
-    const looseClamped = looseClampToDisplays(newX, newY, size.width, size.height);
+    const newX = x + dx,
+      newY = y + dy;
+    const looseClamped = looseClampToDisplays(
+      newX,
+      newY,
+      size.width,
+      size.height,
+    );
     win.setBounds({ ...looseClamped, width: size.width, height: size.height });
     syncHitWin();
     if (bubbleFollowPet) repositionFloatingBubbles();
   });
 
-  ipcMain.on("pause-cursor-polling", () => { idlePaused = true; });
+  ipcMain.on("pause-cursor-polling", () => {
+    idlePaused = true;
+  });
   ipcMain.on("resume-from-reaction", () => {
     idlePaused = false;
     if (_mini.getMiniTransitioning()) return;
-    sendToRenderer("state-change", _state.getCurrentState(), _state.getCurrentSvg());
+    sendToRenderer(
+      "state-change",
+      _state.getCurrentState(),
+      _state.getCurrentSvg(),
+    );
   });
 
   ipcMain.on("drag-lock", (event, locked) => {
@@ -1259,7 +1654,9 @@ function createWindow() {
   });
 
   // Reaction relay: hitWin → main → renderWin
-  ipcMain.on("start-drag-reaction", () => sendToRenderer("start-drag-reaction"));
+  ipcMain.on("start-drag-reaction", () =>
+    sendToRenderer("start-drag-reaction"),
+  );
   ipcMain.on("end-drag-reaction", () => sendToRenderer("end-drag-reaction"));
   ipcMain.on("play-click-reaction", (_, svg, duration) => {
     sendToRenderer("play-click-reaction", svg, duration);
@@ -1287,27 +1684,41 @@ function createWindow() {
 
   ipcMain.on("focus-terminal", () => {
     // Find the best session to focus: prefer highest priority (non-idle), then most recent
-    let best = null, bestTime = 0, bestPriority = -1;
+    let best = null,
+      bestTime = 0,
+      bestPriority = -1;
     for (const [, s] of sessions) {
       if (!s.sourcePid) continue;
       const pri = STATE_PRIORITY[s.state] || 0;
-      if (pri > bestPriority || (pri === bestPriority && s.updatedAt > bestTime)) {
+      if (
+        pri > bestPriority ||
+        (pri === bestPriority && s.updatedAt > bestTime)
+      ) {
         best = s;
         bestTime = s.updatedAt;
         bestPriority = pri;
       }
     }
-    if (best) focusTerminalWindow(best.sourcePid, best.cwd, best.editor, best.pidChain);
+    if (best)
+      focusTerminalWindow(best.sourcePid, best.cwd, best.editor, best.pidChain);
   });
 
   ipcMain.on("show-session-menu", () => {
     popupMenuAt(Menu.buildFromTemplate(buildSessionSubmenu()));
   });
 
-  ipcMain.on("bubble-height", (event, height) => _perm.handleBubbleHeight(event, height));
-  ipcMain.on("permission-decide", (event, behavior) => _perm.handleDecide(event, behavior));
-  ipcMain.on("update-bubble-height", (event, height) => handleUpdateBubbleHeight(event, height));
-  ipcMain.on("update-bubble-action", (event, actionId) => handleUpdateBubbleAction(event, actionId));
+  ipcMain.on("bubble-height", (event, height) =>
+    _perm.handleBubbleHeight(event, height),
+  );
+  ipcMain.on("permission-decide", (event, behavior) =>
+    _perm.handleDecide(event, behavior),
+  );
+  ipcMain.on("update-bubble-height", (event, height) =>
+    handleUpdateBubbleHeight(event, height),
+  );
+  ipcMain.on("update-bubble-action", (event, actionId) =>
+    handleUpdateBubbleAction(event, actionId),
+  );
 
   initFocusHelper();
   startMainTick();
@@ -1379,12 +1790,18 @@ function createWindow() {
         const displays = screen.getAllDisplays();
         const inside = displays.some((d) => {
           const wa = d.workArea;
-          return b.x + b.width > wa.x && b.x < wa.x + wa.width
-              && b.y + b.height > wa.y && b.y < wa.y + wa.height;
+          return (
+            b.x + b.width > wa.x &&
+            b.x < wa.x + wa.width &&
+            b.y + b.height > wa.y &&
+            b.y < wa.y + wa.height
+          );
         });
         if (!inside) {
           report("[window] offscreen after " + cause, "error", {
-            cause, bounds: b, visible: win.isVisible(),
+            cause,
+            bounds: b,
+            visible: win.isVisible(),
             displayCount: displays.length,
             workAreas: displays.map((d) => d.workArea),
           });
@@ -1469,34 +1886,62 @@ function getPrimaryWorkAreaSafe() {
 }
 
 function getNearestWorkArea(cx, cy) {
-  return findNearestWorkArea(screen.getAllDisplays(), getPrimaryWorkAreaSafe(), cx, cy);
+  return findNearestWorkArea(
+    screen.getAllDisplays(),
+    getPrimaryWorkAreaSafe(),
+    cx,
+    cy,
+  );
 }
 
 // Loose clamp used during drag: union of all display work areas as the boundary,
 // so the pet can freely cross between screens. Only prevents going fully off-screen.
 function looseClampToDisplays(x, y, w, h) {
-  return computeLooseClamp(screen.getAllDisplays(), getPrimaryWorkAreaSafe(), x, y, w, h);
+  return computeLooseClamp(
+    screen.getAllDisplays(),
+    getPrimaryWorkAreaSafe(),
+    x,
+    y,
+    w,
+    h,
+  );
 }
 
 function clampToScreen(x, y, w, h) {
   const nearest = getNearestWorkArea(x + w / 2, y + h / 2);
-  const mLeft  = Math.round(w * 0.25);
+  const mLeft = Math.round(w * 0.25);
   const mRight = Math.round(w * 0.25);
-  const mTop   = Math.round(h * 0.6);
-  const mBot   = Math.round(h * 0.04);
+  const mTop = Math.round(h * 0.6);
+  const mBot = Math.round(h * 0.04);
   return {
-    x: Math.max(nearest.x - mLeft, Math.min(x, nearest.x + nearest.width - w + mRight)),
-    y: Math.max(nearest.y - mTop,  Math.min(y, nearest.y + nearest.height - h + mBot)),
+    x: Math.max(
+      nearest.x - mLeft,
+      Math.min(x, nearest.x + nearest.width - w + mRight),
+    ),
+    y: Math.max(
+      nearest.y - mTop,
+      Math.min(y, nearest.y + nearest.height - h + mBot),
+    ),
   };
 }
 
 // ── Mini Mode — initialized here after state module ──
 const _miniCtx = {
-  get theme() { return activeTheme; },
-  get win() { return win; },
-  get currentSize() { return currentSize; },
-  get doNotDisturb() { return doNotDisturb; },
-  set doNotDisturb(v) { doNotDisturb = v; },
+  get theme() {
+    return activeTheme;
+  },
+  get win() {
+    return win;
+  },
+  get currentSize() {
+    return currentSize;
+  },
+  get doNotDisturb() {
+    return doNotDisturb;
+  },
+  set doNotDisturb(v) {
+    doNotDisturb = v;
+  },
   SIZES,
   getCurrentPixelSize,
   isProportionalMode,
@@ -1509,15 +1954,28 @@ const _miniCtx = {
   stopWakePoll,
   clampToScreen,
   getNearestWorkArea,
-  get bubbleFollowPet() { return bubbleFollowPet; },
-  get pendingPermissions() { return pendingPermissions; },
+  get bubbleFollowPet() {
+    return bubbleFollowPet;
+  },
+  get pendingPermissions() {
+    return pendingPermissions;
+  },
   repositionBubbles: () => repositionFloatingBubbles(),
   buildContextMenu: () => buildContextMenu(),
   buildTrayMenu: () => buildTrayMenu(),
 };
 const _mini = require("./mini")(_miniCtx);
-const { enterMiniMode, exitMiniMode, enterMiniViaMenu, miniPeekIn, miniPeekOut,
-        checkMiniModeSnap, cancelMiniTransition, animateWindowX, animateWindowParabola } = _mini;
+const {
+  enterMiniMode,
+  exitMiniMode,
+  enterMiniViaMenu,
+  miniPeekIn,
+  miniPeekOut,
+  checkMiniModeSnap,
+  cancelMiniTransition,
+  animateWindowX,
+  animateWindowParabola,
+} = _mini;
 _settingsRuntime = createSettingsRuntime({
   app,
   isLinux,
@@ -1587,10 +2045,15 @@ function installTerminalFocusExtension() {
 
   // Extension source — in dev: ../extensions/vscode/, in packaged: app.asar.unpacked/
   let extSrc = path.join(__dirname, "..", "..", "extensions", "vscode");
-  extSrc = extSrc.replace("app.asar" + path.sep, "app.asar.unpacked" + path.sep);
+  extSrc = extSrc.replace(
+    "app.asar" + path.sep,
+    "app.asar.unpacked" + path.sep,
+  );
 
   if (!fs.existsSync(extSrc)) {
-    console.log("GitAnimals: terminal-focus extension source not found, skipping auto-install");
+    console.log(
+      "GitAnimals: terminal-focus extension source not found, skipping auto-install",
+    );
     return;
   }
 
@@ -1615,11 +2078,16 @@ function installTerminalFocusExtension() {
       installed++;
       console.log(`GitAnimals: installed terminal-focus extension to ${dest}`);
     } catch (err) {
-      console.warn(`GitAnimals: failed to install extension to ${dest}:`, err.message);
+      console.warn(
+        `GitAnimals: failed to install extension to ${dest}:`,
+        err.message,
+      );
     }
   }
   if (installed > 0) {
-    console.log(`GitAnimals: terminal-focus extension installed to ${installed} editor(s). Restart VS Code/Cursor to activate.`);
+    console.log(
+      `GitAnimals: terminal-focus extension installed to ${installed} editor(s). Restart VS Code/Cursor to activate.`,
+    );
   }
 }
 
@@ -1659,12 +2127,19 @@ if (!gotTheLock) {
     // Background: fetch remote theme registry + per-theme configs & assets.
     // Menu is rebuilt on each successful theme sync so new themes appear.
     personaSync.onSyncComplete(() => {
-      try { rebuildAllMenus(); } catch (err) {
-        console.warn("GitAnimals: rebuildAllMenus after persona sync failed:", err && err.message);
+      try {
+        rebuildAllMenus();
+      } catch (err) {
+        console.warn(
+          "GitAnimals: rebuildAllMenus after persona sync failed:",
+          err && err.message,
+        );
       }
     });
     personaSync.onUnauthorized(() => {
-      try { bc("auth", "session.expired"); } catch {}
+      try {
+        bc("auth", "session.expired");
+      } catch {}
       tokenStore.clear();
 
       // OS notification + settings toast — debounce 30 s to avoid spam on repeated 401s
@@ -1674,23 +2149,33 @@ if (!gotTheLock) {
         try {
           new Notification({
             title: "GitAnimals",
-            body: lang === "ko"
-              ? "세션이 만료되었습니다 — 다시 로그인해 주세요"
-              : lang === "zh"
-                ? "会话已过期 — 请重新登录"
-                : "Session expired — please sign in again",
+            body:
+              lang === "ko"
+                ? "세션이 만료되었습니다 — 다시 로그인해 주세요"
+                : lang === "zh"
+                  ? "会话已过期 — 请重新登录"
+                  : "Session expired — please sign in again",
           }).show();
-        } catch (_e) { /* notifications may be unavailable */ }
+        } catch (_e) {
+          /* notifications may be unavailable */
+        }
         try {
           if (settingsWindow && !settingsWindow.isDestroyed()) {
             settingsWindow.webContents.send("auth:session-expired");
           }
-        } catch (_e) { /* settings window may be closed */ }
+        } catch (_e) {
+          /* settings window may be closed */
+        }
       }
 
       const reloginWin = new LoginWindow();
-      reloginWin.once("authenticated", () => { reloginWin.cleanup(); personaSync.syncAll({ force: true }); });
-      reloginWin.open().catch((e) => console.warn("[auth] relogin window failed:", e.message));
+      reloginWin.once("authenticated", () => {
+        reloginWin.cleanup();
+        personaSync.syncAll({ force: true });
+      });
+      reloginWin
+        .open()
+        .catch((e) => console.warn("[auth] relogin window failed:", e.message));
     });
     personaSync.syncAll();
 
@@ -1702,18 +2187,41 @@ if (!gotTheLock) {
     try {
       const CodexLogMonitor = require("../../agents/codex-log-monitor");
       const codexAgent = require("../../agents/codex");
-      _codexMonitor = new CodexLogMonitor(codexAgent, (sid, state, event, extra) => {
-        if (state === "codex-permission") {
-          updateSession(sid, "notification", event, null, extra.cwd, null, null, null, "codex");
-          showCodexNotifyBubble({
-            sessionId: sid,
-            command: extra.permissionDetail?.command || "",
-          });
-          return;
-        }
-        clearCodexNotifyBubbles(sid);
-        updateSession(sid, state, event, null, extra.cwd, null, null, null, "codex");
-      });
+      _codexMonitor = new CodexLogMonitor(
+        codexAgent,
+        (sid, state, event, extra) => {
+          if (state === "codex-permission") {
+            updateSession(
+              sid,
+              "notification",
+              event,
+              null,
+              extra.cwd,
+              null,
+              null,
+              null,
+              "codex",
+            );
+            showCodexNotifyBubble({
+              sessionId: sid,
+              command: extra.permissionDetail?.command || "",
+            });
+            return;
+          }
+          clearCodexNotifyBubbles(sid);
+          updateSession(
+            sid,
+            state,
+            event,
+            null,
+            extra.cwd,
+            null,
+            null,
+            null,
+            "codex",
+          );
+        },
+      );
       if (_isAgentEnabled(_settingsController.getSnapshot(), "codex")) {
         _codexMonitor.start();
       }
@@ -1724,9 +2232,22 @@ if (!gotTheLock) {
     try {
       const GeminiLogMonitor = require("../../agents/gemini-log-monitor");
       const geminiAgent = require("../../agents/gemini-cli");
-      _geminiMonitor = new GeminiLogMonitor(geminiAgent, (sid, state, event, extra) => {
-        updateSession(sid, state, event, null, extra.cwd, null, null, null, "gemini-cli");
-      });
+      _geminiMonitor = new GeminiLogMonitor(
+        geminiAgent,
+        (sid, state, event, extra) => {
+          updateSession(
+            sid,
+            state,
+            event,
+            null,
+            extra.cwd,
+            null,
+            null,
+            null,
+            "gemini-cli",
+          );
+        },
+      );
       if (_isAgentEnabled(_settingsController.getSnapshot(), "gemini-cli")) {
         _geminiMonitor.start();
       }
@@ -1735,8 +2256,13 @@ if (!gotTheLock) {
     }
 
     // Auto-install VS Code/Cursor terminal-focus extension
-    try { installTerminalFocusExtension(); } catch (err) {
-      console.warn("GitAnimals: failed to auto-install terminal-focus extension:", err.message);
+    try {
+      installTerminalFocusExtension();
+    } catch (err) {
+      console.warn(
+        "GitAnimals: failed to auto-install terminal-focus extension:",
+        err.message,
+      );
     }
 
     // Auto-updater: setup event handlers (user triggers check via tray menu)
@@ -1766,20 +2292,33 @@ if (!gotTheLock) {
     // macOS/Windows power + focus signals — helpful for "pet disappears after
     // wake" / "pet disappears after switching Space" reports.
     try {
-      powerMonitor.on("suspend",       () => bc("power", "suspend"));
+      powerMonitor.on("suspend", () => bc("power", "suspend"));
       powerMonitor.on("resume", () => {
-        bc("power", "resume", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null });
+        bc("power", "resume", {
+          winBounds: win && !win.isDestroyed() ? win.getBounds() : null,
+          visible: win && !win.isDestroyed() ? win.isVisible() : null,
+        });
         _reportIfOffscreen("resume");
       });
-      powerMonitor.on("lock-screen",   () => bc("power", "lock-screen"));
+      powerMonitor.on("lock-screen", () => bc("power", "lock-screen"));
       powerMonitor.on("unlock-screen", () => {
-        bc("power", "unlock-screen", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null });
+        bc("power", "unlock-screen", {
+          winBounds: win && !win.isDestroyed() ? win.getBounds() : null,
+          visible: win && !win.isDestroyed() ? win.isVisible() : null,
+        });
         _reportIfOffscreen("unlock-screen");
       });
-      app.on("did-become-active",      () => bc("app", "did-become-active", { winBounds: win && !win.isDestroyed() ? win.getBounds() : null, visible: win && !win.isDestroyed() ? win.isVisible() : null }));
-      app.on("did-resign-active",      () => bc("app", "did-resign-active"));
+      app.on("did-become-active", () =>
+        bc("app", "did-become-active", {
+          winBounds: win && !win.isDestroyed() ? win.getBounds() : null,
+          visible: win && !win.isDestroyed() ? win.isVisible() : null,
+        }),
+      );
+      app.on("did-resign-active", () => bc("app", "did-resign-active"));
       app.on("child-process-gone", (_e, details) => {
-        try { report("[app] child-process-gone", "error", details); } catch {}
+        try {
+          report("[app] child-process-gone", "error", details);
+        } catch {}
       });
     } catch {}
 
@@ -1790,7 +2329,9 @@ if (!gotTheLock) {
         _bootApp();
       });
       _loginWin.once("closed", () => {
-        try { bc("auth", "login.dismissed-at-boot"); } catch {}
+        try {
+          bc("auth", "login.dismissed-at-boot");
+        } catch {}
         app.quit();
       });
       await _loginWin.open();
@@ -1800,7 +2341,9 @@ if (!gotTheLock) {
   });
 
   app.on("before-quit", () => {
-    try { bc("app", "before-quit"); } catch {}
+    try {
+      bc("app", "before-quit");
+    } catch {}
     isQuitting = true;
     _settingsRuntime.flushRuntimeStateToPrefs();
     unregisterToggleShortcut();
@@ -1814,7 +2357,10 @@ if (!gotTheLock) {
     if (_codexMonitor) _codexMonitor.stop();
     if (_geminiMonitor) _geminiMonitor.stop();
     stopTopmostWatchdog();
-    if (hwndRecoveryTimer) { clearTimeout(hwndRecoveryTimer); hwndRecoveryTimer = null; }
+    if (hwndRecoveryTimer) {
+      clearTimeout(hwndRecoveryTimer);
+      hwndRecoveryTimer = null;
+    }
     _focus.cleanup();
     if (hitWin && !hitWin.isDestroyed()) hitWin.destroy();
   });
