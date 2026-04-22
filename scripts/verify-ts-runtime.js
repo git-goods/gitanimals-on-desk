@@ -15,6 +15,21 @@ function main() {
   const settingsBridge = requireRuntime("src/preload/settings-bridge.js");
   assert.strictEqual(typeof settingsBridge.createSettingsBridge, "function");
 
+  const settingsPrefs = requireRuntime("src/settings/prefs.js");
+  assert.strictEqual(typeof settingsPrefs.load, "function");
+  assert.strictEqual(typeof settingsPrefs.save, "function");
+  assert.strictEqual(typeof settingsPrefs.getDefaults, "function");
+
+  const settingsStore = requireRuntime("src/settings/store.js");
+  assert.strictEqual(typeof settingsStore.createStore, "function");
+
+  const settingsActions = requireRuntime("src/settings/actions.js");
+  assert.strictEqual(typeof settingsActions.updateRegistry, "object");
+  assert.strictEqual(typeof settingsActions.commandRegistry, "object");
+
+  const settingsController = requireRuntime("src/settings/controller.js");
+  assert.strictEqual(typeof settingsController.createSettingsController, "function");
+
   const selectors = requireRuntime("src/core/state-selectors.js");
   assert.strictEqual(typeof selectors.resolveDisplayStateFromSessions, "function");
   assert.strictEqual(typeof selectors.pickDisplayHint, "function");
