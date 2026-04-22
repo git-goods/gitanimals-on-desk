@@ -19,6 +19,10 @@
 const fs = require("fs");
 const path = require("path");
 
+/** @typedef {import("../types/contracts").AgentFlags} AgentFlags */
+/** @typedef {import("../types/contracts").SettingsSnapshot} SettingsSnapshot */
+/** @typedef {import("../types/contracts").ThemeOverrideEntry} ThemeOverrideEntry */
+
 const CURRENT_VERSION = 1;
 
 // ── Schema ──
@@ -103,8 +107,9 @@ function defaultFor(field) {
 
 // Build a fresh defaults snapshot. Each call returns a brand-new object so
 // callers can never accidentally mutate a shared default.
+/** @returns {SettingsSnapshot} */
 function getDefaults() {
-  const out = {};
+  const out = /** @type {SettingsSnapshot} */ ({});
   for (const key of SCHEMA_KEYS) {
     out[key] = defaultFor(SCHEMA[key]);
   }
@@ -124,6 +129,9 @@ function isValidValue(field, value) {
 
 // Coerce an arbitrary object into a valid snapshot — drop bad fields, fill
 // missing fields from defaults, run normalize() on objects.
+/** @param {unknown} raw
+ * @returns {SettingsSnapshot}
+ */
 function validate(raw) {
   const out = getDefaults();
   if (!raw || typeof raw !== "object") return out;
@@ -173,6 +181,11 @@ function migrate(raw) {
 
 const AGENT_FLAGS = ["enabled", "permissionsEnabled"];
 
+/**
+ * @param {unknown} value
+ * @param {Record<string, AgentFlags>} defaultsValue
+ * @returns {Record<string, AgentFlags>}
+ */
 function normalizeAgents(value, defaultsValue) {
   if (!value || typeof value !== "object") return defaultsValue;
   const out = { ...defaultsValue };
@@ -193,13 +206,18 @@ function normalizeAgents(value, defaultsValue) {
   return out;
 }
 
+/**
+ * @param {unknown} value
+ * @param {Record<string, Record<string, ThemeOverrideEntry>>} defaultsValue
+ * @returns {Record<string, Record<string, ThemeOverrideEntry>>}
+ */
 function normalizeThemeOverrides(value, defaultsValue) {
   if (!value || typeof value !== "object") return defaultsValue;
-  const out = {};
+  const out = /** @type {Record<string, Record<string, ThemeOverrideEntry>>} */ ({});
   for (const themeId of Object.keys(value)) {
     const themeMap = value[themeId];
     if (!themeMap || typeof themeMap !== "object") continue;
-    const cleanThemeMap = {};
+    const cleanThemeMap = /** @type {Record<string, ThemeOverrideEntry>} */ ({});
     for (const stateKey of Object.keys(themeMap)) {
       const entry = themeMap[stateKey];
       if (
@@ -221,9 +239,14 @@ function normalizeThemeOverrides(value, defaultsValue) {
   return out;
 }
 
+/**
+ * @param {unknown} value
+ * @param {Record<string, true>} defaultsValue
+ * @returns {Record<string, true>}
+ */
 function normalizePinnedThemes(value, defaultsValue) {
   if (!value || typeof value !== "object") return defaultsValue;
-  const out = {};
+  const out = /** @type {Record<string, true>} */ ({});
   for (const id of Object.keys(value)) {
     if (value[id] === true) out[id] = true;
   }

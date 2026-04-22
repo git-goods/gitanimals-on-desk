@@ -1,6 +1,8 @@
 // Agent registry — loads all agent configs, provides lookup API
 // Used by main.js for process detection and session tracking
 
+/** @typedef {import("../src/types/contracts").AgentDefinition} AgentDefinition */
+
 const claudeCode = require("./claude-code");
 const codex = require("./codex");
 const copilotCli = require("./copilot-cli");
@@ -10,6 +12,7 @@ const codebuddy = require("./codebuddy");
 const kiroCli = require("./kiro-cli");
 const opencode = require("./opencode");
 
+/** @type {AgentDefinition[]} */
 const AGENTS = [claudeCode, codex, copilotCli, geminiCli, cursorAgent, codebuddy, kiroCli, opencode];
 const AGENT_MAP = new Map(AGENTS.map((a) => [a.id, a]));
 
