@@ -704,6 +704,13 @@ function getHitRectScreen(bounds) {
       padY: _mini.getMiniMode() ? 8 : 0,
     },
   );
+  if (hit && flip) {
+    const cx = bounds.x + bounds.width / 2;
+    const mirroredLeft = cx + (cx - hit.right);
+    const mirroredRight = cx + (cx - hit.left);
+    hit.left = mirroredLeft;
+    hit.right = mirroredRight;
+  }
   return (
     hit || {
       left: bounds.x,
@@ -1106,13 +1113,7 @@ const {
 // from a future settings panel land here identically.
 const MENU_AFFECTING_KEYS = new Set([
   "lang",
-  "soundMuted",
   "flip",
-  "bubbleFollowPet",
-  "hideBubbles",
-  "showSessionId",
-  "autoStartWithClaude",
-  "openAtLogin",
   "showTray",
   "showDock",
   "theme",
@@ -1211,7 +1212,7 @@ function wireSettingsSubscribers() {
         ) {
           bw.webContents.send("settings-changed", {
             changes,
-            snapshot: _settingsController.getSnapshot(),
+            snapshot: { ..._settingsController.getSnapshot(), platform: process.platform },
           });
         }
       }
@@ -1228,9 +1229,10 @@ wireSettingsSubscribers();
 // ── IPC: settings panel write entry points ──
 // Renderer-side callers (the future settings panel) use these. Menu/main code
 // in this process calls _settingsController directly — no IPC round-trip.
-ipcMain.handle("settings:get-snapshot", () =>
-  _settingsController.getSnapshot(),
-);
+ipcMain.handle("settings:get-snapshot", () => ({
+  ..._settingsController.getSnapshot(),
+  platform: process.platform,
+}));
 ipcMain.handle("settings:update", (_event, payload) => {
   if (!payload || typeof payload !== "object") {
     return {
@@ -1388,6 +1390,7 @@ function openSettingsWindow(initialTab) {
       preload: path.join(__dirname, "..", "preload", "settings.js"),
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false,
     },
   };
   if (iconPath) opts.icon = iconPath;

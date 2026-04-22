@@ -103,32 +103,6 @@ module.exports = function initMenu(ctx) {
         label: ctx.doNotDisturb ? t("wake") : t("sleep"),
         click: () => ctx.doNotDisturb ? ctx.disableDoNotDisturb() : ctx.enableDoNotDisturb(),
       },
-      // The setters route through ctx.settings.applyUpdate(); main.js's
-      // settings subscriber handles reposition / menu rebuild / persist.
-      {
-        label: t("bubbleFollow"),
-        type: "checkbox",
-        checked: ctx.bubbleFollowPet,
-        click: (menuItem) => { ctx.bubbleFollowPet = menuItem.checked; },
-      },
-      {
-        label: t("hideBubbles"),
-        type: "checkbox",
-        checked: ctx.hideBubbles,
-        click: (menuItem) => { ctx.hideBubbles = menuItem.checked; },
-      },
-      {
-        label: t("soundEffects"),
-        type: "checkbox",
-        checked: !ctx.soundMuted,
-        click: (menuItem) => { ctx.soundMuted = !menuItem.checked; },
-      },
-      {
-        label: t("showSessionId"),
-        type: "checkbox",
-        checked: ctx.showSessionId,
-        click: (menuItem) => { ctx.showSessionId = menuItem.checked; },
-      },
       {
         label: t("flip"),
         type: "checkbox",
@@ -141,62 +115,7 @@ module.exports = function initMenu(ctx) {
         submenu: buildThemeSubmenu(),
       },
       { type: "separator" },
-      {
-        label: t("startOnLogin"),
-        type: "checkbox",
-        // Bound to prefs via ctx.openAtLogin. The setter routes to
-        // settings-controller → openAtLogin pre-commit gate, which calls the
-        // OS API. Subscriber in main.js rebuilds the menu on commit, so the
-        // checkbox updates without explicit buildTrayMenu/buildContextMenu().
-        checked: ctx.openAtLogin,
-        click: (menuItem) => { ctx.openAtLogin = menuItem.checked; },
-      },
-      {
-        label: t("startWithClaude"),
-        type: "checkbox",
-        checked: ctx.autoStartWithClaude,
-        // Setter triggers controller.applyUpdate; subscriber in main.js
-        // installs/uninstalls the SessionStart hook + rebuilds the menu.
-        click: (menuItem) => { ctx.autoStartWithClaude = menuItem.checked; },
-      },
-    ];
-    // macOS: Dock and Menu Bar visibility toggles
-    if (isMac) {
-      items.push(
-        { type: "separator" },
-        {
-          label: t("showInMenuBar"),
-          type: "checkbox",
-          checked: ctx.showTray,
-          enabled: ctx.showTray ? ctx.showDock : true, // can't uncheck if Dock is already hidden
-          click: (menuItem) => { ctx.showTray = menuItem.checked; },
-        },
-        {
-          label: t("showInDock"),
-          type: "checkbox",
-          checked: ctx.showDock,
-          enabled: ctx.showDock ? ctx.showTray : true, // can't uncheck if Menu Bar is already hidden
-          click: (menuItem) => { ctx.showDock = menuItem.checked; },
-        },
-      );
-    }
-    items.push(
-      { type: "separator" },
-      {
-        label: t("settings"),
-        click: () => ctx.openSettingsWindow(),
-      },
-      { type: "separator" },
       ctx.getUpdateMenuItem(),
-      { type: "separator" },
-      {
-        label: t("language"),
-        submenu: [
-          { label: "English", type: "radio", checked: ctx.lang === "en", click: () => { ctx.lang = "en"; } },
-          { label: "中文", type: "radio", checked: ctx.lang === "zh", click: () => { ctx.lang = "zh"; } },
-          { label: "한국어", type: "radio", checked: ctx.lang === "ko", click: () => { ctx.lang = "ko"; } },
-        ],
-      },
       { type: "separator" },
       {
         label: ctx.petHidden ? t("showPet") : t("hidePet"),
@@ -207,8 +126,13 @@ module.exports = function initMenu(ctx) {
         enabled: false,
       },
       { type: "separator" },
+      {
+        label: t("settings"),
+        click: () => ctx.openSettingsWindow(),
+      },
+      { type: "separator" },
       { label: t("quit"), click: () => requestAppQuit() },
-    );
+    ];
     ctx.tray.setContextMenu(Menu.buildFromTemplate(items));
   }
 
@@ -430,12 +354,6 @@ module.exports = function initMenu(ctx) {
         label: ctx.doNotDisturb ? t("wake") : t("sleep"),
         click: () => ctx.doNotDisturb ? ctx.disableDoNotDisturb() : ctx.enableDoNotDisturb(),
       },
-      {
-        label: t("flip"),
-        type: "checkbox",
-        checked: ctx.flip,
-        click: (menuItem) => { ctx.flip = menuItem.checked; },
-      },
       { type: "separator" },
       {
         label: `${t("sessions")} (${ctx.sessions.size})`,
@@ -446,44 +364,17 @@ module.exports = function initMenu(ctx) {
         label: t("theme"),
         submenu: buildThemeSubmenu(),
       },
-    ];
-    // macOS: Dock and Menu Bar visibility toggles
-    if (isMac) {
-      template.push(
-        { type: "separator" },
-        {
-          label: t("showInMenuBar"),
-          type: "checkbox",
-          checked: ctx.showTray,
-          enabled: ctx.showTray ? ctx.showDock : true, // can't uncheck if Dock is already hidden
-          click: (menuItem) => { ctx.showTray = menuItem.checked; },
-        },
-        {
-          label: t("showInDock"),
-          type: "checkbox",
-          checked: ctx.showDock,
-          enabled: ctx.showDock ? ctx.showTray : true, // can't uncheck if Menu Bar is already hidden
-          click: (menuItem) => { ctx.showDock = menuItem.checked; },
-        },
-      );
-    }
-    template.push(
       { type: "separator" },
       {
         label: t("settings"),
         click: () => ctx.openSettingsWindow(),
       },
       { type: "separator" },
-      {
-        label: t("toggleShortcut").replace("{shortcut}", isMac ? "⌘⇧⌥C" : "Ctrl+Shift+Alt+C"),
-        enabled: false,
-      },
-      { type: "separator" },
       ctx.isAuthenticated && ctx.isAuthenticated()
         ? { label: t("logout"), click: () => ctx.logout && ctx.logout() }
         : { label: t("signIn"), click: () => ctx.logout && ctx.logout() },
       { label: t("quit"), click: () => requestAppQuit() },
-    );
+    ];
     if (process.env.GITANIMALS_DEBUG) {
       template.push(
         { type: "separator" },
