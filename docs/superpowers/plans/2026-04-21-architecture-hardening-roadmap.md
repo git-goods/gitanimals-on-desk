@@ -127,6 +127,7 @@
 - 기존 preload/IPC 경계 유지 또는 최소 변경
 - 기능/성능 회귀 없음
 - Step 10의 첫 준비 단계는 `settingsAPI` preload contract를 고정하고, listener cleanup을 지원해 React effect와 호환되게 만드는 것이다.
+- Step 11은 번들러 전환 없이 settings 창만 React renderer로 교체하고, preload/main IPC 채널은 그대로 유지한다.
 
 ## PR 운영 규칙
 

@@ -1,19 +1,15 @@
 "use strict";
 
-// ── Settings panel renderer ──
-//
-// Strict unidirectional flow (plan §4.2):
-//
-//   1. UI clicks → settingsAPI.update(key, value) → main → controller
-//   2. Controller commits → broadcasts settings-changed
-//   3. settingsAPI.onChanged fires → renderUI() rebuilds the affected row(s)
-//
-// We never optimistically toggle a switch in the click handler. The visual
-// state always reflects what the store says — period. Failures show a toast
-// and the switch stays in its previous position because the store was never
-// committed.
+const React = window.React;
+const ReactDOM = window.ReactDOM;
 
-// ── i18n (mirror src/i18n.js — bubbles can't require electron modules) ──
+if (!React || !ReactDOM) {
+  throw new Error("Settings renderer requires React and ReactDOM globals");
+}
+
+const { useEffect, useMemo, useRef, useState } = React;
+const h = React.createElement;
+
 const STRINGS = {
   en: {
     settingsTitle: "Settings",
@@ -61,7 +57,6 @@ const STRINGS = {
     langChinese: "中文",
     themeTabTitle: "Theme",
     themeTabSubtitle: "Pinned themes appear in the right-click Persona submenu. At least one must stay pinned.",
-    themeColPin: "Pin",
     themeRefresh: "Refresh",
     themeRefreshing: "Refreshing…",
     themeRefreshDone: "Themes refreshed.",
@@ -121,7 +116,6 @@ const STRINGS = {
     langChinese: "中文",
     themeTabTitle: "主题",
     themeTabSubtitle: "已固定的主题会出现在右键菜单的「角色」子菜单中。至少保留一个固定主题。",
-    themeColPin: "固定",
     themeRefresh: "刷新",
     themeRefreshing: "刷新中…",
     themeRefreshDone: "主题已刷新。",
@@ -182,7 +176,6 @@ const STRINGS = {
     langKorean: "한국어",
     themeTabTitle: "테마",
     themeTabSubtitle: "고정된 테마가 우클릭 페르소나 서브메뉴에 표시돼요. 하나 이상은 반드시 고정되어 있어야 해요.",
-    themeColPin: "고정",
     themeRefresh: "새로고침",
     themeRefreshing: "새로고침 중…",
     themeRefreshDone: "테마를 새로고침했어요.",
@@ -197,36 +190,6 @@ const STRINGS = {
   },
 };
 
-let snapshot = null;
-let activeTab = "general";
-let agentMetadata = null;
-let themeMetadata = null;
-let _userInfo = null;
-
-function t(key) {
-  const lang = (snapshot && snapshot.lang) || "en";
-  const dict = STRINGS[lang] || STRINGS.en;
-  return dict[key] || key;
-}
-
-// ── Toast ──
-const toastStack = document.getElementById("toastStack");
-function showToast(message, { error = false, ttl = 3500 } = {}) {
-  const node = document.createElement("div");
-  node.className = "toast" + (error ? " error" : "");
-  node.textContent = message;
-  toastStack.appendChild(node);
-  // Force reflow then add visible class so the transition runs.
-  // eslint-disable-next-line no-unused-expressions
-  node.offsetHeight;
-  node.classList.add("visible");
-  setTimeout(() => {
-    node.classList.remove("visible");
-    setTimeout(() => node.remove(), 240);
-  }, ttl);
-}
-
-// ── Sidebar ──
 const SIDEBAR_TABS = [
   { id: "general", icon: "\u2699", labelKey: "sidebarGeneral", available: true },
   { id: "agents", icon: "\u26A1", labelKey: "sidebarAgents", available: true },
@@ -236,577 +199,634 @@ const SIDEBAR_TABS = [
   { id: "about", icon: "\u2139", labelKey: "sidebarAbout", available: false },
 ];
 
-function renderSidebar() {
-  const sidebar = document.getElementById("sidebar");
-  sidebar.innerHTML = "";
-  for (const tab of SIDEBAR_TABS) {
-    const item = document.createElement("div");
-    item.className = "sidebar-item";
-    if (!tab.available) item.classList.add("disabled");
-    if (tab.id === activeTab) item.classList.add("active");
-    item.innerHTML =
-      `<span class="sidebar-item-icon">${tab.icon}</span>` +
-      `<span class="sidebar-item-label">${escapeHtml(t(tab.labelKey))}</span>` +
-      (tab.available ? "" : `<span class="sidebar-item-soon">${escapeHtml(t("sidebarSoon"))}</span>`);
-    if (tab.available) {
-      item.addEventListener("click", () => {
-        activeTab = tab.id;
-        renderSidebar();
-        renderContent();
-      });
+function translate(snapshot, key) {
+  const lang = (snapshot && snapshot.lang) || "en";
+  const dict = STRINGS[lang] || STRINGS.en;
+  return dict[key] || key;
+}
+
+function cx(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function ToastStack({ toasts }) {
+  return h(
+    "div",
+    { className: "toast-stack", id: "toastStack" },
+    toasts.map((toast) =>
+      h(
+        "div",
+        {
+          key: toast.id,
+          className: cx("toast", toast.error && "error", "visible"),
+        },
+        toast.message
+      )
+    )
+  );
+}
+
+function Sidebar({ activeTab, setActiveTab, t }) {
+  return h(
+    "nav",
+    { className: "sidebar", id: "sidebar" },
+    SIDEBAR_TABS.map((tab) =>
+      h(
+        "div",
+        {
+          key: tab.id,
+          className: cx(
+            "sidebar-item",
+            !tab.available && "disabled",
+            tab.id === activeTab && "active"
+          ),
+          onClick: tab.available ? () => setActiveTab(tab.id) : undefined,
+        },
+        h("span", { className: "sidebar-item-icon" }, tab.icon),
+        h("span", { className: "sidebar-item-label" }, t(tab.labelKey)),
+        tab.available
+          ? null
+          : h("span", { className: "sidebar-item-soon" }, t("sidebarSoon"))
+      )
+    )
+  );
+}
+
+function Section({ title, children }) {
+  return h(
+    "section",
+    { className: "section" },
+    title ? h("h2", { className: "section-title" }, title) : null,
+    h("div", { className: "section-rows" }, children)
+  );
+}
+
+function SwitchControl({ on, pending, disabled, onToggle }) {
+  const handleKeyDown = (event) => {
+    if (disabled || pending) return;
+    if (event.key === " " || event.key === "Enter") {
+      event.preventDefault();
+      onToggle();
     }
-    sidebar.appendChild(item);
-  }
-}
-
-// ── Content ──
-function renderContent() {
-  const content = document.getElementById("content");
-  content.innerHTML = "";
-  if (activeTab === "general") {
-    renderGeneralTab(content);
-  } else if (activeTab === "agents") {
-    renderAgentsTab(content);
-  } else if (activeTab === "theme") {
-    renderThemeTab(content);
-  } else {
-    renderPlaceholder(content);
-  }
-}
-
-function renderAgentsTab(parent) {
-  const h1 = document.createElement("h1");
-  h1.textContent = t("agentsTitle");
-  parent.appendChild(h1);
-
-  const subtitle = document.createElement("p");
-  subtitle.className = "subtitle";
-  subtitle.textContent = t("agentsSubtitle");
-  parent.appendChild(subtitle);
-
-  if (!agentMetadata || agentMetadata.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "placeholder";
-    empty.innerHTML = `<div class="placeholder-desc">${escapeHtml(t("agentsEmpty"))}</div>`;
-    parent.appendChild(empty);
-    return;
-  }
-
-  const rows = agentMetadata.flatMap((agent) => buildAgentRows(agent));
-  parent.appendChild(buildSection("", rows));
-}
-
-function buildAgentRows(agent) {
-  const rows = [
-    buildAgentSwitchRow({
-      agent,
-      flag: "enabled",
-      extraClass: null,
-      buildText: (text) => {
-        const label = document.createElement("span");
-        label.className = "row-label";
-        label.textContent = agent.name || agent.id;
-        text.appendChild(label);
-        const badges = document.createElement("span");
-        badges.className = "row-desc agent-badges";
-        const esKey = agent.eventSource === "log-poll" ? "eventSourceLogPoll"
-          : agent.eventSource === "plugin-event" ? "eventSourcePlugin"
-          : "eventSourceHook";
-        const esBadge = document.createElement("span");
-        esBadge.className = "agent-badge";
-        esBadge.textContent = t(esKey);
-        badges.appendChild(esBadge);
-        if (agent.capabilities && agent.capabilities.permissionApproval) {
-          const permBadge = document.createElement("span");
-          permBadge.className = "agent-badge accent";
-          permBadge.textContent = t("badgePermissionBubble");
-          badges.appendChild(permBadge);
-        }
-        text.appendChild(badges);
-      },
-    }),
-  ];
-  const caps = agent.capabilities || {};
-  if (caps.permissionApproval || caps.interactiveBubble) {
-    rows.push(buildAgentSwitchRow({
-      agent,
-      flag: "permissionsEnabled",
-      extraClass: "row-sub",
-      buildText: (text) => {
-        const label = document.createElement("span");
-        label.className = "row-label";
-        label.textContent = t("rowAgentPermissions");
-        text.appendChild(label);
-        const desc = document.createElement("span");
-        desc.className = "row-desc";
-        desc.textContent = t("rowAgentPermissionsDesc");
-        text.appendChild(desc);
-      },
-    }));
-  }
-  return rows;
-}
-
-function buildAgentSwitchRow({ agent, flag, extraClass, buildText }) {
-  const row = document.createElement("div");
-  row.className = extraClass ? `row ${extraClass}` : "row";
-
-  const text = document.createElement("div");
-  text.className = "row-text";
-  buildText(text);
-  row.appendChild(text);
-
-  const ctrl = document.createElement("div");
-  ctrl.className = "row-control";
-  const sw = document.createElement("div");
-  sw.className = "switch";
-  sw.setAttribute("role", "switch");
-  sw.setAttribute("tabindex", "0");
-  const readFlag = () => {
-    const entry = snapshot && snapshot.agents && snapshot.agents[agent.id];
-    return entry ? entry[flag] !== false : true;
   };
-  const on = readFlag();
-  if (on) sw.classList.add("on");
-  sw.setAttribute("aria-checked", on ? "true" : "false");
-  attachSwitchToggle(sw, () =>
-    window.settingsAPI.command("setAgentFlag", {
-      agentId: agent.id,
-      flag,
-      value: !readFlag(),
+
+  return h("div", { className: "row-control" },
+    h("div", {
+      className: cx("switch", on && "on", pending && "pending", disabled && "disabled"),
+      role: "switch",
+      tabIndex: disabled ? -1 : 0,
+      "aria-checked": on ? "true" : "false",
+      onClick: disabled || pending ? undefined : onToggle,
+      onKeyDown: handleKeyDown,
     })
   );
-  ctrl.appendChild(sw);
-  row.appendChild(ctrl);
-  return row;
 }
 
-let _themeRefreshing = false;
-
-function renderThemeTab(parent) {
-  const header = document.createElement("div");
-  header.className = "tab-header";
-  const h1 = document.createElement("h1");
-  h1.textContent = t("themeTabTitle");
-  header.appendChild(h1);
-
-  const refreshBtn = document.createElement("button");
-  refreshBtn.className = "btn";
-  refreshBtn.type = "button";
-  refreshBtn.textContent = _themeRefreshing ? t("themeRefreshing") : t("themeRefresh");
-  refreshBtn.disabled = _themeRefreshing;
-  refreshBtn.addEventListener("click", () => _handleThemeRefresh());
-  header.appendChild(refreshBtn);
-  parent.appendChild(header);
-
-  const subtitle = document.createElement("p");
-  subtitle.className = "subtitle";
-  subtitle.textContent = t("themeTabSubtitle");
-  parent.appendChild(subtitle);
-
-  if (!themeMetadata) {
-    const loading = document.createElement("p");
-    loading.className = "subtitle";
-    loading.textContent = "…";
-    parent.appendChild(loading);
-    return;
-  }
-
-  const activeId = snapshot && snapshot.theme;
-  const pinned = (snapshot && snapshot.pinnedThemes) || {};
-  const rows = themeMetadata.map(theme => buildThemePinRow(theme, activeId, pinned));
-  parent.appendChild(buildSection("", rows));
+function SettingRow({ label, desc, control, extraClass }) {
+  return h(
+    "div",
+    { className: cx("row", extraClass) },
+    h(
+      "div",
+      { className: "row-text" },
+      h("span", { className: "row-label" }, label),
+      desc ? h("span", { className: "row-desc" }, desc) : null
+    ),
+    control
+  );
 }
 
-async function _handleThemeRefresh() {
-  if (_themeRefreshing) return;
-  _themeRefreshing = true;
-  if (activeTab === "theme") renderContent();
-  try {
-    const result = await window.settingsAPI.command("refreshThemes");
-    if (result && result.status !== "ok") {
-      showToast(t("themeRefreshFailed") + (result.message || result.status), { error: true });
-    } else {
-      showToast(t("themeRefreshDone"));
-    }
-    if (typeof window.settingsAPI.listThemes === "function") {
-      try {
-        const list = await window.settingsAPI.listThemes();
-        themeMetadata = Array.isArray(list) ? list : [];
-      } catch (e) { console.warn("settings: listThemes failed", e); }
-    }
-  } catch (err) {
-    showToast(t("themeRefreshFailed") + (err && err.message), { error: true });
-  } finally {
-    _themeRefreshing = false;
-    if (activeTab === "theme") renderContent();
-  }
+function UserCard({ t, userInfo, pending, onLogout, onSignInAgain }) {
+  return h(
+    Section,
+    { title: "" },
+    h(
+      "div",
+      { className: "row" },
+      h(
+        "div",
+        { className: "row-text" },
+        h(
+          "span",
+          { className: "row-label" },
+          userInfo ? `\u{1F464} @${userInfo.username}` : `\u{1F464} ${t("userCardLoading")}`
+        ),
+        h("span", { className: "row-desc" }, t("userCardSignedIn"))
+      ),
+      h(
+        "div",
+        { className: "row-control", style: { display: "flex", gap: "6px" } },
+        h(
+          "button",
+          {
+            className: "btn",
+            type: "button",
+            disabled: pending,
+            onClick: onLogout,
+          },
+          t("userCardSignOut")
+        ),
+        h(
+          "button",
+          {
+            className: "btn",
+            type: "button",
+            disabled: pending,
+            onClick: onSignInAgain,
+          },
+          t("userCardSignInAgain")
+        )
+      )
+    )
+  );
 }
 
-function buildThemePinRow(theme, activeId, pinned) {
-  const row = document.createElement("div");
-  row.className = "row";
+function GeneralTab({ snapshot, t, pending, runUpdate, runCommand, userInfo }) {
+  const soundEnabled = !snapshot.soundMuted;
 
-  const text = document.createElement("div");
-  text.className = "row-text";
-  const label = document.createElement("span");
-  label.className = "row-label";
-  label.textContent = theme.name + (theme.builtin ? "" : " \u2746");
-  text.appendChild(label);
-  row.appendChild(text);
-
-  const ctrl = document.createElement("div");
-  ctrl.className = "row-control";
-  const sw = document.createElement("div");
-  sw.className = "switch";
-  sw.setAttribute("role", "switch");
-  const isActive = theme.id === activeId;
-  const isPinned = pinned[theme.id] === true;
-  if (isPinned) sw.classList.add("on");
-  sw.setAttribute("aria-checked", isPinned ? "true" : "false");
-
-  if (isActive) {
-    sw.classList.add("disabled");
-    sw.setAttribute("tabindex", "-1");
-    sw.title = t("toastActiveLocked");
-  } else {
-    sw.setAttribute("tabindex", "0");
-    attachSwitchToggle(sw, async () => {
-      const result = await window.settingsAPI.command("togglePinnedTheme", { themeId: theme.id });
-      if (result && result.status === "active-locked") {
-        return { status: "error", message: t("toastActiveLocked") };
-      }
-      if (result && result.status === "min-one-required") {
-        return { status: "error", message: t("toastMinOneRequired") };
-      }
-      return result;
-    });
-  }
-
-  ctrl.appendChild(sw);
-  row.appendChild(ctrl);
-  return row;
+  return h(
+    React.Fragment,
+    null,
+    h("h1", null, t("settingsTitle")),
+    h("p", { className: "subtitle" }, t("settingsSubtitle")),
+    h(UserCard, {
+      t,
+      userInfo,
+      pending: !!pending.auth,
+      onLogout: () => runCommand("auth", () => window.settingsAPI.command("logout")),
+      onSignInAgain: () => runCommand("auth", () => window.settingsAPI.command("signIn")),
+    }),
+    h(
+      Section,
+      { title: t("sectionAppearance") },
+      h(LanguageRow, {
+        snapshot,
+        t,
+        pending: !!pending.lang,
+        onChange: (lang) => runUpdate("lang", "lang", lang),
+      }),
+      h(ToggleRow, {
+        label: t("rowSound"),
+        desc: t("rowSoundDesc"),
+        on: soundEnabled,
+        pending: !!pending.soundMuted,
+        onToggle: () => runUpdate("soundMuted", "soundMuted", soundEnabled),
+      })
+    ),
+    h(
+      Section,
+      { title: t("sectionStartup") },
+      h(ToggleRow, {
+        label: t("rowOpenAtLogin"),
+        desc: t("rowOpenAtLoginDesc"),
+        on: !!snapshot.openAtLogin,
+        pending: !!pending.openAtLogin,
+        onToggle: () => runUpdate("openAtLogin", "openAtLogin", !snapshot.openAtLogin),
+      }),
+      h(ToggleRow, {
+        label: t("rowStartWithClaude"),
+        desc: t("rowStartWithClaudeDesc"),
+        on: !!snapshot.autoStartWithClaude,
+        pending: !!pending.autoStartWithClaude,
+        onToggle: () => runUpdate("autoStartWithClaude", "autoStartWithClaude", !snapshot.autoStartWithClaude),
+      })
+    ),
+    h(
+      Section,
+      { title: t("sectionBubbles") },
+      h(ToggleRow, {
+        label: t("rowBubbleFollow"),
+        desc: t("rowBubbleFollowDesc"),
+        on: !!snapshot.bubbleFollowPet,
+        pending: !!pending.bubbleFollowPet,
+        onToggle: () => runUpdate("bubbleFollowPet", "bubbleFollowPet", !snapshot.bubbleFollowPet),
+      }),
+      h(ToggleRow, {
+        label: t("rowHideBubbles"),
+        desc: t("rowHideBubblesDesc"),
+        on: !!snapshot.hideBubbles,
+        pending: !!pending.hideBubbles,
+        onToggle: () => runUpdate("hideBubbles", "hideBubbles", !snapshot.hideBubbles),
+      }),
+      h(ToggleRow, {
+        label: t("rowShowSessionId"),
+        desc: t("rowShowSessionIdDesc"),
+        on: !!snapshot.showSessionId,
+        pending: !!pending.showSessionId,
+        onToggle: () => runUpdate("showSessionId", "showSessionId", !snapshot.showSessionId),
+      })
+    ),
+    h(
+      Section,
+      { title: t("sectionPrivacy") },
+      h(ToggleRow, {
+        label: t("rowSendDiagnostics"),
+        desc: t("rowSendDiagnosticsDesc"),
+        on: snapshot.sendDiagnostics !== false,
+        pending: !!pending.sendDiagnostics,
+        onToggle: () => runUpdate("sendDiagnostics", "sendDiagnostics", snapshot.sendDiagnostics === false),
+      })
+    )
+  );
 }
 
-function renderPlaceholder(parent) {
-  const div = document.createElement("div");
-  div.className = "placeholder";
-  div.innerHTML =
-    `<div class="placeholder-icon">\u{1F6E0}</div>` +
-    `<div class="placeholder-title">${escapeHtml(t("placeholderTitle"))}</div>` +
-    `<div class="placeholder-desc">${escapeHtml(t("placeholderDesc"))}</div>`;
-  parent.appendChild(div);
-}
-
-function buildUserCard() {
-  const usernameEl = document.createElement("span");
-  usernameEl.className = "row-label";
-  usernameEl.textContent = _userInfo
-    ? "\u{1F464} @" + _userInfo.username
-    : "\u{1F464} " + t("userCardLoading");
-
-  const statusEl = document.createElement("span");
-  statusEl.className = "row-desc";
-  statusEl.textContent = t("userCardSignedIn");
-
-  const textDiv = document.createElement("div");
-  textDiv.className = "row-text";
-  textDiv.appendChild(usernameEl);
-  textDiv.appendChild(statusEl);
-
-  const signOutBtn = document.createElement("button");
-  signOutBtn.className = "btn";
-  signOutBtn.type = "button";
-  signOutBtn.textContent = t("userCardSignOut");
-
-  const signInAgainBtn = document.createElement("button");
-  signInAgainBtn.className = "btn";
-  signInAgainBtn.type = "button";
-  signInAgainBtn.textContent = t("userCardSignInAgain");
-
-  signOutBtn.addEventListener("click", () => {
-    signOutBtn.disabled = true;
-    signInAgainBtn.disabled = true;
-    window.settingsAPI.command("logout").catch(() => {});
+function ToggleRow({ label, desc, on, pending, disabled, onToggle, extraClass }) {
+  return h(SettingRow, {
+    label,
+    desc,
+    extraClass,
+    control: h(SwitchControl, { on, pending, disabled, onToggle }),
   });
-  signInAgainBtn.addEventListener("click", () => {
-    signOutBtn.disabled = true;
-    signInAgainBtn.disabled = true;
-    window.settingsAPI.command("signIn").catch(() => {});
-  });
+}
 
-  const ctrlDiv = document.createElement("div");
-  ctrlDiv.className = "row-control";
-  ctrlDiv.style.display = "flex";
-  ctrlDiv.style.gap = "6px";
-  ctrlDiv.appendChild(signOutBtn);
-  ctrlDiv.appendChild(signInAgainBtn);
+function LanguageRow({ snapshot, t, pending, onChange }) {
+  const current = snapshot.lang || "en";
+  const options = [
+    { value: "en", label: t("langEnglish") },
+    { value: "zh", label: t("langChinese") },
+    { value: "ko", label: t("langKorean") },
+  ];
 
-  const row = document.createElement("div");
-  row.className = "row";
-  row.appendChild(textDiv);
-  row.appendChild(ctrlDiv);
+  return h(
+    "div",
+    { className: "row" },
+    h(
+      "div",
+      { className: "row-text" },
+      h("span", { className: "row-label" }, t("rowLanguage")),
+      h("span", { className: "row-desc" }, t("rowLanguageDesc"))
+    ),
+    h(
+      "div",
+      { className: "row-control" },
+      h(
+        "div",
+        { className: "segmented", role: "tablist" },
+        options.map((option) =>
+          h(
+            "button",
+            {
+              key: option.value,
+              className: option.value === current ? "active" : "",
+              disabled: pending,
+              onClick: () => {
+                if (option.value !== current) onChange(option.value);
+              },
+            },
+            option.label
+          )
+        )
+      )
+    )
+  );
+}
 
-  if (!_userInfo && typeof window.settingsAPI.getUser === "function") {
-    window.settingsAPI.getUser().then(function(u) {
-      if (u && u.username) {
-        _userInfo = u;
-        usernameEl.textContent = "\u{1F464} @" + u.username;
-      } else {
-        usernameEl.textContent = "\u{1F464}";
-      }
-    }).catch(function() {
-      usernameEl.textContent = "\u{1F464}";
-    });
+function AgentsTab({ snapshot, t, agentMetadata, pending, runCommand }) {
+  return h(
+    React.Fragment,
+    null,
+    h("h1", null, t("agentsTitle")),
+    h("p", { className: "subtitle" }, t("agentsSubtitle")),
+    !agentMetadata || agentMetadata.length === 0
+      ? h(
+        "div",
+        { className: "placeholder" },
+        h("div", { className: "placeholder-desc" }, t("agentsEmpty"))
+      )
+      : h(
+        Section,
+        { title: "" },
+        agentMetadata.flatMap((agent) => {
+          const agentState = (snapshot.agents && snapshot.agents[agent.id]) || {};
+          const enabled = agentState.enabled !== false;
+          const permissionsEnabled = agentState.permissionsEnabled !== false;
+          const rows = [
+            h(ToggleRow, {
+              key: `${agent.id}:enabled`,
+              label: agent.name || agent.id,
+              desc: h(AgentBadges, { agent, t }),
+              on: enabled,
+              pending: !!pending[`agent:${agent.id}:enabled`],
+              onToggle: () => runCommand(
+                `agent:${agent.id}:enabled`,
+                () => window.settingsAPI.command("setAgentFlag", {
+                  agentId: agent.id,
+                  flag: "enabled",
+                  value: !enabled,
+                })
+              ),
+            }),
+          ];
+
+          const caps = agent.capabilities || {};
+          if (caps.permissionApproval || caps.interactiveBubble) {
+            rows.push(
+              h(ToggleRow, {
+                key: `${agent.id}:permissionsEnabled`,
+                label: t("rowAgentPermissions"),
+                desc: t("rowAgentPermissionsDesc"),
+                extraClass: "row-sub",
+                on: permissionsEnabled,
+                pending: !!pending[`agent:${agent.id}:permissionsEnabled`],
+                onToggle: () => runCommand(
+                  `agent:${agent.id}:permissionsEnabled`,
+                  () => window.settingsAPI.command("setAgentFlag", {
+                    agentId: agent.id,
+                    flag: "permissionsEnabled",
+                    value: !permissionsEnabled,
+                  })
+                ),
+              })
+            );
+          }
+          return rows;
+        })
+      )
+  );
+}
+
+function AgentBadges({ agent, t }) {
+  const eventSourceKey = agent.eventSource === "log-poll"
+    ? "eventSourceLogPoll"
+    : agent.eventSource === "plugin-event"
+      ? "eventSourcePlugin"
+      : "eventSourceHook";
+  return h(
+    "span",
+    { className: "row-desc agent-badges" },
+    h("span", { className: "agent-badge" }, t(eventSourceKey)),
+    agent.capabilities && agent.capabilities.permissionApproval
+      ? h("span", { className: "agent-badge accent" }, t("badgePermissionBubble"))
+      : null
+  );
+}
+
+function ThemeTab({ snapshot, t, themeMetadata, themeRefreshing, pending, runCommand, refreshThemes }) {
+  return h(
+    React.Fragment,
+    null,
+    h(
+      "div",
+      { className: "tab-header" },
+      h("h1", null, t("themeTabTitle")),
+      h(
+        "button",
+        {
+          className: "btn",
+          type: "button",
+          disabled: themeRefreshing,
+          onClick: refreshThemes,
+        },
+        themeRefreshing ? t("themeRefreshing") : t("themeRefresh")
+      )
+    ),
+    h("p", { className: "subtitle" }, t("themeTabSubtitle")),
+    themeMetadata == null
+      ? h("p", { className: "subtitle" }, "…")
+      : h(
+        Section,
+        { title: "" },
+        themeMetadata.map((theme) => {
+          const pinned = !!(snapshot.pinnedThemes && snapshot.pinnedThemes[theme.id]);
+          const active = snapshot.theme === theme.id;
+          const pendingKey = `theme:${theme.id}`;
+          return h(ToggleRow, {
+            key: theme.id,
+            label: theme.name + (theme.builtin ? "" : " \u2746"),
+            desc: null,
+            on: pinned,
+            disabled: active,
+            pending: !!pending[pendingKey],
+            onToggle: () => runCommand(
+              pendingKey,
+              async () => {
+                const result = await window.settingsAPI.command("togglePinnedTheme", { themeId: theme.id });
+                if (result && result.status === "active-locked") {
+                  return { status: "error", message: t("toastActiveLocked") };
+                }
+                if (result && result.status === "min-one-required") {
+                  return { status: "error", message: t("toastMinOneRequired") };
+                }
+                return result;
+              }
+            ),
+          });
+        })
+      )
+  );
+}
+
+function PlaceholderTab({ t }) {
+  return h(
+    "div",
+    { className: "placeholder" },
+    h("div", { className: "placeholder-icon" }, "\u{1F6E0}"),
+    h("div", { className: "placeholder-title" }, t("placeholderTitle")),
+    h("div", { className: "placeholder-desc" }, t("placeholderDesc"))
+  );
+}
+
+function App() {
+  const [snapshot, setSnapshot] = useState(null);
+  const [activeTab, setActiveTab] = useState("general");
+  const [agentMetadata, setAgentMetadata] = useState([]);
+  const [themeMetadata, setThemeMetadata] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
+  const [themeRefreshing, setThemeRefreshing] = useState(false);
+  const [pending, setPending] = useState({});
+  const [toasts, setToasts] = useState([]);
+  const toastTimers = useRef(new Map());
+  const pendingRef = useRef({});
+  const snapshotRef = useRef(null);
+
+  const t = (key) => translate(snapshot || {}, key);
+
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
+
+  useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
+
+  function pushToast(message, options = {}) {
+    const id = `${Date.now()}:${Math.random()}`;
+    setToasts((current) => current.concat([{ id, message, error: !!options.error }]));
+    const timer = setTimeout(() => {
+      setToasts((current) => current.filter((toast) => toast.id !== id));
+      toastTimers.current.delete(id);
+    }, options.ttl || 3500);
+    toastTimers.current.set(id, timer);
   }
 
-  return buildSection("", [row]);
-}
-
-function renderGeneralTab(parent) {
-  const h1 = document.createElement("h1");
-  h1.textContent = t("settingsTitle");
-  parent.appendChild(h1);
-
-  const subtitle = document.createElement("p");
-  subtitle.className = "subtitle";
-  subtitle.textContent = t("settingsSubtitle");
-  parent.appendChild(subtitle);
-
-  parent.appendChild(buildUserCard());
-
-  // Section: Appearance
-  parent.appendChild(buildSection(t("sectionAppearance"), [
-    buildLanguageRow(),
-    buildSwitchRow({
-      key: "soundMuted",
-      labelKey: "rowSound",
-      descKey: "rowSoundDesc",
-      // soundMuted is inverse: ON-switch means sound enabled.
-      invert: true,
-    }),
-  ]));
-
-  // Section: Startup
-  parent.appendChild(buildSection(t("sectionStartup"), [
-    buildSwitchRow({
-      key: "openAtLogin",
-      labelKey: "rowOpenAtLogin",
-      descKey: "rowOpenAtLoginDesc",
-    }),
-    buildSwitchRow({
-      key: "autoStartWithClaude",
-      labelKey: "rowStartWithClaude",
-      descKey: "rowStartWithClaudeDesc",
-    }),
-  ]));
-
-  // Section: Bubbles
-  parent.appendChild(buildSection(t("sectionBubbles"), [
-    buildSwitchRow({
-      key: "bubbleFollowPet",
-      labelKey: "rowBubbleFollow",
-      descKey: "rowBubbleFollowDesc",
-    }),
-    buildSwitchRow({
-      key: "hideBubbles",
-      labelKey: "rowHideBubbles",
-      descKey: "rowHideBubblesDesc",
-    }),
-    buildSwitchRow({
-      key: "showSessionId",
-      labelKey: "rowShowSessionId",
-      descKey: "rowShowSessionIdDesc",
-    }),
-  ]));
-
-  // Section: Privacy — diagnostic telemetry opt-out.
-  parent.appendChild(buildSection(t("sectionPrivacy"), [
-    buildSwitchRow({
-      key: "sendDiagnostics",
-      labelKey: "rowSendDiagnostics",
-      descKey: "rowSendDiagnosticsDesc",
-    }),
-  ]));
-}
-
-function buildSection(title, rows) {
-  const section = document.createElement("section");
-  section.className = "section";
-  if (title) {
-    const heading = document.createElement("h2");
-    heading.className = "section-title";
-    heading.textContent = title;
-    section.appendChild(heading);
-  }
-  const wrap = document.createElement("div");
-  wrap.className = "section-rows";
-  for (const row of rows) wrap.appendChild(row);
-  section.appendChild(wrap);
-  return section;
-}
-
-// Wire click + Space/Enter keydown on a `.switch` to an async invoker that
-// returns a `Promise<{status, message?}>`. Handles pending state, error
-// toasts, and keyboard activation identically across all rows — so
-// `buildSwitchRow` (pure prefs) and `buildAgentRow` (command-backed) share
-// a single toggle behavior.
-function attachSwitchToggle(sw, invoke) {
-  const run = () => {
-    if (sw.classList.contains("pending")) return;
-    sw.classList.add("pending");
-    Promise.resolve()
-      .then(invoke)
+  function withPending(key, work) {
+    if (pendingRef.current[key]) return Promise.resolve();
+    setPending((current) => ({ ...current, [key]: true }));
+    return Promise.resolve()
+      .then(work)
       .then((result) => {
-        sw.classList.remove("pending");
         if (!result || result.status !== "ok") {
-          const msg = (result && result.message) || "unknown error";
-          showToast(t("toastSaveFailed") + msg, { error: true });
+          const message = (result && result.message) || "unknown error";
+          pushToast(t("toastSaveFailed") + message, { error: true });
         }
+        return result;
       })
       .catch((err) => {
-        sw.classList.remove("pending");
-        showToast(t("toastSaveFailed") + (err && err.message), { error: true });
+        pushToast(t("toastSaveFailed") + (err && err.message), { error: true });
+        return null;
+      })
+      .finally(() => {
+        setPending((current) => {
+          const next = { ...current };
+          delete next[key];
+          return next;
+        });
       });
-  };
-  sw.addEventListener("click", run);
-  sw.addEventListener("keydown", (ev) => {
-    if (ev.key === " " || ev.key === "Enter") {
-      ev.preventDefault();
-      run();
-    }
-  });
-}
+  }
 
-function buildSwitchRow({ key, labelKey, descKey, invert = false }) {
-  const row = document.createElement("div");
-  row.className = "row";
-  row.innerHTML =
-    `<div class="row-text">` +
-      `<span class="row-label"></span>` +
-      `<span class="row-desc"></span>` +
-    `</div>` +
-    `<div class="row-control"><div class="switch" role="switch" tabindex="0"></div></div>`;
-  row.querySelector(".row-label").textContent = t(labelKey);
-  row.querySelector(".row-desc").textContent = t(descKey);
-  const sw = row.querySelector(".switch");
-  const rawValue = !!(snapshot && snapshot[key]);
-  const visualOn = invert ? !rawValue : rawValue;
-  if (visualOn) sw.classList.add("on");
-  sw.setAttribute("aria-checked", visualOn ? "true" : "false");
-  // No optimistic update — visual state flips on broadcast, not on click.
-  // If the action fails, the broadcast never fires and the switch stays.
-  attachSwitchToggle(sw, () => {
-    const currentRaw = !!(snapshot && snapshot[key]);
-    const currentVisual = invert ? !currentRaw : currentRaw;
-    const nextRaw = invert ? currentVisual : !currentVisual;
-    return window.settingsAPI.update(key, nextRaw);
-  });
-  return row;
-}
+  function runUpdate(pendingKey, key, value) {
+    return withPending(pendingKey, () => window.settingsAPI.update(key, value));
+  }
 
-function buildLanguageRow() {
-  const row = document.createElement("div");
-  row.className = "row";
-  row.innerHTML =
-    `<div class="row-text">` +
-      `<span class="row-label"></span>` +
-      `<span class="row-desc"></span>` +
-    `</div>` +
-    `<div class="row-control">` +
-      `<div class="segmented" role="tablist">` +
-        `<button data-lang="en"></button>` +
-        `<button data-lang="zh"></button>` +
-        `<button data-lang="ko"></button>` +
-      `</div>` +
-    `</div>`;
-  row.querySelector(".row-label").textContent = t("rowLanguage");
-  row.querySelector(".row-desc").textContent = t("rowLanguageDesc");
-  const buttons = row.querySelectorAll(".segmented button");
-  buttons[0].textContent = t("langEnglish");
-  buttons[1].textContent = t("langChinese");
-  buttons[2].textContent = t("langKorean");
-  const current = (snapshot && snapshot.lang) || "en";
-  for (const btn of buttons) {
-    if (btn.dataset.lang === current) btn.classList.add("active");
-    btn.addEventListener("click", () => {
-      const next = btn.dataset.lang;
-      if (next === ((snapshot && snapshot.lang) || "en")) return;
-      window.settingsAPI.update("lang", next).then((result) => {
+  function runCommand(pendingKey, work) {
+    return withPending(pendingKey, work);
+  }
+
+  function refreshThemes() {
+    if (themeRefreshing) return;
+    setThemeRefreshing(true);
+    window.settingsAPI.command("refreshThemes")
+      .then((result) => {
         if (!result || result.status !== "ok") {
-          const msg = (result && result.message) || "unknown error";
-          showToast(t("toastSaveFailed") + msg, { error: true });
+          pushToast(t("themeRefreshFailed") + ((result && result.message) || result.status || "unknown error"), { error: true });
+          return null;
         }
-      }).catch((err) => {
-        showToast(t("toastSaveFailed") + (err && err.message), { error: true });
+        pushToast(t("themeRefreshDone"));
+        return window.settingsAPI.listThemes();
+      })
+      .then((list) => {
+        if (Array.isArray(list)) setThemeMetadata(list);
+      })
+      .catch((err) => {
+        pushToast(t("themeRefreshFailed") + (err && err.message), { error: true });
+      })
+      .finally(() => {
+        setThemeRefreshing(false);
+      });
+  }
+
+  useEffect(() => {
+    let mounted = true;
+
+    window.settingsAPI.getSnapshot()
+      .then((nextSnapshot) => {
+        if (mounted) setSnapshot(nextSnapshot || {});
+      });
+
+    window.settingsAPI.listAgents()
+      .then((list) => {
+        if (mounted) setAgentMetadata(Array.isArray(list) ? list : []);
+      })
+      .catch((err) => {
+        console.warn("settings: listAgents failed", err);
+        if (mounted) setAgentMetadata([]);
+      });
+
+    window.settingsAPI.listThemes()
+      .then((list) => {
+        if (mounted) setThemeMetadata(Array.isArray(list) ? list : []);
+      })
+      .catch((err) => {
+        console.warn("settings: listThemes failed", err);
+        if (mounted) setThemeMetadata([]);
+      });
+
+    window.settingsAPI.getUser()
+      .then((user) => {
+        if (mounted) setUserInfo(user && user.username ? user : null);
+      })
+      .catch(() => {
+        if (mounted) setUserInfo(null);
+      });
+
+    const offChanged = window.settingsAPI.onChanged((payload) => {
+      setSnapshot((current) => {
+        if (payload && payload.snapshot) return payload.snapshot;
+        if (payload && payload.changes && current) return { ...current, ...payload.changes };
+        return current;
       });
     });
-  }
-  return row;
-}
 
-// ── Boot ──
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+    const offTab = window.settingsAPI.onSetTab((tab) => {
+      const next = SIDEBAR_TABS.find((entry) => entry.id === tab && entry.available);
+      if (next) setActiveTab(next.id);
+    });
+
+    const offExpired = window.settingsAPI.onSessionExpired(() => {
+      pushToast(translate(snapshotRef.current || {}, "sessionExpiredToast"), { error: true, ttl: 8000 });
+    });
+
+    return () => {
+      mounted = false;
+      offChanged();
+      offTab();
+      offExpired();
+      for (const timer of toastTimers.current.values()) clearTimeout(timer);
+      toastTimers.current.clear();
+    };
+  }, []);
+
+  const content = useMemo(() => {
+    const safeSnapshot = snapshot || {};
+    if (activeTab === "general") {
+      return h(GeneralTab, {
+        snapshot: safeSnapshot,
+        t,
+        pending,
+        runUpdate,
+        runCommand,
+        userInfo,
+      });
+    }
+    if (activeTab === "agents") {
+      return h(AgentsTab, {
+        snapshot: safeSnapshot,
+        t,
+        agentMetadata,
+        pending,
+        runCommand,
+      });
+    }
+    if (activeTab === "theme") {
+      return h(ThemeTab, {
+        snapshot: safeSnapshot,
+        t,
+        themeMetadata,
+        themeRefreshing,
+        pending,
+        runCommand,
+        refreshThemes,
+      });
+    }
+    return h(PlaceholderTab, { t });
+  }, [activeTab, agentMetadata, pending, snapshot, themeMetadata, themeRefreshing, userInfo]);
+
+  return h(
+    React.Fragment,
+    null,
+    h(
+      "div",
+      { className: "app" },
+      h(Sidebar, { activeTab, setActiveTab, t }),
+      h("main", { className: "content", id: "content" }, content)
+    ),
+    h(ToastStack, { toasts })
   );
 }
 
-window.settingsAPI.onChanged((payload) => {
-  if (payload && payload.snapshot) {
-    snapshot = payload.snapshot;
-  } else if (payload && payload.changes && snapshot) {
-    snapshot = { ...snapshot, ...payload.changes };
-  }
-  // Guard against an early broadcast that lands before `getSnapshot()`
-  // resolves — rendering with a null snapshot blanks the UI and the
-  // initial render later would need to re-fetch static language state.
-  if (!snapshot) return;
-  renderSidebar();
-  renderContent();
-});
+const rootElement = document.getElementById("root");
+const root = ReactDOM.createRoot
+  ? ReactDOM.createRoot(rootElement)
+  : { render: (node) => ReactDOM.render(node, rootElement) };
 
-window.settingsAPI.getSnapshot().then((snap) => {
-  snapshot = snap || {};
-  renderSidebar();
-  renderContent();
-});
-
-if (typeof window.settingsAPI.listAgents === "function") {
-  window.settingsAPI
-    .listAgents()
-    .then((list) => {
-      agentMetadata = Array.isArray(list) ? list : [];
-      if (activeTab === "agents") renderContent();
-    })
-    .catch((err) => {
-      console.warn("settings: listAgents failed", err);
-      agentMetadata = [];
-    });
-}
-
-if (typeof window.settingsAPI.listThemes === "function") {
-  window.settingsAPI
-    .listThemes()
-    .then((list) => {
-      themeMetadata = Array.isArray(list) ? list : [];
-      if (activeTab === "theme") renderContent();
-    })
-    .catch((err) => {
-      console.warn("settings: listThemes failed", err);
-      themeMetadata = [];
-    });
-}
-
-if (typeof window.settingsAPI.onSetTab === "function") {
-  window.settingsAPI.onSetTab((tab) => {
-    const valid = SIDEBAR_TABS.find(s => s.id === tab && s.available);
-    if (valid) { activeTab = tab; renderSidebar(); renderContent(); }
-  });
-}
-
-if (typeof window.settingsAPI.onSessionExpired === "function") {
-  window.settingsAPI.onSessionExpired(() => {
-    showToast(t("sessionExpiredToast"), { error: true, ttl: 8000 });
-  });
-}
+root.render(h(App));
