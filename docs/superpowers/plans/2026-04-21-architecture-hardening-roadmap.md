@@ -118,6 +118,8 @@
 ### Step 9
 
 - 현재 flaky/integration test를 환경 독립적으로 재구성
+- 1차 목표는 localhost bind 없이도 돌 수 있도록 네트워크 의존 테스트에 주입 지점을 추가하는 것이다.
+- 특히 `remote-theme-sync` 계층은 실제 HTTP 서버 대신 fetch 주입 기반 테스트로 전환한다.
 
 ### Step 10-11
 
