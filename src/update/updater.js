@@ -767,6 +767,9 @@ function initUpdater(ctx, deps = {}) {
           : t("updateDownloading", "Downloading Update...");
       case "ready":
         return t("updateReady", "Update Ready");
+      case "available":
+        return t("updateAvailableMenu", "Update Available (v{version})")
+          .replace("{version}", pendingVersion || "");
       default:
         return t("checkForUpdates", "Check for Updates");
     }
@@ -776,9 +779,16 @@ function initUpdater(ctx, deps = {}) {
     return {
       label: getUpdateMenuLabel(),
       enabled: updateStatus !== "checking" && updateStatus !== "downloading",
-      click: () => updateStatus === "ready"
-        ? getAutoUpdater()?.quitAndInstall(false, true)
-        : checkForUpdates(true),
+      click: () => {
+        if (updateStatus === "ready") {
+          const au = getAutoUpdater();
+          if (au) au.quitAndInstall(false, true);
+        } else if (updateStatus === "available" && pendingVersion) {
+          reevaluateDeferred(true);
+        } else {
+          checkForUpdates(true);
+        }
+      },
     };
   }
 

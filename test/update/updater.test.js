@@ -404,6 +404,39 @@ describe("defer", () => {
   });
 });
 
+describe("menu reflects available state", () => {
+  beforeEach(() => {
+    mock.restoreAll();
+    delete require.cache[require.resolve("../../src/update/updater")];
+    initUpdater = require("../../src/update/updater");
+  });
+
+  it("getUpdateMenuLabel shows version when status is available", async () => {
+    const savedState = {};
+    const ctx = makeCtx({
+      showUpdateBubble: () => "later",
+      savePendingState(partial) { Object.assign(savedState, partial); },
+    });
+    const autoUpdater = {
+      autoDownload: false,
+      autoInstallOnAppQuit: true,
+      _handlers: {},
+      on(event, handler) { this._handlers[event] = handler; },
+      checkForUpdates: async () => ({}),
+      quitAndInstall() {},
+      downloadUpdate() {},
+    };
+    const updater = initUpdater(ctx, makeDeps({ autoUpdaterFactory: () => autoUpdater }));
+    updater.setupAutoUpdater();
+
+    // Trigger update-available → user picks "later" → status stays "available"
+    await autoUpdater._handlers["update-available"]({ version: "2.0.0" });
+
+    const label = updater.getUpdateMenuLabel();
+    assert.ok(label.includes("2.0.0"), `label should include version, got: ${label}`);
+  });
+});
+
 describe("snooze", () => {
   beforeEach(() => {
     mock.restoreAll();
