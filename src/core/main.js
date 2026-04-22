@@ -596,7 +596,13 @@ const _stateCtx = {
     return doNotDisturb;
   },
   set doNotDisturb(v) {
+    const wasOn = doNotDisturb;
     doNotDisturb = v;
+    if (wasOn && !v) {
+      try { reevaluateDeferred(); } catch (err) {
+        console.warn("GitAnimals: reevaluateDeferred after DND off failed:", err && err.message);
+      }
+    }
   },
   get miniMode() {
     return _mini.getMiniMode();
@@ -1185,6 +1191,11 @@ function wireSettingsSubscribers() {
         );
       }
     }
+    if ("miniMode" in changes && !changes.miniMode) {
+      try { reevaluateDeferred(); } catch (err) {
+        console.warn("GitAnimals: reevaluateDeferred failed:", err && err.message);
+      }
+    }
 
     // 3. Menu rebuild — only for menu-affecting keys to avoid thrashing on
     //    window position / mini state changes.
@@ -1324,6 +1335,14 @@ const _updaterCtx = {
   resolveDisplayState: () => resolveDisplayState(),
   getSvgOverride: (state) => getSvgOverride(state),
   resetSoundCooldown: () => resetSoundCooldown(),
+  get autoCheckForUpdates() { return _settingsController.get("autoCheckForUpdates"); },
+  getPendingUpdateVersion() { return _settingsController.get("pendingUpdateVersion"); },
+  getUpdateSnoozeUntil() { return _settingsController.get("updateSnoozeUntil"); },
+  savePendingState(partial) {
+    try { _settingsController.applyBulk(partial); } catch (err) {
+      console.warn("GitAnimals: savePendingState failed:", err && err.message);
+    }
+  },
 };
 const _updater = require("../update/updater")(_updaterCtx);
 const {
@@ -1331,6 +1350,9 @@ const {
   checkForUpdates,
   getUpdateMenuItem,
   getUpdateMenuLabel,
+  startScheduler,
+  stopScheduler,
+  reevaluateDeferred,
 } = _updater;
 
 // ── Settings panel window ──
@@ -1958,7 +1980,13 @@ const _miniCtx = {
     return doNotDisturb;
   },
   set doNotDisturb(v) {
+    const wasOn = doNotDisturb;
     doNotDisturb = v;
+    if (wasOn && !v) {
+      try { reevaluateDeferred(); } catch (err) {
+        console.warn("GitAnimals: reevaluateDeferred after DND off failed:", err && err.message);
+      }
+    }
   },
   SIZES,
   getCurrentPixelSize,
@@ -2285,6 +2313,7 @@ if (!gotTheLock) {
 
     // Auto-updater: setup event handlers (user triggers check via tray menu)
     setupAutoUpdater();
+    startScheduler();
   }
 
   app.whenReady().then(async () => {
@@ -2366,6 +2395,7 @@ if (!gotTheLock) {
     _settingsRuntime.flushRuntimeStateToPrefs();
     unregisterToggleShortcut();
     globalShortcut.unregisterAll();
+    stopScheduler();
     _perm.cleanup();
     _server.cleanup();
     _updateBubble.cleanup();
