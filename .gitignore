@@ -75,3 +75,9 @@ scripts/*
 .cursor/
 .bkit
 src/core/state-selectors.js
+src/core/settings-runtime.js
+src/preload/settings-bridge.js
+src/settings/actions.js
+src/settings/controller.js
+src/settings/prefs.js
+src/settings/store.js
