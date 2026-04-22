@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": false,
+    "noEmit": false,
+    "outDir": ".tsbuild/runtime",
+    "rootDir": ".",
+    "sourceMap": false,
+    "removeComments": false
+  },
+  "include": [
+    "src/types/**/*.d.ts",
+    "src/preload/settings-bridge.js",
+    "src/core/state-selectors.js",
+    "src/core/settings-runtime.js",
+    "src/theme/loader.js",
+    "src/theme/remote-sync.js",
+    "agents/**/*.js",
+    "hooks/json-utils.js",
+    "hooks/shared-process.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".worktrees",
+    "tools/preview",
+    ".tsbuild"
+  ]
+}

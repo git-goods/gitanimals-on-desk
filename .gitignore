@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.tsbuild/
 .env
 .mock-server/
 .worktrees/
@@ -64,6 +65,7 @@ scripts/*
 !scripts/dev.js
 !scripts/clean-cache.js
 !scripts/preview-server.js
+!scripts/verify-ts-runtime.js
 !scripts/preview/
 
 # oh-my-cursor state
