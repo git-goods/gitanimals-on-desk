@@ -272,6 +272,7 @@ let bubbleFollowPet = _settingsController.get("bubbleFollowPet");
 let hideBubbles = _settingsController.get("hideBubbles");
 let showSessionId = _settingsController.get("showSessionId");
 let soundMuted = _settingsController.get("soundMuted");
+let flip = _settingsController.get("flip");
 let petHidden = false;
 const DEFAULT_TOGGLE_SHORTCUT = "CommandOrControl+Shift+Alt+C";
 
@@ -350,6 +351,9 @@ function syncHitStateAfterLoad() {
 }
 
 function syncRendererStateAfterLoad({ includeStartupRecovery = true } = {}) {
+  if (flip) {
+    sendToRenderer("flip-change", true);
+  }
   if (_mini.getMiniMode()) {
     sendToRenderer("mini-mode-change", true, _mini.getMiniEdge());
   }
@@ -993,6 +997,12 @@ const _menuCtx = {
   set soundMuted(v) {
     _settingsController.applyUpdate("soundMuted", v);
   },
+  get flip() {
+    return flip;
+  },
+  set flip(v) {
+    _settingsController.applyUpdate("flip", v);
+  },
   get pendingPermissions() {
     return pendingPermissions;
   },
@@ -1097,6 +1107,7 @@ const {
 const MENU_AFFECTING_KEYS = new Set([
   "lang",
   "soundMuted",
+  "flip",
   "bubbleFollowPet",
   "hideBubbles",
   "showSessionId",
@@ -1147,6 +1158,10 @@ function wireSettingsSubscribers() {
     if ("hideBubbles" in changes) hideBubbles = changes.hideBubbles;
     if ("showSessionId" in changes) showSessionId = changes.showSessionId;
     if ("soundMuted" in changes) soundMuted = changes.soundMuted;
+    if ("flip" in changes) {
+      flip = changes.flip;
+      sendToRenderer("flip-change", flip);
+    }
 
     // 2. Reactive side effects (mirror what the legacy setters / click handlers used to do).
     if ("hideBubbles" in changes) {

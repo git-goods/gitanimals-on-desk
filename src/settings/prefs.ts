@@ -47,6 +47,7 @@ export const SCHEMA: Record<string, SchemaField> = {
   hideBubbles: { type: "boolean", default: false },
   showSessionId: { type: "boolean", default: false },
   soundMuted: { type: "boolean", default: false },
+  flip: { type: "boolean", default: false },
   sendDiagnostics: { type: "boolean", default: true },
   theme: { type: "string", default: "fox" },
   agents: {
