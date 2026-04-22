@@ -5,6 +5,7 @@
     "checkJs": false,
     "declaration": false,
     "noEmit": false,
+    "noEmitOnError": true,
     "outDir": ".tsbuild/runtime",
     "rootDir": ".",
     "sourceMap": false,
