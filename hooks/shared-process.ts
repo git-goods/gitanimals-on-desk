@@ -1,6 +1,7 @@
 // hooks/shared-process.js — Shared process tree walk, stdin reader, platform config
 // Used by hook scripts (gitanimals, copilot, cursor, gemini, kiro, codebuddy).
 // Zero third-party dependencies — only Node built-ins.
+export {};
 
 // ── Base platform constants ──────────────────────────────────────────────────
 
@@ -33,6 +34,40 @@ const DEFAULT_EDITOR_PATH_CHECKS = [
   ["cursor.app", "cursor"],
 ];
 
+type PlatformConfig = {
+  terminalNames: Set<string>;
+  systemBoundary: Set<string>;
+  editorMap: Record<string, string>;
+  editorPathChecks: string[][];
+};
+
+type PlatformOptions = {
+  extraTerminals?: { win?: string[]; mac?: string[]; linux?: string[] };
+  extraEditors?: { win?: Record<string, string>; mac?: Record<string, string>; linux?: Record<string, string> };
+  extraEditorPathChecks?: string[][];
+};
+
+type AgentNames = {
+  win: Set<string>;
+  mac: Set<string>;
+  linux?: Set<string>;
+};
+
+type PidResolveResult = {
+  stablePid: number | null;
+  agentPid: number | null;
+  detectedEditor: string | null;
+  pidChain: number[];
+};
+
+type PidResolverOptions = {
+  platformConfig: PlatformConfig;
+  agentNames?: AgentNames | null;
+  agentCmdlineCheck?: ((cmdline: string) => boolean) | null;
+  startPid?: number;
+  maxDepth?: number;
+};
+
 // ── getPlatformConfig ────────────────────────────────────────────────────────
 // Returns { terminalNames: Set, systemBoundary: Set, editorMap: Object, editorPathChecks: Array }
 // Options:
@@ -40,7 +75,7 @@ const DEFAULT_EDITOR_PATH_CHECKS = [
 //   extraEditors:   { win?: Object, mac?: Object, linux?: Object }
 //   extraEditorPathChecks: [pattern, editor][]  — prepended before defaults (macOS/Linux full path)
 
-function getPlatformConfig(options) {
+function getPlatformConfig(options?: PlatformOptions): PlatformConfig {
   const opts = options || {};
   const isWin = process.platform === "win32";
   const isLinux = process.platform === "linux";
@@ -81,7 +116,7 @@ function getPlatformConfig(options) {
 //   startPid             — number (default process.ppid)
 //   maxDepth             — number (default 8)
 
-function createPidResolver(options) {
+function createPidResolver(options: PidResolverOptions): () => PidResolveResult {
   const { platformConfig } = options;
   const { terminalNames, systemBoundary, editorMap, editorPathChecks } = platformConfig;
   const startPid = options.startPid || process.ppid;
@@ -95,7 +130,7 @@ function createPidResolver(options) {
   const agentNameSet = an ? (pick(an.win, an.linux || an.mac, an.mac) || null) : null;
   const agentCmdlineCheck = options.agentCmdlineCheck || null;
 
-  let _cached = null;
+  let _cached: PidResolveResult | null = null;
 
   return function resolve() {
     if (_cached) return _cached;
@@ -109,7 +144,7 @@ function createPidResolver(options) {
     const pidChain = [];
 
     for (let i = 0; i < maxDepth; i++) {
-      let name, parentPid;
+      let name: string, parentPid: number;
       try {
         if (isWin) {
           const out = execFileSync(
@@ -169,9 +204,9 @@ function createPidResolver(options) {
 // Reads stdin, parses JSON, returns Promise<Object>.
 // 400ms timeout + finishOnce protection. Returns {} on parse failure or timeout.
 
-function readStdinJson() {
+function readStdinJson(): Promise<Record<string, any>> {
   return new Promise((resolve) => {
-    const chunks = [];
+    const chunks: Buffer[] = [];
     let done = false;
     let timer = null;
 

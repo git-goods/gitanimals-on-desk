@@ -27,8 +27,8 @@
     "src/theme/remote-sync.ts",
     "src/core/telemetry.js",
     "agents/**/*.js",
-    "hooks/json-utils.js",
-    "hooks/shared-process.js"
+    "hooks/json-utils.ts",
+    "hooks/shared-process.ts"
   ],
   "exclude": [
     "node_modules",

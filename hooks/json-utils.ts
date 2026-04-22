@@ -1,6 +1,7 @@
 // Shared utilities for hook installers (claude / cursor / gemini /
 // codebuddy / opencode). Keeps config-file mutation behavior identical
 // across agents so a fix in one place fixes all of them.
+export {};
 
 const fs = require("fs");
 const path = require("path");
@@ -11,7 +12,7 @@ const path = require("path");
  * config. Creates the parent directory if missing. Cleans up the tmp file
  * on failure before re-throwing.
  */
-function writeJsonAtomic(filePath, data) {
+function writeJsonAtomic(filePath: string, data: unknown): void {
   const dir = path.dirname(filePath);
   const base = path.basename(filePath);
   const tmpPath = path.join(dir, `.${base}.${process.pid}.${Date.now()}.tmp`);
@@ -32,7 +33,7 @@ function writeJsonAtomic(filePath, data) {
  * and must use the physical copy under app.asar.unpacked/ (see package.json
  * "asarUnpack"). No-op for dev/source installs.
  */
-function asarUnpackedPath(p) {
+function asarUnpackedPath(p: string): string {
   return p.replace("app.asar/", "app.asar.unpacked/");
 }
 
@@ -49,7 +50,11 @@ function asarUnpackedPath(p) {
  *   (CodeBuddy / Claude Code nested format)
  * @returns {string|null}
  */
-function extractExistingNodeBin(settings, marker, options) {
+function extractExistingNodeBin(
+  settings: Record<string, any> | null | undefined,
+  marker: string,
+  options?: { nested?: boolean }
+): string | null {
   if (!settings || !settings.hooks) return null;
   const nested = options && options.nested;
 

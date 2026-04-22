@@ -17,7 +17,9 @@
     "src/settings/prefs.ts",
     "src/settings/store.ts",
     "src/theme/loader.ts",
-    "src/theme/remote-sync.ts"
+    "src/theme/remote-sync.ts",
+    "hooks/json-utils.ts",
+    "hooks/shared-process.ts"
   ],
   "exclude": [
     "node_modules",

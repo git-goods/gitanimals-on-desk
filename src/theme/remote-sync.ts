@@ -3,6 +3,7 @@
 // Remote theme system — fetch registry + per-theme config/assets from HTTPS server.
 // Mirrors existing theme-cache/ pattern: sanitize SVGs, pathToFileURL, .cache-meta.json.
 // Fire-and-forget sync on app start; callers get notified via onSyncComplete.
+export {};
 
 const fs = require("fs");
 const path = require("path");
