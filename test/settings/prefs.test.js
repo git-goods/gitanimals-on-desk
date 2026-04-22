@@ -287,3 +287,60 @@ describe("prefs.save", () => {
     assert.strictEqual(written.x, 0);
   });
 });
+
+describe("update discovery prefs fields", () => {
+  it("defaults include autoCheckForUpdates=true", () => {
+    const d = prefs.getDefaults();
+    assert.strictEqual(d.autoCheckForUpdates, true);
+  });
+
+  it("defaults include lastUpdateCheckAt=0", () => {
+    const d = prefs.getDefaults();
+    assert.strictEqual(d.lastUpdateCheckAt, 0);
+  });
+
+  it("defaults include updateSnoozeUntil=0", () => {
+    const d = prefs.getDefaults();
+    assert.strictEqual(d.updateSnoozeUntil, 0);
+  });
+
+  it("defaults include pendingUpdateVersion empty string", () => {
+    const d = prefs.getDefaults();
+    assert.strictEqual(d.pendingUpdateVersion, "");
+  });
+
+  it("validate accepts valid update prefs", () => {
+    const v = prefs.validate({
+      autoCheckForUpdates: false,
+      lastUpdateCheckAt: 1713800000000,
+      updateSnoozeUntil: 1713886400000,
+      pendingUpdateVersion: "1.2.3",
+    });
+    assert.strictEqual(v.autoCheckForUpdates, false);
+    assert.strictEqual(v.lastUpdateCheckAt, 1713800000000);
+    assert.strictEqual(v.updateSnoozeUntil, 1713886400000);
+    assert.strictEqual(v.pendingUpdateVersion, "1.2.3");
+  });
+
+  it("validate rejects bad types and falls back to defaults", () => {
+    const v = prefs.validate({
+      autoCheckForUpdates: "yes",
+      lastUpdateCheckAt: "now",
+      updateSnoozeUntil: NaN,
+      pendingUpdateVersion: 123,
+    });
+    assert.strictEqual(v.autoCheckForUpdates, true);
+    assert.strictEqual(v.lastUpdateCheckAt, 0);
+    assert.strictEqual(v.updateSnoozeUntil, 0);
+    assert.strictEqual(v.pendingUpdateVersion, "");
+  });
+
+  it("load tolerates missing new fields in existing prefs file", () => {
+    const p = makeTempPath();
+    fs.writeFileSync(p, JSON.stringify({ version: 1, lang: "ko" }));
+    const { snapshot } = prefs.load(p);
+    assert.strictEqual(snapshot.autoCheckForUpdates, true);
+    assert.strictEqual(snapshot.lastUpdateCheckAt, 0);
+    assert.strictEqual(snapshot.pendingUpdateVersion, "");
+  });
+});
