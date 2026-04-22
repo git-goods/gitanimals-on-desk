@@ -11,7 +11,219 @@ function requireRuntime(relPath) {
   return require(path.join(runtimeRoot, relPath));
 }
 
-function main() {
+function verifySettingsBridge(createSettingsBridge) {
+  const subscriptions = new Map();
+  const invoked = [];
+  const bridge = createSettingsBridge({
+    invoke(channel, payload) {
+      invoked.push({ channel, payload });
+      if (channel === "settings:get-snapshot") {
+        return Promise.resolve({ lang: "en" });
+      }
+      return Promise.resolve({ status: "ok" });
+    },
+    subscribe(channel, handler) {
+      subscriptions.set(channel, handler);
+      return () => subscriptions.delete(channel);
+    },
+  });
+
+  let changedPayload = null;
+  let selectedTab = null;
+  let sessionExpired = 0;
+  const offChanged = bridge.onChanged((payload) => { changedPayload = payload; });
+  const offTab = bridge.onSetTab((tab) => { selectedTab = tab; });
+  const offExpired = bridge.onSessionExpired(() => { sessionExpired += 1; });
+
+  subscriptions.get("settings-changed")(null, { changes: { lang: "ko" } });
+  subscriptions.get("settings:set-tab")(null, "themes");
+  subscriptions.get("auth:session-expired")();
+
+  assert.deepStrictEqual(changedPayload, { changes: { lang: "ko" } });
+  assert.strictEqual(selectedTab, "themes");
+  assert.strictEqual(sessionExpired, 1);
+
+  offChanged();
+  offTab();
+  offExpired();
+
+  subscriptions.get("settings-changed")(null, { changes: { lang: "zh" } });
+  subscriptions.get("settings:set-tab")(null, "agents");
+  subscriptions.get("auth:session-expired")();
+
+  assert.deepStrictEqual(changedPayload, { changes: { lang: "ko" } });
+  assert.strictEqual(selectedTab, "themes");
+  assert.strictEqual(sessionExpired, 1);
+
+  return bridge.getSnapshot().then((snapshot) => {
+    assert.deepStrictEqual(snapshot, { lang: "en" });
+    assert.deepStrictEqual(invoked[0], { channel: "settings:get-snapshot", payload: undefined });
+  });
+}
+
+function verifySettingsController({ settingsPrefs, createSettingsController }) {
+  const defaults = settingsPrefs.getDefaults();
+  const writes = [];
+  const loginItems = [];
+  const telemetry = [];
+
+  const controller = createSettingsController({
+    loadResult: {
+      snapshot: defaults,
+      locked: false,
+    },
+    prefsPath: path.join(root, ".tmp-shadow-prefs.json"),
+    injectedDeps: {
+      setOpenAtLogin(value) {
+        loginItems.push(value);
+      },
+      setTelemetryEnabled(value) {
+        telemetry.push(value);
+      },
+    },
+    prefs: {
+      ...settingsPrefs,
+      save(filePath, snapshot) {
+        writes.push({ filePath, snapshot });
+      },
+    },
+  });
+
+  const langResult = controller.applyUpdate("lang", "ko");
+  assert.deepStrictEqual(langResult, { status: "ok" });
+  assert.strictEqual(controller.get("lang"), "ko");
+
+  const telemetryResult = controller.applyUpdate("sendDiagnostics", false);
+  assert.deepStrictEqual(telemetryResult, { status: "ok" });
+  assert.deepStrictEqual(telemetry, [false]);
+
+  const loginResult = controller.applyUpdate("openAtLogin", true);
+  assert.deepStrictEqual(loginResult, { status: "ok" });
+  assert.deepStrictEqual(loginItems, [true]);
+
+  const bulkResult = controller.applyBulk({
+    x: 12,
+    y: 24,
+    positionSaved: true,
+  });
+  assert.deepStrictEqual(bulkResult, { status: "ok" });
+  assert.strictEqual(controller.get("x"), 12);
+  assert.strictEqual(controller.get("y"), 24);
+  assert.strictEqual(controller.get("positionSaved"), true);
+  assert.ok(writes.length >= 3);
+}
+
+function verifyStateSelectors(selectors) {
+  const state = selectors.resolveDisplayStateFromSessions({
+    sessions: new Map([
+      ["a", { state: "working", headless: false }],
+      ["b", { state: "error", headless: false }],
+    ]),
+    statePriority: { sleeping: 0, idle: 1, working: 3, error: 8 },
+  });
+  assert.strictEqual(state, "error");
+
+  const displayHint = selectors.pickDisplayHint({
+    state: "working",
+    existingDisplayHint: "typing",
+    incomingDisplayHint: "building",
+    displayHintMap: { typing: "typing.svg", building: "building.svg" },
+  });
+  assert.strictEqual(displayHint, "building");
+}
+
+function verifySettingsRuntime({ createSettingsRuntime, createSettingsController, settingsPrefs }) {
+  const appliedBulk = [];
+  const app = {
+    isPackaged: false,
+    setLoginItemSettings() {},
+    getLoginItemSettings() {
+      return { openAtLogin: true };
+    },
+    getAppPath() {
+      return root;
+    },
+  };
+  const controller = createSettingsController({
+    loadResult: {
+      snapshot: settingsPrefs.getDefaults(),
+      locked: false,
+    },
+    prefs: {
+      ...settingsPrefs,
+      save() {},
+    },
+  });
+  const originalApplyBulk = controller.applyBulk.bind(controller);
+  controller.applyBulk = (partial) => {
+    appliedBulk.push(partial);
+    return originalApplyBulk(partial);
+  };
+
+  const runtime = createSettingsRuntime({
+    app,
+    isLinux: false,
+    loginItemHelpers: {
+      getLoginItemSettings(options) {
+        return options;
+      },
+      linuxSetOpenAtLogin() {},
+      linuxGetOpenAtLogin() {
+        return false;
+      },
+    },
+    settingsController: controller,
+    getLaunchScriptPath() {
+      return path.join(root, "launch.js");
+    },
+    getWin() {
+      return {
+        isDestroyed() {
+          return false;
+        },
+        getBounds() {
+          return { x: 50, y: 80 };
+        },
+      };
+    },
+    getCurrentSize() {
+      return "P:12";
+    },
+    mini: {
+      getMiniMode() {
+        return true;
+      },
+      getMiniEdge() {
+        return "left";
+      },
+      getPreMiniX() {
+        return 20;
+      },
+      getPreMiniY() {
+        return 30;
+      },
+    },
+  });
+
+  runtime.hydrateSystemBackedSettings();
+  assert.strictEqual(controller.get("openAtLogin"), true);
+  assert.strictEqual(controller.get("openAtLoginHydrated"), true);
+
+  runtime.flushRuntimeStateToPrefs();
+  assert.strictEqual(appliedBulk.length, 1);
+  assert.deepStrictEqual(appliedBulk[0], {
+    x: 50,
+    y: 80,
+    positionSaved: true,
+    size: "P:12",
+    miniMode: true,
+    miniEdge: "left",
+    preMiniX: 20,
+    preMiniY: 30,
+  });
+}
+
+async function main() {
   const settingsBridge = requireRuntime("src/preload/settings-bridge.js");
   assert.strictEqual(typeof settingsBridge.createSettingsBridge, "function");
 
@@ -55,7 +267,22 @@ function main() {
   const sharedProcess = requireRuntime("hooks/shared-process.js");
   assert.strictEqual(typeof sharedProcess.createPidResolver, "function");
 
+  verifySettingsController({
+    settingsPrefs,
+    createSettingsController: settingsController.createSettingsController,
+  });
+  verifyStateSelectors(selectors);
+  verifySettingsRuntime({
+    createSettingsRuntime: settingsRuntime.createSettingsRuntime,
+    createSettingsController: settingsController.createSettingsController,
+    settingsPrefs,
+  });
+
+  await verifySettingsBridge(settingsBridge.createSettingsBridge);
   console.log("TS runtime emit verification passed.");
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});
