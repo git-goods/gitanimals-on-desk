@@ -1328,6 +1328,12 @@ function createWindow() {
         report("[renderer] window.onerror", "error", payload);
       } else if (kind === "unhandled-rejection") {
         report("[renderer] unhandledrejection", "error", payload);
+      } else if (kind === "asset-load-failed") {
+        report("[renderer] asset-load-failed", "error", {
+          ...payload,
+          isPackaged: app.isPackaged,
+          appVersion: app.getVersion(),
+        });
       } else {
         bc("renderer", String(kind || "diagnostic"), payload);
       }
