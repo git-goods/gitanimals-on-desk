@@ -2,6 +2,8 @@
 "use strict";
 
 const assert = require("node:assert");
+const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 
 const root = path.join(__dirname, "..");
@@ -223,6 +225,53 @@ function verifySettingsRuntime({ createSettingsRuntime, createSettingsController
   });
 }
 
+function verifyThemeLoader(themeLoader) {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-theme-shadow-"));
+  const fakeSrc = path.join(tmpRoot, "fake-src");
+  const foxDir = path.join(tmpRoot, "themes", "fox");
+  const assetsDir = path.join(foxDir, "assets");
+  const userData = path.join(tmpRoot, "userData");
+
+  fs.mkdirSync(fakeSrc, { recursive: true });
+  fs.mkdirSync(assetsDir, { recursive: true });
+  fs.mkdirSync(userData, { recursive: true });
+  fs.writeFileSync(path.join(assetsDir, "idle.svg"), "<svg/>\n");
+  fs.writeFileSync(
+    path.join(foxDir, "theme.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      name: "fox",
+      version: "shadow-test",
+      viewBox: { x: 0, y: 0, width: 100, height: 100 },
+      states: {
+        idle: ["idle.svg"],
+        working: ["working.svg"],
+        thinking: ["thinking.svg"],
+        sleeping: ["sleeping.svg"],
+        waking: ["waking.svg"],
+      },
+    }),
+    "utf8"
+  );
+
+  themeLoader.init(fakeSrc, userData);
+  const theme = themeLoader.loadTheme("fox");
+  assert.strictEqual(theme.name, "fox");
+  assert.deepStrictEqual(theme.states.idle, ["idle.svg"]);
+  assert.ok(themeLoader.sanitizeSvg('<svg><script>alert(1)</script><rect/></svg>').includes("<rect"));
+
+  fs.rmSync(tmpRoot, { recursive: true, force: true });
+}
+
+function verifyRemoteSync(remoteSync) {
+  const files = remoteSync._extractThemeFileList({
+    states: { idle: ["idle.svg"], working: ["working.svg", "ignore.png"] },
+    reactions: { drag: { file: "drag.svg" } },
+  });
+  assert.deepStrictEqual(files.sort(), ["drag.svg", "idle.svg", "working.svg"].sort());
+  assert.strictEqual(remoteSync._isStale(0), true);
+}
+
 async function main() {
   const settingsBridge = requireRuntime("src/preload/settings-bridge.js");
   assert.strictEqual(typeof settingsBridge.createSettingsBridge, "function");
@@ -277,6 +326,8 @@ async function main() {
     createSettingsController: settingsController.createSettingsController,
     settingsPrefs,
   });
+  verifyThemeLoader(themeLoader);
+  verifyRemoteSync(remoteSync);
 
   await verifySettingsBridge(settingsBridge.createSettingsBridge);
   console.log("TS runtime emit verification passed.");

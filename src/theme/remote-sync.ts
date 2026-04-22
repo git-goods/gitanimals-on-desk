@@ -8,7 +8,10 @@ const fs = require("fs");
 const path = require("path");
 const https = require("https");
 const http = require("http");
-const { URL } = require("url");
+
+type RegistryEntry = { id: string; name: string; version?: string };
+type RegistryMeta = { fetchedAt: number; themes: RegistryEntry[] };
+type FetchBuffer = (url: string) => Promise<Buffer>;
 
 // ── Config ──
 
@@ -23,14 +26,14 @@ const DEFAULT_REGISTRY_BASE_URL = "https://gitanimals-themes.example.com";
 
 // ── Module state ──
 
-let themeCacheDir = null; // {userData}/theme-cache/
-let _syncCompleteListeners = [];
+let themeCacheDir: string | null = null; // {userData}/theme-cache/
+let _syncCompleteListeners: Array<() => void> = [];
 let _syncInFlight = false;
-let _fetchBufferImpl = _httpsGetBuffer;
+let _fetchBufferImpl: FetchBuffer = _httpsGetBuffer;
 
 // ── Public API ──
 
-function init(userDataDir) {
+function init(userDataDir: string): void {
   if (!userDataDir) throw new Error("remote-theme-sync.init: userDataDir required");
   themeCacheDir = path.join(userDataDir, "theme-cache");
 }
@@ -39,12 +42,12 @@ function getRemoteRegistryBaseUrl() {
   return (process.env.THEME_REGISTRY_URL || DEFAULT_REGISTRY_BASE_URL).replace(/\/$/, "");
 }
 
-function onSyncComplete(fn) {
-  if (typeof fn === "function") _syncCompleteListeners.push(fn);
+function onSyncComplete(fn: unknown): void {
+  if (typeof fn === "function") _syncCompleteListeners.push(fn as () => void);
 }
 
-function _setFetchBufferForTests(fn) {
-  _fetchBufferImpl = typeof fn === "function" ? fn : _httpsGetBuffer;
+function _setFetchBufferForTests(fn: unknown): void {
+  _fetchBufferImpl = typeof fn === "function" ? (fn as FetchBuffer) : _httpsGetBuffer;
 }
 
 function _notifySyncComplete() {
@@ -57,7 +60,7 @@ function _notifySyncComplete() {
  * Read cached registry synchronously. Returns array of { id, name, version }.
  * Returns [] if no cache or parse error.
  */
-function loadCachedRegistry() {
+function loadCachedRegistry(): RegistryEntry[] {
   if (!themeCacheDir) return [];
   const p = path.join(themeCacheDir, ".registry.json");
   try {
@@ -67,18 +70,18 @@ function loadCachedRegistry() {
   } catch { return []; }
 }
 
-function _loadRegistryMeta() {
+function _loadRegistryMeta(): RegistryMeta {
   if (!themeCacheDir) return { fetchedAt: 0, themes: [] };
   const p = path.join(themeCacheDir, ".registry.json");
   try { return JSON.parse(fs.readFileSync(p, "utf8")) || { fetchedAt: 0, themes: [] }; }
   catch { return { fetchedAt: 0, themes: [] }; }
 }
 
-function _isStale(fetchedAt, ttlMs = REMOTE_TTL_MS) {
+function _isStale(fetchedAt: number, ttlMs = REMOTE_TTL_MS): boolean {
   return (Date.now() - (fetchedAt || 0)) >= ttlMs;
 }
 
-function _isValidRegistryEntry(e) {
+function _isValidRegistryEntry(e: any): e is RegistryEntry {
   return e && typeof e === "object"
     && typeof e.id === "string" && THEME_ID_RE.test(e.id)
     && typeof e.name === "string" && e.name.length > 0
@@ -89,7 +92,7 @@ function _isValidRegistryEntry(e) {
  * Fire-and-forget: sync registry, then each theme.
  * Safe to call without awaiting. Re-entry protected.
  */
-function syncAll(options = {}) {
+function syncAll(options = {}): Promise<void> {
   if (_syncInFlight) return Promise.resolve();
   _syncInFlight = true;
   return _syncAllInternal(options)
@@ -97,7 +100,7 @@ function syncAll(options = {}) {
     .finally(() => { _syncInFlight = false; });
 }
 
-async function _syncAllInternal({ force = false } = {}) {
+async function _syncAllInternal({ force = false } = {}): Promise<void> {
   if (!themeCacheDir) {
     console.warn("[remote-theme-sync] not initialized; skipping");
     return;
@@ -135,7 +138,7 @@ async function _syncAllInternal({ force = false } = {}) {
  * Fetch /themes/index.json and persist to .registry.json.
  * Returns array of valid entries, or throws.
  */
-async function _syncRegistry() {
+async function _syncRegistry(): Promise<RegistryEntry[]> {
   const base = getRemoteRegistryBaseUrl();
   const buf = await _fetchBufferImpl(`${base}/themes/index.json`);
   const raw = JSON.parse(buf.toString("utf8"));
@@ -151,7 +154,7 @@ async function _syncRegistry() {
  * Fetch /themes/<id>/theme.json + extracted SVGs. Sanitize + cache.
  * Returns true if cache was updated, false if nothing changed.
  */
-async function _syncTheme(themeId, baseUrl, { force = false } = {}) {
+async function _syncTheme(themeId: string, baseUrl: string, { force = false } = {}): Promise<boolean> {
   if (!THEME_ID_RE.test(themeId)) throw new Error(`Invalid theme id: ${themeId}`);
 
   const themeDir = path.join(themeCacheDir, themeId);
@@ -219,9 +222,9 @@ async function _syncTheme(themeId, baseUrl, { force = false } = {}) {
  * Collect every SVG filename referenced by a theme.
  * Searches: states, miniMode.states, reactions, workingTiers, jugglingTiers.
  */
-function _extractThemeFileList(theme) {
-  const files = new Set();
-  const addFromStates = (states) => {
+function _extractThemeFileList(theme: Record<string, any>): string[] {
+  const files = new Set<string>();
+  const addFromStates = (states: Record<string, unknown> | null | undefined) => {
     if (!states) return;
     for (const arr of Object.values(states)) {
       if (Array.isArray(arr)) for (const f of arr) if (typeof f === "string") files.add(f);
@@ -230,7 +233,7 @@ function _extractThemeFileList(theme) {
   addFromStates(theme.states);
   if (theme.miniMode) addFromStates(theme.miniMode.states);
   if (theme.reactions) {
-    for (const r of Object.values(theme.reactions)) {
+    for (const r of Object.values(theme.reactions as Record<string, any>)) {
       if (r && typeof r.file === "string") files.add(r.file);
     }
   }
@@ -240,7 +243,7 @@ function _extractThemeFileList(theme) {
   if (Array.isArray(theme.jugglingTiers)) {
     for (const t of theme.jugglingTiers) if (t && typeof t.file === "string") files.add(t.file);
   }
-  return [...files].filter(f => f.endsWith(".svg"));
+  return [...files].filter((f) => f.endsWith(".svg"));
 }
 
 /**
@@ -248,7 +251,7 @@ function _extractThemeFileList(theme) {
  * `http://` is allowed only when THEME_REGISTRY_URL starts with it
  * (dev/mock), but plain absolute URLs passed here must match that scheme.
  */
-function _httpsGetBuffer(url, timeoutMs = FETCH_TIMEOUT_MS, redirectsLeft = MAX_REDIRECTS) {
+function _httpsGetBuffer(url: string, timeoutMs = FETCH_TIMEOUT_MS, redirectsLeft = MAX_REDIRECTS): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     let parsed;
     try { parsed = new URL(url); } catch { return reject(new Error(`Invalid URL: ${url}`)); }

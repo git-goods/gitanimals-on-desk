@@ -15,7 +15,9 @@
     "src/settings/actions.ts",
     "src/settings/controller.ts",
     "src/settings/prefs.ts",
-    "src/settings/store.ts"
+    "src/settings/store.ts",
+    "src/theme/loader.ts",
+    "src/theme/remote-sync.ts"
   ],
   "exclude": [
     "node_modules",
