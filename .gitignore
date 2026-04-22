@@ -81,3 +81,5 @@ src/settings/actions.js
 src/settings/controller.js
 src/settings/prefs.js
 src/settings/store.js
+src/theme/loader.js
+src/theme/remote-sync.js

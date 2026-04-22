@@ -6,9 +6,18 @@ const { pathToFileURL } = require("url");
 const { bc, report } = (() => {
   try { return require("../core/telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
+import type { ThemeCatalogEntry, ThemeManifest } from "../types/contracts";
 
-/** @typedef {import("../types/contracts").ThemeCatalogEntry} ThemeCatalogEntry */
-/** @typedef {import("../types/contracts").ThemeManifest} ThemeManifest */
+type ThemeLike = ThemeManifest & Record<string, any>;
+type ThemeSource = "builtin" | "user" | "remote" | null;
+type VariantEntry = {
+  parentId: string;
+  parentDir: string;
+  accessories: string[];
+  builtin: boolean;
+  source: ThemeSource;
+};
+type ScanThemeOptions = { source?: string };
 
 // ── Shared accessory pool ──
 const SHARED_PREFIX = "shared:";
@@ -84,17 +93,17 @@ const HREF_ATTRS = new Set(["href", "xlink:href", "src", "action", "formaction"]
 
 // ── State ──
 
-let activeTheme = null;
-let builtinThemesDir = null;   // set by init()
-let assetsSvgDir = null;       // assets/svg/ for built-in theme
-let assetsSoundsDir = null;    // assets/sounds/ for built-in theme
-let userDataDir = null;        // app.getPath("userData") — set by init()
-let userThemesDir = null;      // {userData}/themes/
-let themeCacheDir = null;      // {userData}/theme-cache/
+let activeTheme: ThemeLike | null = null;
+let builtinThemesDir: string | null = null;   // set by init()
+let assetsSvgDir: string | null = null;       // assets/svg/ for built-in theme
+let assetsSoundsDir: string | null = null;    // assets/sounds/ for built-in theme
+let userDataDir: string | null = null;        // app.getPath("userData") — set by init()
+let userThemesDir: string | null = null;      // {userData}/themes/
+let themeCacheDir: string | null = null;      // {userData}/theme-cache/
 
 // Variant map: variant ID → { parentId, parentDir, accessories, builtin, source }
 // Populated by discoverThemes(), consumed by loadTheme().
-let _variantMap = {};
+let _variantMap: Record<string, VariantEntry> = {};
 
 // ── Public API ──
 
@@ -121,7 +130,7 @@ function init(appDir, userData) {
  */
 function discoverThemes() {
   const themes = /** @type {ThemeCatalogEntry[]} */ ([]);
-  const seen = new Set();
+  const seen = new Set<string>();
   _variantMap = {};
 
   // Built-in themes
@@ -143,7 +152,13 @@ function discoverThemes() {
   return themes;
 }
 
-function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
+function _scanThemesDir(
+  dir: string,
+  builtin: boolean,
+  themes: ThemeCatalogEntry[],
+  seen: Set<string>,
+  opts: ScanThemeOptions = {}
+) {
   try {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
@@ -164,9 +179,9 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
               parentDir: themeDir,
               accessories: Array.isArray(v.accessories) ? v.accessories : [],
               builtin,
-              source: opts.source || null,
+              source: (opts.source as ThemeSource) || null,
             };
-            const item = { id: v.id, name: v.name, path: jsonPath, builtin };
+            const item: ThemeCatalogEntry = { id: v.id, name: v.name, path: jsonPath, builtin };
             if (opts.source) item.source = opts.source;
             themes.push(item);
             seen.add(v.id);
@@ -174,7 +189,7 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
           // Also mark the directory name as seen to prevent duplicate entries
           seen.add(entry.name);
         } else {
-          const item = { id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin };
+          const item: ThemeCatalogEntry = { id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin };
           if (opts.source) item.source = opts.source;
           themes.push(item);
           seen.add(entry.name);
@@ -189,7 +204,7 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
  * @param {string} themeId
  * @returns {ThemeManifest & Record<string, unknown>} merged theme config
  */
-function loadTheme(themeId) {
+function loadTheme(themeId: string): ThemeLike {
   // Resolve variant ID → parent theme directory
   // Lazily populate variant map if not yet initialized (e.g. startup before discoverThemes)
   if (Object.keys(_variantMap).length === 0) {
@@ -261,7 +276,12 @@ function loadTheme(themeId) {
 /**
  * Read theme.json from built-in or user themes directory.
  */
-function _readThemeJson(themeId) {
+function _readThemeJson(themeId: string): {
+  raw: Record<string, any> | null;
+  isBuiltin: boolean;
+  themeDir: string | null;
+  source?: ThemeSource;
+} {
   // Built-in first
   const builtinPath = path.join(builtinThemesDir, themeId, "theme.json");
   if (fs.existsSync(builtinPath)) {
@@ -463,7 +483,7 @@ function _sanitizeNode(node) {
 /**
  * @returns {object|null} current active theme config
  */
-function getActiveTheme() {
+function getActiveTheme(): ThemeLike | null {
   return activeTheme;
 }
 
@@ -574,7 +594,7 @@ function getRendererSourceAssetsPath() {
  * Build config object to inject into renderer process (via additionalArguments or IPC).
  * Contains only the subset renderer.js needs.
  */
-function getRendererConfig() {
+function getRendererConfig(): Record<string, any> | null {
   if (!activeTheme) return null;
   const t = activeTheme;
   return {
@@ -588,8 +608,8 @@ function getRendererConfig() {
     // For external themes: non-SVG assets served from source dir (not cache)
     sourceAssetsPath: getRendererSourceAssetsPath(),
     eyeTracking: t.eyeTracking,
-    glyphFlips: t.miniMode ? t.miniMode.glyphFlips : {},
-    miniFlipAssets: t.miniMode ? !!t.miniMode.flipAssets : false,
+    glyphFlips: t.miniMode ? (t.miniMode as any).glyphFlips : {},
+    miniFlipAssets: t.miniMode ? !!(t.miniMode as any).flipAssets : false,
     dragSvg: t.reactions && t.reactions.drag ? t.reactions.drag.file : null,
     idleFollowSvg: t.states.idle[0],
     // renderer needs to know which states need eye tracking (for <object> vs <img> decision)
@@ -605,7 +625,7 @@ function getRendererConfig() {
 /**
  * Build config object to inject into hit-renderer process.
  */
-function getHitRendererConfig() {
+function getHitRendererConfig(): Record<string, any> | null {
   if (!activeTheme) return null;
   const t = activeTheme;
   return {
@@ -618,7 +638,7 @@ function getHitRendererConfig() {
  * Ensure the user themes directory exists.
  * @returns {string} absolute path to user themes dir
  */
-function ensureUserThemesDir() {
+function ensureUserThemesDir(): string | null {
   if (!userThemesDir) return null;
   try {
     fs.mkdirSync(userThemesDir, { recursive: true });
@@ -628,7 +648,7 @@ function ensureUserThemesDir() {
 
 // ── Validation ──
 
-function validateTheme(cfg) {
+function validateTheme(cfg: Record<string, any>) {
   const errors = [];
 
   if (cfg.schemaVersion !== 1) {
@@ -676,7 +696,7 @@ function validateTheme(cfg) {
 
   // accessories validation
   if (cfg.accessories && typeof cfg.accessories === "object") {
-    for (const [accName, acc] of Object.entries(cfg.accessories)) {
+    for (const [accName, acc] of Object.entries(cfg.accessories as Record<string, any>)) {
       if (!acc || typeof acc !== "object") {
         errors.push(`accessories.${accName} must be an object`);
         continue;
@@ -840,7 +860,7 @@ function mergeDefaults(raw, themeId, isBuiltin) {
     }
   }
   if (theme.reactions) {
-    for (const r of Object.values(theme.reactions)) {
+    for (const r of Object.values(theme.reactions as Record<string, any>)) {
       if (r && r.file) r.file = bn(r.file);
       if (r && Array.isArray(r.files)) r.files = r.files.map(bn);
     }
@@ -852,18 +872,18 @@ function mergeDefaults(raw, themeId, isBuiltin) {
     for (const [k, v] of Object.entries(theme.displayHintMap)) theme.displayHintMap[k] = bn(v);
   }
   if (theme.workingTiers) {
-    for (const t of theme.workingTiers) { if (t.file) t.file = bn(t.file); }
+    for (const t of theme.workingTiers as Array<Record<string, any>>) { if (t.file) t.file = bn(t.file); }
   }
   if (theme.jugglingTiers) {
-    for (const t of theme.jugglingTiers) { if (t.file) t.file = bn(t.file); }
+    for (const t of theme.jugglingTiers as Array<Record<string, any>>) { if (t.file) t.file = bn(t.file); }
   }
   if (Array.isArray(theme.idleAnimations)) {
-    for (const a of theme.idleAnimations) { if (a && a.file) a.file = bn(a.file); }
+    for (const a of theme.idleAnimations as Array<Record<string, any>>) { if (a && a.file) a.file = bn(a.file); }
   }
   if (Array.isArray(theme.wideHitboxFiles)) theme.wideHitboxFiles = theme.wideHitboxFiles.map(bn);
   if (Array.isArray(theme.sleepingHitboxFiles)) theme.sleepingHitboxFiles = theme.sleepingHitboxFiles.map(bn);
   if (theme.accessories) {
-    for (const acc of Object.values(theme.accessories)) {
+    for (const acc of Object.values(theme.accessories as Record<string, any>)) {
       if (acc && acc.file) {
         if (isSharedRef(acc.file)) {
           acc.file = SHARED_PREFIX + path.basename(stripShared(acc.file));

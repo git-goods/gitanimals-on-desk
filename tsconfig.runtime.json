@@ -20,8 +20,8 @@
     "src/settings/store.ts",
     "src/core/state-selectors.ts",
     "src/core/settings-runtime.ts",
-    "src/theme/loader.js",
-    "src/theme/remote-sync.js",
+    "src/theme/loader.ts",
+    "src/theme/remote-sync.ts",
     "agents/**/*.js",
     "hooks/json-utils.js",
     "hooks/shared-process.js"
