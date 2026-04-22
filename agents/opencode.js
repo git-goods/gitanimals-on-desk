@@ -2,6 +2,9 @@
 // Perception via opencode Plugin SDK: event hook → HTTP POST to GitAnimals
 // Plugin registered in ~/.config/opencode/opencode.json "plugin" array (global scope)
 
+/** @typedef {import("../src/types/contracts").AgentDefinition} AgentDefinition */
+
+/** @type {AgentDefinition} */
 module.exports = {
   id: "opencode",
   name: "OpenCode",

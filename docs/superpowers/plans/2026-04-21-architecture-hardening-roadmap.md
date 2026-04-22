@@ -104,6 +104,7 @@
 - 런타임 동작 변화 없이 구조 안전성 향상
 - 우선순위는 `settings` data/controller 레이어 -> theme loader -> agent registry 순서
 - theme 단계는 `loader` / `remote-sync`와 그 하위 의존(`telemetry`)까지 묶어서 확장
+- agents 단계는 각 definition 파일이 직접 `AgentDefinition` 계약을 만족하도록 정렬
 
 ### Step 7-8
 

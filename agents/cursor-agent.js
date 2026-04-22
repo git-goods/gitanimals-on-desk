@@ -1,6 +1,9 @@
 // Cursor IDE — Agent (Composer) hooks via ~/.cursor/hooks.json
 // Event names are camelCase (Cursor hook spec); cursor-hook.js normalizes to PascalCase for the state machine.
 
+/** @typedef {import("../src/types/contracts").AgentDefinition} AgentDefinition */
+
+/** @type {AgentDefinition} */
 module.exports = {
   id: "cursor-agent",
   name: "Cursor Agent",
