@@ -17,6 +17,14 @@
 // that just landed (only keys whose values actually changed) and `snapshot` is
 // the full new snapshot.
 
+/** @typedef {import("../types/contracts").SettingsSnapshot} SettingsSnapshot */
+/** @typedef {import("../types/settings").SettingsStore} SettingsStore */
+/** @typedef {import("../types/settings").SettingsStoreBroadcast} SettingsStoreBroadcast */
+
+/**
+ * @param {SettingsSnapshot} initialSnapshot
+ * @returns {SettingsStore}
+ */
 function createStore(initialSnapshot) {
   if (!initialSnapshot || typeof initialSnapshot !== "object") {
     throw new TypeError("createStore(initialSnapshot): initialSnapshot must be an object");

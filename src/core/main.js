@@ -2,6 +2,7 @@ const { app, BrowserWindow, screen, Menu, ipcMain, globalShortcut, nativeTheme, 
 const path = require("path");
 const fs = require("fs");
 const { applyStationaryCollectionBehavior } = require("./mac-window");
+const { createSettingsRuntime } = require("./settings-runtime");
 const hitGeometry = require("../hit/geometry");
 const { findNearestWorkArea, computeLooseClamp, SYNTHETIC_WORK_AREA } = require("../utils/work-area");
 const telemetry = require("./telemetry");
@@ -79,34 +80,6 @@ function _uninstallAutoStartHook() {
   unregisterAutoStart();
 }
 
-// Cross-platform "open at login" writer used by both the openAtLogin effect
-// and the startup hydration helper. Throws on failure so the action layer can
-// surface the error to the UI.
-function _writeSystemOpenAtLogin(enabled) {
-  if (isLinux) {
-    const launchScript = path.join(__dirname, "..", "..", "launch.js");
-    const execCmd = app.isPackaged
-      ? `"${process.env.APPIMAGE || app.getPath("exe")}"`
-      : `node "${launchScript}"`;
-    loginItemHelpers.linuxSetOpenAtLogin(enabled, { execCmd });
-    return;
-  }
-  app.setLoginItemSettings(
-    loginItemHelpers.getLoginItemSettings({
-      isPackaged: app.isPackaged,
-      openAtLogin: enabled,
-      execPath: process.execPath,
-      appPath: app.getAppPath(),
-    })
-  );
-}
-function _readSystemOpenAtLogin() {
-  if (isLinux) return loginItemHelpers.linuxGetOpenAtLogin();
-  return app.getLoginItemSettings(
-    app.isPackaged ? {} : { path: process.execPath, args: [app.getAppPath()] }
-  ).openAtLogin;
-}
-
 // Forward declarations — these are defined later in the file but the
 // controller's injectedDeps need to resolve them lazily. Using a function
 // wrapper lets us bind them after module scope finishes without a second
@@ -134,7 +107,7 @@ const _settingsController = createSettingsController({
   injectedDeps: {
     installAutoStart: _installAutoStartHook,
     uninstallAutoStart: _uninstallAutoStartHook,
-    setOpenAtLogin: _writeSystemOpenAtLogin,
+    setOpenAtLogin: (...args) => _settingsRuntime.writeSystemOpenAtLogin(...args),
     startMonitorForAgent: _deferredStartMonitorForAgent,
     stopMonitorForAgent: _deferredStopMonitorForAgent,
     clearSessionsByAgent: _deferredClearSessionsByAgent,
@@ -160,52 +133,6 @@ let _lastUnauthorizedNotifiedAt = 0; // epoch ms — debounce OS notification (3
 // Updated by the subscriber in `wireSettingsSubscribers()` below — never
 // assign directly.
 let lang = _settingsController.get("lang");
-
-// First-run import of system-backed settings into prefs. The actual truth for
-// `openAtLogin` lives in OS login items / autostart files; if we just trusted
-// the schema default (false), an upgrading user with login-startup already
-// enabled would silently lose it the first time prefs is saved. So on first
-// boot after this field exists in the schema, copy the system value INTO prefs
-// and mark it hydrated. After that, prefs is the source of truth and the
-// openAtLogin pre-commit gate handles future writes back to the system.
-//
-// MUST run inside app.whenReady() — Electron's app.getLoginItemSettings() is
-// only stable after the app is ready. MUST run before createWindow() so the
-// first menu render reads the hydrated value.
-function hydrateSystemBackedSettings() {
-  if (_settingsController.get("openAtLoginHydrated")) return;
-  let systemValue = false;
-  try {
-    systemValue = !!_readSystemOpenAtLogin();
-  } catch (err) {
-    console.warn("GitAnimals: failed to read system openAtLogin during hydration:", err && err.message);
-  }
-  const result = _settingsController.hydrate({
-    openAtLogin: systemValue,
-    openAtLoginHydrated: true,
-  });
-  if (result && result.status === "error") {
-    console.warn("GitAnimals: openAtLogin hydration failed:", result.message);
-  }
-}
-
-// Capture window/mini runtime state into the controller and write to disk.
-// Replaces the legacy `savePrefs()` callsites — they used to read fresh
-// `win.getBounds()` and `_mini.*` at save time, so we mirror that here.
-function flushRuntimeStateToPrefs() {
-  if (!win || win.isDestroyed()) return;
-  const bounds = win.getBounds();
-  _settingsController.applyBulk({
-    x: bounds.x,
-    y: bounds.y,
-    positionSaved: true,
-    size: currentSize,
-    miniMode: _mini.getMiniMode(),
-    miniEdge: _mini.getMiniEdge(),
-    preMiniX: _mini.getPreMiniX(),
-    preMiniY: _mini.getPreMiniY(),
-  });
-}
 
 let _codexMonitor = null;          // Codex CLI JSONL log polling instance
 let _geminiMonitor = null;         // Gemini CLI session JSON polling instance
@@ -262,6 +189,7 @@ let contextMenuOwner = null;
 // sync by the settings subscriber. The legacy S/M/L → P:N migration runs
 // inside createWindow() because it needs the screen API.
 let currentSize = _settingsController.get("size");
+let _settingsRuntime;
 
 // ── Proportional size mode ──
 // currentSize = "P:<ratio>" means the pet occupies <ratio>% of the work area width.
@@ -1400,6 +1328,12 @@ function createWindow() {
         report("[renderer] window.onerror", "error", payload);
       } else if (kind === "unhandled-rejection") {
         report("[renderer] unhandledrejection", "error", payload);
+      } else if (kind === "asset-load-failed") {
+        report("[renderer] asset-load-failed", "error", {
+          ...payload,
+          isPackaged: app.isPackaged,
+          appVersion: app.getVersion(),
+        });
       } else {
         bc("renderer", String(kind || "diagnostic"), payload);
       }
@@ -1584,6 +1518,16 @@ const _miniCtx = {
 const _mini = require("./mini")(_miniCtx);
 const { enterMiniMode, exitMiniMode, enterMiniViaMenu, miniPeekIn, miniPeekOut,
         checkMiniModeSnap, cancelMiniTransition, animateWindowX, animateWindowParabola } = _mini;
+_settingsRuntime = createSettingsRuntime({
+  app,
+  isLinux,
+  loginItemHelpers,
+  settingsController: _settingsController,
+  getLaunchScriptPath: () => path.join(__dirname, "..", "..", "launch.js"),
+  getWin: () => win,
+  getCurrentSize: () => currentSize,
+  mini: _mini,
+});
 
 // Convenience getters for mini state (used throughout main.js)
 Object.defineProperties(this || {}, {}); // no-op placeholder
@@ -1628,7 +1572,7 @@ function switchTheme(themeId) {
   // flushRuntimeStateToPrefs only captures window bounds + mini state;
   // user-selected prefs like `theme` must be written explicitly.
   _settingsController.applyBulk({ theme: themeId });
-  flushRuntimeStateToPrefs();
+  _settingsRuntime.flushRuntimeStateToPrefs();
   rebuildAllMenus();
 }
 
@@ -1803,7 +1747,7 @@ if (!gotTheLock) {
     // Import system-backed settings (openAtLogin) into prefs on first run.
     // Must run before createWindow() so the first menu draw sees the
     // hydrated value rather than the schema default.
-    hydrateSystemBackedSettings();
+    _settingsRuntime.hydrateSystemBackedSettings();
 
     // Reconcile telemetry with user preference. Default is true (opt-out).
     try {
@@ -1858,7 +1802,7 @@ if (!gotTheLock) {
   app.on("before-quit", () => {
     try { bc("app", "before-quit"); } catch {}
     isQuitting = true;
-    flushRuntimeStateToPrefs();
+    _settingsRuntime.flushRuntimeStateToPrefs();
     unregisterToggleShortcut();
     globalShortcut.unregisterAll();
     _perm.cleanup();

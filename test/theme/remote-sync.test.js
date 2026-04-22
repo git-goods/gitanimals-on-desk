@@ -2,7 +2,6 @@
 
 const { describe, it, before, after, beforeEach } = require("node:test");
 const assert = require("node:assert");
-const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -27,30 +26,6 @@ const FOX_THEME_JSON = {
 
 const MINI_SVG = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>';
 const MALICIOUS_SVG = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><rect width="10" height="10"/></svg>';
-
-// ── Test HTTP server ──
-
-function startServer(routes) {
-  return new Promise((resolve) => {
-    const server = http.createServer((req, res) => {
-      const handler = routes[req.url];
-      if (!handler) {
-        res.writeHead(404);
-        res.end();
-        return;
-      }
-      handler(req, res);
-    });
-    server.listen(0, "127.0.0.1", () => {
-      const addr = server.address();
-      resolve({ server, url: `http://127.0.0.1:${addr.port}` });
-    });
-  });
-}
-
-function stopServer(s) {
-  return new Promise((resolve) => s && s.close(resolve));
-}
 
 function makeTempUserData() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-remote-sync-"));
@@ -98,45 +73,47 @@ describe("remote-theme-sync._isStale", () => {
   });
 });
 
-describe("remote-theme-sync syncAll (live localhost)", () => {
+describe("remote-theme-sync syncAll (mocked fetch)", () => {
   let envSaved;
   let tmp;
-  let server;
+  const baseUrl = "http://mock.local";
 
   before(() => {
     envSaved = process.env.THEME_REGISTRY_URL;
   });
   after(() => {
     process.env.THEME_REGISTRY_URL = envSaved || "";
+    remoteThemeSync._setFetchBufferForTests(null);
   });
 
   beforeEach(() => {
     tmp = makeTempUserData();
+    remoteThemeSync._setFetchBufferForTests(null);
   });
 
+  function installFetchMap(routes) {
+    remoteThemeSync._setFetchBufferForTests(async (url) => {
+      const response = routes[url];
+      if (response instanceof Error) throw response;
+      if (response === undefined) throw new Error(`Missing mock response for ${url}`);
+      return Buffer.isBuffer(response) ? response : Buffer.from(String(response), "utf8");
+    });
+    process.env.THEME_REGISTRY_URL = baseUrl;
+  }
+
   async function runSync(routes) {
-    const started = await startServer(routes);
-    server = started.server;
-    process.env.THEME_REGISTRY_URL = started.url;
+    installFetchMap(routes);
     remoteThemeSync.init(tmp);
     await remoteThemeSync.syncAll();
-    await stopServer(server);
-    server = null;
   }
 
   it("fetches registry + theme + SVGs, writes to cache", async () => {
     await runSync({
-      "/themes/index.json": (_req, res) => {
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify([{ id: "dessert-fox", name: "Dessert Fox", version: "1.0.0" }]));
-      },
-      "/themes/dessert-fox/theme.json": (_req, res) => {
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify(FOX_THEME_JSON));
-      },
-      "/themes/dessert-fox/idle-follow.svg": (_req, res) => { res.writeHead(200); res.end(MINI_SVG); },
-      "/themes/dessert-fox/typing.svg": (_req, res) => { res.writeHead(200); res.end(MINI_SVG); },
-      "/themes/dessert-fox/thinking.svg": (_req, res) => { res.writeHead(200); res.end(MINI_SVG); },
+      [`${baseUrl}/themes/index.json`]: JSON.stringify([{ id: "dessert-fox", name: "Dessert Fox", version: "1.0.0" }]),
+      [`${baseUrl}/themes/dessert-fox/theme.json`]: JSON.stringify(FOX_THEME_JSON),
+      [`${baseUrl}/themes/dessert-fox/idle-follow.svg`]: MINI_SVG,
+      [`${baseUrl}/themes/dessert-fox/typing.svg`]: MINI_SVG,
+      [`${baseUrl}/themes/dessert-fox/thinking.svg`]: MINI_SVG,
     });
 
     // Registry
@@ -158,17 +135,20 @@ describe("remote-theme-sync syncAll (live localhost)", () => {
 
   it("sanitizes malicious SVG content", async () => {
     await runSync({
-      "/themes/index.json": (_req, res) => {
-        res.writeHead(200);
-        res.end(JSON.stringify([{ id: "evil-theme", name: "Evil", version: "1.0.0" }]));
-      },
-      "/themes/evil-theme/theme.json": (_req, res) => {
-        res.writeHead(200);
-        res.end(JSON.stringify({ ...FOX_THEME_JSON, states: { idle: ["idle-follow.svg"], working: ["typing.svg"], thinking: ["thinking.svg"], sleeping: ["idle-follow.svg"], waking: ["idle-follow.svg"] } }));
-      },
-      "/themes/evil-theme/idle-follow.svg": (_req, res) => { res.writeHead(200); res.end(MALICIOUS_SVG); },
-      "/themes/evil-theme/typing.svg": (_req, res) => { res.writeHead(200); res.end(MALICIOUS_SVG); },
-      "/themes/evil-theme/thinking.svg": (_req, res) => { res.writeHead(200); res.end(MALICIOUS_SVG); },
+      [`${baseUrl}/themes/index.json`]: JSON.stringify([{ id: "evil-theme", name: "Evil", version: "1.0.0" }]),
+      [`${baseUrl}/themes/evil-theme/theme.json`]: JSON.stringify({
+        ...FOX_THEME_JSON,
+        states: {
+          idle: ["idle-follow.svg"],
+          working: ["typing.svg"],
+          thinking: ["thinking.svg"],
+          sleeping: ["idle-follow.svg"],
+          waking: ["idle-follow.svg"],
+        },
+      }),
+      [`${baseUrl}/themes/evil-theme/idle-follow.svg`]: MALICIOUS_SVG,
+      [`${baseUrl}/themes/evil-theme/typing.svg`]: MALICIOUS_SVG,
+      [`${baseUrl}/themes/evil-theme/thinking.svg`]: MALICIOUS_SVG,
     });
 
     const cached = fs.readFileSync(path.join(tmp, "theme-cache", "evil-theme", "assets", "idle-follow.svg"), "utf8");
@@ -178,21 +158,15 @@ describe("remote-theme-sync syncAll (live localhost)", () => {
 
   it("rejects invalid theme ids from registry", async () => {
     await runSync({
-      "/themes/index.json": (_req, res) => {
-        res.writeHead(200);
-        res.end(JSON.stringify([
-          { id: "../evil", name: "Evil", version: "1.0" },
-          { id: "has spaces", name: "Bad", version: "1.0" },
-          { id: "ok-one", name: "OK", version: "1.0" },
-        ]));
-      },
-      "/themes/ok-one/theme.json": (_req, res) => {
-        res.writeHead(200);
-        res.end(JSON.stringify(FOX_THEME_JSON));
-      },
-      "/themes/ok-one/idle-follow.svg": (_req, res) => { res.writeHead(200); res.end(MINI_SVG); },
-      "/themes/ok-one/typing.svg": (_req, res) => { res.writeHead(200); res.end(MINI_SVG); },
-      "/themes/ok-one/thinking.svg": (_req, res) => { res.writeHead(200); res.end(MINI_SVG); },
+      [`${baseUrl}/themes/index.json`]: JSON.stringify([
+        { id: "../evil", name: "Evil", version: "1.0" },
+        { id: "has spaces", name: "Bad", version: "1.0" },
+        { id: "ok-one", name: "OK", version: "1.0" },
+      ]),
+      [`${baseUrl}/themes/ok-one/theme.json`]: JSON.stringify(FOX_THEME_JSON),
+      [`${baseUrl}/themes/ok-one/idle-follow.svg`]: MINI_SVG,
+      [`${baseUrl}/themes/ok-one/typing.svg`]: MINI_SVG,
+      [`${baseUrl}/themes/ok-one/thinking.svg`]: MINI_SVG,
     });
 
     const registry = remoteThemeSync.loadCachedRegistry();
@@ -206,32 +180,44 @@ describe("remote-theme-sync syncAll (live localhost)", () => {
   it("skips refetch when cache is fresh (TTL)", async () => {
     let requests = 0;
     const routes = {
-      "/themes/index.json": (_req, res) => { requests++; res.writeHead(200); res.end(JSON.stringify([{ id: "dessert-fox", name: "Dessert Fox", version: "1.0.0" }])); },
-      "/themes/dessert-fox/theme.json": (_req, res) => { requests++; res.writeHead(200); res.end(JSON.stringify(FOX_THEME_JSON)); },
-      "/themes/dessert-fox/idle-follow.svg": (_req, res) => { requests++; res.writeHead(200); res.end(MINI_SVG); },
-      "/themes/dessert-fox/typing.svg": (_req, res) => { requests++; res.writeHead(200); res.end(MINI_SVG); },
-      "/themes/dessert-fox/thinking.svg": (_req, res) => { requests++; res.writeHead(200); res.end(MINI_SVG); },
+      [`${baseUrl}/themes/index.json`]: JSON.stringify([{ id: "dessert-fox", name: "Dessert Fox", version: "1.0.0" }]),
+      [`${baseUrl}/themes/dessert-fox/theme.json`]: JSON.stringify(FOX_THEME_JSON),
+      [`${baseUrl}/themes/dessert-fox/idle-follow.svg`]: MINI_SVG,
+      [`${baseUrl}/themes/dessert-fox/typing.svg`]: MINI_SVG,
+      [`${baseUrl}/themes/dessert-fox/thinking.svg`]: MINI_SVG,
     };
+    installFetchMap(new Proxy(routes, {
+      get(target, prop) {
+        if (typeof prop === "string" && Object.prototype.hasOwnProperty.call(target, prop)) {
+          requests++;
+          return target[prop];
+        }
+        return undefined;
+      },
+    }));
 
     // First sync
-    await runSync(routes);
+    remoteThemeSync.init(tmp);
+    await remoteThemeSync.syncAll();
     const firstRequests = requests;
     assert.ok(firstRequests > 0);
 
     // Second sync — cache fresh → no network
     requests = 0;
-    await runSync(routes);
+    installFetchMap(routes);
+    remoteThemeSync.init(tmp);
+    await remoteThemeSync.syncAll();
     assert.strictEqual(requests, 0);
   });
 
   it("preserves cache when server is unreachable (offline scenario)", async () => {
     // First successful sync
     await runSync({
-      "/themes/index.json": (_req, res) => { res.writeHead(200); res.end(JSON.stringify([{ id: "dessert-fox", name: "Dessert Fox", version: "1.0.0" }])); },
-      "/themes/dessert-fox/theme.json": (_req, res) => { res.writeHead(200); res.end(JSON.stringify(FOX_THEME_JSON)); },
-      "/themes/dessert-fox/idle-follow.svg": (_req, res) => { res.writeHead(200); res.end(MINI_SVG); },
-      "/themes/dessert-fox/typing.svg": (_req, res) => { res.writeHead(200); res.end(MINI_SVG); },
-      "/themes/dessert-fox/thinking.svg": (_req, res) => { res.writeHead(200); res.end(MINI_SVG); },
+      [`${baseUrl}/themes/index.json`]: JSON.stringify([{ id: "dessert-fox", name: "Dessert Fox", version: "1.0.0" }]),
+      [`${baseUrl}/themes/dessert-fox/theme.json`]: JSON.stringify(FOX_THEME_JSON),
+      [`${baseUrl}/themes/dessert-fox/idle-follow.svg`]: MINI_SVG,
+      [`${baseUrl}/themes/dessert-fox/typing.svg`]: MINI_SVG,
+      [`${baseUrl}/themes/dessert-fox/thinking.svg`]: MINI_SVG,
     });
 
     // Expire TTL + point to unreachable URL
@@ -244,7 +230,10 @@ describe("remote-theme-sync syncAll (live localhost)", () => {
     meta.fetchedAt = 0;
     fs.writeFileSync(metaPath, JSON.stringify(meta));
 
-    process.env.THEME_REGISTRY_URL = "http://127.0.0.1:1"; // unreachable
+    installFetchMap({
+      [`${baseUrl}/themes/index.json`]: new Error("connect ECONNREFUSED 127.0.0.1:1"),
+      [`${baseUrl}/themes/dessert-fox/theme.json`]: new Error("connect ECONNREFUSED 127.0.0.1:1"),
+    });
     remoteThemeSync.init(tmp);
     await remoteThemeSync.syncAll();
 

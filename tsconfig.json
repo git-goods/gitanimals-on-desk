@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "src/types/**/*.d.ts",
+    "src/settings/prefs.js",
+    "src/settings/agent-gate.js",
+    "src/settings/actions.js",
+    "src/settings/store.js",
+    "src/settings/controller.js",
+    "src/preload/settings-bridge.js",
+    "src/core/state-selectors.js",
+    "src/core/telemetry.js",
+    "src/theme/loader.js",
+    "src/theme/remote-sync.js",
+    "agents/**/*.js",
+    "hooks/json-utils.js",
+    "hooks/shared-process.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".worktrees",
+    "tools/preview"
+  ]
+}

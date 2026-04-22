@@ -50,6 +50,9 @@
 
 const { CURRENT_VERSION, AGENT_FLAGS } = require("./prefs");
 
+/** @typedef {import("../types/settings").SettingsCommandRegistry} SettingsCommandRegistry */
+/** @typedef {import("../types/settings").SettingsUpdateRegistry} SettingsUpdateRegistry */
+
 // ── Validator helpers ──
 
 function requireBoolean(key) {
@@ -103,6 +106,7 @@ function requirePlainObject(key) {
 // ── updateRegistry ──
 // Maps prefs field name → validator. Controller looks up by key and runs.
 
+/** @type {SettingsUpdateRegistry} */
 const updateRegistry = {
   // ── Window state ──
   x: requireFiniteNumber("x"),
@@ -380,6 +384,7 @@ async function refreshThemes(_payload, deps) {
   return { status: "ok" };
 }
 
+/** @type {SettingsCommandRegistry} */
 const commandRegistry = {
   removeTheme: notImplemented("removeTheme"),
   installHooks: notImplemented("installHooks"),

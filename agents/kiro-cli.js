@@ -2,6 +2,9 @@
 // Hooks via ~/.kiro/agents/gitanimals.json, stdin JSON + exit code gating
 // Docs: https://kiro.dev/docs/cli/hooks/
 
+/** @typedef {import("../src/types/contracts").AgentDefinition} AgentDefinition */
+
+/** @type {AgentDefinition} */
 module.exports = {
   id: "kiro-cli",
   name: "Kiro CLI",

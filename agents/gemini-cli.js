@@ -1,6 +1,9 @@
 // Gemini CLI agent configuration
 // Hooks via ~/.gemini/settings.json, stdin JSON + stdout JSON
 
+/** @typedef {import("../src/types/contracts").AgentDefinition} AgentDefinition */
+
+/** @type {AgentDefinition} */
 module.exports = {
   id: "gemini-cli",
   name: "Gemini CLI",

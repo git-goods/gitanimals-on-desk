@@ -3,6 +3,9 @@
 // Settings: ~/.codebuddy/settings.json
 // Docs: https://www.codebuddy.ai/docs/zh/cli/hooks
 
+/** @typedef {import("../src/types/contracts").AgentDefinition} AgentDefinition */
+
+/** @type {AgentDefinition} */
 module.exports = {
   id: "codebuddy",
   name: "CodeBuddy",

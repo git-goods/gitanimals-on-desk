@@ -7,6 +7,9 @@ const { bc, report } = (() => {
   try { return require("../core/telemetry"); } catch { return { bc() {}, report() {} }; }
 })();
 
+/** @typedef {import("../types/contracts").ThemeCatalogEntry} ThemeCatalogEntry */
+/** @typedef {import("../types/contracts").ThemeManifest} ThemeManifest */
+
 // ── Shared accessory pool ──
 const SHARED_PREFIX = "shared:";
 const SHARED_ACCESSORIES_PATH = "../../themes/_shared/accessories";
@@ -114,10 +117,10 @@ function init(appDir, userData) {
 /**
  * Discover all available themes.
  * Scans built-in themes dir + {userData}/themes/
- * @returns {{ id: string, name: string, path: string, builtin: boolean }[]}
+ * @returns {ThemeCatalogEntry[]}
  */
 function discoverThemes() {
-  const themes = [];
+  const themes = /** @type {ThemeCatalogEntry[]} */ ([]);
   const seen = new Set();
   _variantMap = {};
 
@@ -184,7 +187,7 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
 /**
  * Load and activate a theme by ID.
  * @param {string} themeId
- * @returns {object} merged theme config
+ * @returns {ThemeManifest & Record<string, unknown>} merged theme config
  */
 function loadTheme(themeId) {
   // Resolve variant ID → parent theme directory
@@ -513,7 +516,10 @@ function getAssetPath(filename) {
  * @returns {string} path prefix
  */
 function getRendererAssetsPath() {
-  if (!activeTheme) return "../../assets/svg";
+  if (!activeTheme) {
+    try { bc("theme", "legacy-fallback", { reason: "no-active-theme" }); } catch {}
+    return "../../assets/svg";
+  }
   if (activeTheme._builtin) {
     // Built-in theme with own assets dir (e.g., calico with SVG + APNGs)
     const themeAssetsDir = path.join(activeTheme._themeDir, "assets");
@@ -523,10 +529,27 @@ function getRendererAssetsPath() {
       // Use directory basename (not _id) — variant IDs differ from dir names
       return "../../themes/" + path.basename(activeTheme._themeDir) + "/assets";
     }
+    try {
+      bc("theme", "legacy-fallback", {
+        reason: "builtin-assets-missing",
+        id: activeTheme._id,
+        themeDir: activeTheme._themeDir,
+      });
+    } catch {}
+    return "../../assets/svg";
+  }
+  if (!activeTheme._assetsFileUrl) {
+    try {
+      bc("theme", "legacy-fallback", {
+        reason: "external-no-file-url",
+        id: activeTheme._id,
+        source: activeTheme._source,
+      });
+    } catch {}
     return "../../assets/svg";
   }
   // External theme: return file:// URL to the cache dir for SVGs
-  return activeTheme._assetsFileUrl || "../../assets/svg";
+  return activeTheme._assetsFileUrl;
 }
 
 /**
@@ -555,6 +578,10 @@ function getRendererConfig() {
   if (!activeTheme) return null;
   const t = activeTheme;
   return {
+    // Identity — renderer attaches these to asset-load-failed diagnostics so
+    // Sentry can tell which theme/source produced the broken image.
+    themeId: t._id,
+    themeSource: t._source || (t._builtin ? "builtin" : "unknown"),
     viewBox: t.viewBox,
     layout: t.layout,
     assetsPath: getRendererAssetsPath(),

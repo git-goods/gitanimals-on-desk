@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "enabled": true,
+  "teamName": "",
+  "feature": "gitanimals-buddy",
+  "pdcaPhase": "do",
+  "orchestrationPattern": "leader",
+  "ctoAgent": "opus",
+  "startedAt": "2026-04-21T07:06:50.790Z",
+  "lastUpdated": "2026-04-21T07:08:31.827Z",
+  "teammates": [
+    {
+      "name": "a2b5779ad44ac6eff",
+      "role": "Explore",
+      "model": "sonnet",
+      "status": "completed",
+      "currentTask": null,
+      "taskId": null,
+      "startedAt": "2026-04-21T07:06:50.791Z",
+      "lastActivityAt": "2026-04-21T07:08:31.826Z"
+    }
+  ],
+  "progress": {
+    "totalTasks": 0,
+    "completedTasks": 0,
+    "inProgressTasks": 0,
+    "failedTasks": 0,
+    "pendingTasks": 0
+  },
+  "recentMessages": [],
+  "sessionId": "1a161872-52b6-40bb-87ef-361f678c8633"
+}
