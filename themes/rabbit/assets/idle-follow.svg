@@ -5,22 +5,7 @@
       50%  { transform: translate(0, -11px); }
       100% { transform: translate(0, -10px); }
     }
-    @keyframes rabbit-idle-obj {
-      0%   { transform: translate(0, 0); }
-      15%  { transform: translate(0, -5px); }
-      30%  { transform: translate(0, 0); }
-      100% { transform: translate(0, 0); }
-    }
-    @keyframes rabbit-idle-shadow {
-      0%   { transform: translate(-2px, 0px) scaleX(1); }
-      15%  { transform: translate(-2px, 0px) scaleX(1.1); }
-      30%  { transform: translate(-2px, 0px) scaleX(1); }
-      100% { transform: translate(-2px, 0px) scaleX(1); }
-    }
-
     #rabbit-idle-head { animation: rabbit-idle-head 1s ease-in-out infinite; }
-    #rabbit-idle-obj { animation: rabbit-idle-obj 2s ease-in-out infinite; }
-    #rabbit-idle-shadow { animation: rabbit-idle-shadow 2s ease-in-out infinite; }
   </style>
 
   <g transform="translate(1, 7) scale(1.5)">
