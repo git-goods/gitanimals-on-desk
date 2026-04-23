@@ -39,20 +39,6 @@ docs/*
 *.tmp
 
 
-# Calico animation studio (WIP pipeline, not for distribution)
-calico-studio/
-
-# WIP artwork (unpublished, All Rights Reserved)
-tools/calico-*
-!tools/calico-final.svg
-
-# Internal pipeline tools (not for distribution)
-tools/chroma_key.py
-tools/fix_gray_bleed.py
-tools/rebuild_apng.py
-tools/check_dark.py
-!tools/calico-test.html
-
 # Debug logs
 logs/
 
@@ -74,14 +60,4 @@ scripts/*
 # Cursor local config (MCP, rules from omc setup)
 .cursor/
 .bkit/*
-src/core/state-selectors.js
-src/core/settings-runtime.js
-src/preload/settings-bridge.js
-src/settings/actions.js
-src/settings/controller.js
-src/settings/prefs.js
-src/settings/store.js
-src/theme/loader.js
-src/theme/remote-sync.js
-hooks/json-utils.js
-hooks/shared-process.js
+**/.bkit
