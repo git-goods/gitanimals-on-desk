@@ -1169,6 +1169,9 @@ function wireSettingsSubscribers() {
       flip = changes.flip;
       sendToRenderer("flip-change", flip);
     }
+    if ("theme" in changes) {
+      switchTheme(changes.theme);
+    }
 
     // 2. Reactive side effects (mirror what the legacy setters / click handlers used to do).
     if ("hideBubbles" in changes) {
