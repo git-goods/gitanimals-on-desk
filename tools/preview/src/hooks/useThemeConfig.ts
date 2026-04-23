@@ -19,15 +19,23 @@ export function useThemeConfig(themeId: string | null) {
   const [loading, setLoading] = useState(false);
 
   const reload = useCallback(() => {
-    if (!themeId) return;
+    if (!themeId) {
+      setConfig(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     fetch(`/api/themes/${encodeURIComponent(themeId)}/config`)
       .then((r) => r.json())
       .then((data) => {
         if (!data.error) setConfig(data);
+        else setConfig(null);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setConfig(null);
+        setLoading(false);
+      });
   }, [themeId]);
 
   useEffect(() => {

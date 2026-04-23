@@ -7,6 +7,10 @@ function makeCtx(overrides = {}) {
   return {
     doNotDisturb: false,
     miniMode: false,
+    autoCheckForUpdates: true,
+    getPendingUpdateVersion: () => "",
+    getUpdateSnoozeUntil: () => 0,
+    savePendingState() {},
     rebuildAllMenus() {},
     updateLog() {},
     t: (k) => k,
@@ -311,5 +315,231 @@ describe("updater visual flow", () => {
 
     assert.strictEqual(resetSoundCooldownCalls, 1);
     assert.ok(appliedStates.includes("attention"));
+  });
+});
+
+describe("scheduler", () => {
+  beforeEach(() => {
+    mock.restoreAll();
+    delete require.cache[require.resolve("../../src/update/updater")];
+    initUpdater = require("../../src/update/updater");
+  });
+
+  it("startScheduler does nothing when app.isPackaged is false", () => {
+    const ctx = makeCtx();
+    const updater = initUpdater(ctx, makeDeps({
+      app: { isPackaged: false, getVersion: () => "1.0.0", relaunch() {}, exit() {} },
+    }));
+    updater.startScheduler();
+    updater.stopScheduler();
+  });
+
+  it("stopScheduler is safe to call without start", () => {
+    const ctx = makeCtx();
+    const updater = initUpdater(ctx, makeDeps());
+    updater.stopScheduler();
+  });
+});
+
+describe("defer", () => {
+  beforeEach(() => {
+    mock.restoreAll();
+    delete require.cache[require.resolve("../../src/update/updater")];
+    initUpdater = require("../../src/update/updater");
+  });
+
+  it("saves pendingUpdateVersion when update found during DND", async () => {
+    const savedState = {};
+    const bubbles = [];
+    const ctx = makeCtx({
+      doNotDisturb: true,
+      showUpdateBubble: (p) => { bubbles.push(p); return "later"; },
+      savePendingState(partial) { Object.assign(savedState, partial); },
+    });
+    const autoUpdater = {
+      autoDownload: false,
+      autoInstallOnAppQuit: true,
+      _handlers: {},
+      on(event, handler) { this._handlers[event] = handler; },
+      checkForUpdates: async () => ({}),
+      quitAndInstall() {},
+      downloadUpdate() {},
+    };
+    const updater = initUpdater(ctx, makeDeps({ autoUpdaterFactory: () => autoUpdater }));
+    updater.setupAutoUpdater();
+    await autoUpdater._handlers["update-available"]({ version: "2.0.0" });
+
+    assert.strictEqual(savedState.pendingUpdateVersion, "2.0.0");
+    const availableBubbles = bubbles.filter(b => b.mode === "available");
+    assert.strictEqual(availableBubbles.length, 0);
+  });
+
+  it("reevaluateDeferred prompts when not silent and snooze expired", async () => {
+    const bubbles = [];
+    const ctx = makeCtx({
+      showUpdateBubble: (p) => { bubbles.push(p); return "later"; },
+      getPendingUpdateVersion: () => "2.0.0",
+      getUpdateSnoozeUntil: () => 0,
+      savePendingState() {},
+    });
+    const updater = initUpdater(ctx, makeDeps());
+    updater.setupAutoUpdater();
+    await updater.reevaluateDeferred();
+
+    const availableBubbles = bubbles.filter(b => b.mode === "available");
+    assert.ok(availableBubbles.length > 0, "should show available prompt");
+  });
+
+  it("reevaluateDeferred skips when still silent", async () => {
+    const bubbles = [];
+    const ctx = makeCtx({
+      doNotDisturb: true,
+      showUpdateBubble: (p) => { bubbles.push(p); return "later"; },
+      getPendingUpdateVersion: () => "2.0.0",
+      savePendingState() {},
+    });
+    const updater = initUpdater(ctx, makeDeps());
+    await updater.reevaluateDeferred();
+    assert.strictEqual(bubbles.length, 0);
+  });
+});
+
+describe("menu reflects available state", () => {
+  beforeEach(() => {
+    mock.restoreAll();
+    delete require.cache[require.resolve("../../src/update/updater")];
+    initUpdater = require("../../src/update/updater");
+  });
+
+  it("getUpdateMenuLabel shows version when status is available", async () => {
+    const savedState = {};
+    const ctx = makeCtx({
+      showUpdateBubble: () => "later",
+      savePendingState(partial) { Object.assign(savedState, partial); },
+    });
+    const autoUpdater = {
+      autoDownload: false,
+      autoInstallOnAppQuit: true,
+      _handlers: {},
+      on(event, handler) { this._handlers[event] = handler; },
+      checkForUpdates: async () => ({}),
+      quitAndInstall() {},
+      downloadUpdate() {},
+    };
+    const updater = initUpdater(ctx, makeDeps({ autoUpdaterFactory: () => autoUpdater }));
+    updater.setupAutoUpdater();
+
+    // Trigger update-available → user picks "later" → status stays "available"
+    await autoUpdater._handlers["update-available"]({ version: "2.0.0" });
+
+    const label = updater.getUpdateMenuLabel();
+    assert.ok(label.includes("2.0.0"), `label should include version, got: ${label}`);
+  });
+});
+
+describe("pending version cleanup", () => {
+  beforeEach(() => {
+    mock.restoreAll();
+    delete require.cache[require.resolve("../../src/update/updater")];
+    initUpdater = require("../../src/update/updater");
+  });
+
+  it("clears pendingUpdateVersion when current version is up-to-date", async () => {
+    const savedState = {};
+    const ctx = makeCtx({
+      showUpdateBubble: (p) => "dismiss",
+      savePendingState(partial) { Object.assign(savedState, partial); },
+      getPendingUpdateVersion: () => "0.5.10",
+      getUpdateSnoozeUntil: () => 0,
+    });
+    const updater = initUpdater(ctx, makeDeps({
+      app: { isPackaged: true, getVersion: () => "0.5.10", relaunch() {}, exit() {} },
+      httpsGetImpl: (options, cb) => {
+        const res = {
+          statusCode: 200,
+          on(evt, fn) {
+            if (evt === "data") fn(JSON.stringify({ tag_name: "v0.5.10" }));
+            if (evt === "end") fn();
+          },
+        };
+        cb(res);
+        return { on() {}, setTimeout() {} };
+      },
+    }));
+    updater.setupAutoUpdater();
+    await updater.checkForUpdates(false);
+
+    assert.strictEqual(savedState.pendingUpdateVersion, "");
+  });
+
+  it("persists lastUpdateCheckAt on check start", async () => {
+    const savedState = {};
+    const before = Date.now();
+    const ctx = makeCtx({
+      showUpdateBubble: (p) => "dismiss",
+      savePendingState(partial) { Object.assign(savedState, partial); },
+    });
+    const updater = initUpdater(ctx, makeDeps({
+      httpsGetImpl: (options, cb) => {
+        const res = {
+          statusCode: 200,
+          on(evt, fn) {
+            if (evt === "data") fn(JSON.stringify({ tag_name: "v0.5.10" }));
+            if (evt === "end") fn();
+          },
+        };
+        cb(res);
+        return { on() {}, setTimeout() {} };
+      },
+    }));
+    updater.setupAutoUpdater();
+    await updater.checkForUpdates(false);
+
+    assert.ok(savedState.lastUpdateCheckAt >= before, "should persist check timestamp");
+  });
+});
+
+describe("snooze", () => {
+  beforeEach(() => {
+    mock.restoreAll();
+    delete require.cache[require.resolve("../../src/update/updater")];
+    initUpdater = require("../../src/update/updater");
+  });
+
+  it("Later sets snooze and keeps pendingUpdateVersion", async () => {
+    const savedState = {};
+    const ctx = makeCtx({
+      showUpdateBubble: () => "later",
+      savePendingState(partial) { Object.assign(savedState, partial); },
+    });
+    const autoUpdater = {
+      autoDownload: false,
+      autoInstallOnAppQuit: true,
+      _handlers: {},
+      on(event, handler) { this._handlers[event] = handler; },
+      checkForUpdates: async () => ({}),
+      quitAndInstall() {},
+      downloadUpdate() {},
+    };
+    const updater = initUpdater(ctx, makeDeps({ autoUpdaterFactory: () => autoUpdater }));
+    updater.setupAutoUpdater();
+    await autoUpdater._handlers["update-available"]({ version: "2.0.0" });
+
+    assert.strictEqual(savedState.pendingUpdateVersion, "2.0.0");
+    assert.ok(savedState.updateSnoozeUntil > Date.now() - 1000, "snooze should be set");
+    assert.ok(savedState.updateSnoozeUntil <= Date.now() + 86400001, "snooze should be ~24h");
+  });
+
+  it("reevaluateDeferred skips when snooze not expired", async () => {
+    const bubbles = [];
+    const ctx = makeCtx({
+      showUpdateBubble: (p) => { bubbles.push(p); return "later"; },
+      getPendingUpdateVersion: () => "2.0.0",
+      getUpdateSnoozeUntil: () => Date.now() + 86400000,
+      savePendingState() {},
+    });
+    const updater = initUpdater(ctx, makeDeps());
+    await updater.reevaluateDeferred();
+    assert.strictEqual(bubbles.length, 0, "should not prompt while snoozed");
   });
 });

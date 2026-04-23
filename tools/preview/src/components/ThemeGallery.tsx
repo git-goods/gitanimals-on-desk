@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import type { ThemeListItem, ThemeConfig } from "../types";
 import ThemePreview from "./ThemePreview";
 import { MAIN_STATES } from "../types";
@@ -61,19 +62,46 @@ export default function ThemeGallery({ themes, refreshKey }: Props) {
         <div key={theme.id} style={{ marginBottom: 24 }}>
           <div
             style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
               fontSize: 14,
-              color: "#e94560",
               marginBottom: 8,
               paddingBottom: 4,
               borderBottom: "1px solid #333",
             }}
           >
-            {theme.name}
-            <span style={{ color: "#666", fontSize: 12, marginLeft: 8 }}>
-              {theme.id}
-              {config.activeAccessories?.length > 0 &&
-                ` + ${config.activeAccessories.join(", ")}`}
-            </span>
+            <div>
+              <span style={{ color: "#e94560" }}>{theme.name}</span>
+              <span style={{ color: "#666", fontSize: 12, marginLeft: 8 }}>
+                {theme.id}
+                {config.activeAccessories?.length > 0 &&
+                  ` + ${config.activeAccessories.join(", ")}`}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Link
+                to={`/themes/${encodeURIComponent(theme.id)}`}
+                style={{
+                  color: "#4fc3f7",
+                  fontSize: 12,
+                  textDecoration: "none",
+                }}
+              >
+                All States
+              </Link>
+              <Link
+                to={`/themes/${encodeURIComponent(theme.id)}/editor?state=idle`}
+                style={{
+                  color: "#e94560",
+                  fontSize: 12,
+                  textDecoration: "none",
+                }}
+              >
+                Editor
+              </Link>
+            </div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {allStates.map((state) => {
@@ -84,14 +112,19 @@ export default function ThemeGallery({ themes, refreshKey }: Props) {
               if (!file) return null;
 
               return (
-                <ThemePreview
+                <Link
                   key={`${theme.id}-${state}`}
-                  config={config}
-                  file={file}
-                  state={state}
-                  size={120}
-                  label={state}
-                />
+                  to={`/themes/${encodeURIComponent(theme.id)}/editor?state=${encodeURIComponent(state)}`}
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  <ThemePreview
+                    config={config}
+                    file={file}
+                    state={state}
+                    size={120}
+                    label={state}
+                  />
+                </Link>
               );
             })}
           </div>
