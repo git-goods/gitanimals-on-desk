@@ -45,4 +45,11 @@ export interface ThemeConfig {
   error?: string;
 }
 
+export interface LayoutOverrides {
+  baselineY: number;
+  visibleHeightRatio: number;
+  baselineBottomRatio: number;
+  centerX: number;
+}
+
 export const MAIN_STATES = ["idle", "thinking", "working", "sleeping", "waking"] as const;

@@ -1,10 +1,14 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useThemeList, useThemeConfig } from "./hooks/useThemeConfig";
 import { useSSE } from "./hooks/useSSE";
 import ThemePreview from "./components/ThemePreview";
+import type { ThemePreviewHandle } from "./components/ThemePreview";
 import ThemeGallery from "./components/ThemeGallery";
 import AccessoryEditor from "./components/AccessoryEditor";
+import LayoutEditor from "./components/LayoutEditor";
+import SvgPartsEditor from "./components/SvgPartsEditor";
 import { MAIN_STATES } from "./types";
+import type { LayoutOverrides } from "./types";
 
 type Mode = "single" | "gallery";
 type SingleTab = "editor" | "all-states";
@@ -17,6 +21,9 @@ export default function App() {
   const [selectedState, setSelectedState] = useState("idle");
   const [refreshKey, setRefreshKey] = useState(0);
   const [accOverride, setAccOverride] = useState<{ name: string; transform: string } | null>(null);
+  const [layoutOverrides, setLayoutOverrides] = useState<LayoutOverrides | null>(null);
+  const [svgPartOverride, setSvgPartOverride] = useState<{ id: string; transform: string } | null>(null);
+  const previewRef = useRef<ThemePreviewHandle>(null);
 
   // Auto-select first theme
   if (themes.length > 0 && !selectedTheme) {
@@ -73,7 +80,7 @@ export default function App() {
           <>
             <select
               value={selectedTheme || ""}
-              onChange={(e) => { setSelectedTheme(e.target.value); setAccOverride(null); }}
+              onChange={(e) => { setSelectedTheme(e.target.value); setAccOverride(null); setLayoutOverrides(null); setSvgPartOverride(null); }}
               style={{ padding: "5px 10px", background: "#0f3460", color: "#e0e0e0", border: "1px solid #444", borderRadius: 4, fontSize: 13 }}
             >
               {themes.map((t) => (
@@ -109,7 +116,7 @@ export default function App() {
                 {allStates.map((s) => (
                   <button
                     key={s}
-                    onClick={() => setSelectedState(s)}
+                    onClick={() => { setSelectedState(s); setSvgPartOverride(null); }}
                     style={{
                       padding: "4px 8px",
                       background: selectedState === s ? "#e94560" : "#0f3460",
@@ -169,11 +176,14 @@ export default function App() {
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "#111" }}>
             {config && currentFile ? (
               <ThemePreview
+                ref={previewRef}
                 config={config}
                 file={currentFile}
                 state={selectedState}
                 size={250}
                 accessoryOverride={accOverride}
+                layoutOverrides={layoutOverrides}
+                svgPartOverride={svgPartOverride}
               />
             ) : (
               <div style={{ color: "#666" }}>Select a theme</div>
@@ -183,6 +193,21 @@ export default function App() {
           {/* Controls */}
           <div style={{ width: 320, background: "#16213e", borderLeft: "1px solid #333", overflowY: "auto", padding: 16 }}>
             <h3 style={{ fontSize: 13, color: "#e94560", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              SVG Parts
+            </h3>
+            <SvgPartsEditor
+              svgObject={previewRef.current?.getObject() ?? null}
+              onPartChange={(id, transform) => setSvgPartOverride({ id, transform })}
+            />
+
+            <h3 style={{ fontSize: 13, color: "#e94560", margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              Layout
+            </h3>
+            {config && (
+              <LayoutEditor config={config} onLayoutChange={setLayoutOverrides} />
+            )}
+
+            <h3 style={{ fontSize: 13, color: "#e94560", margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>
               Accessories
             </h3>
             {config && (
