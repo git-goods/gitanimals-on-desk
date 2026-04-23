@@ -137,25 +137,6 @@ body {
   accent-color: #e94560;
 }
 
-.parts-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-
-.layout-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 13px;
-}
-
-.layout-toggle input[type="checkbox"] {
-  accent-color: #4fc3f7;
-}
-
 .copy-btn {
   display: block;
   width: 100%;

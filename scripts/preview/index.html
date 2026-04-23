@@ -35,16 +35,6 @@
       <p style="color:#666; font-size:12px;">Select an accessory above to adjust</p>
     </div>
 
-    <h3>SVG Parts</h3>
-    <div id="parts-editor">
-      <p style="color:#666; font-size:12px;">Load a state to see SVG parts</p>
-    </div>
-
-    <h3>Layout Editor</h3>
-    <div id="layout-editor">
-      <p style="color:#666; font-size:12px;">Loading theme...</p>
-    </div>
-
     <h3>Theme Info</h3>
     <div id="theme-info" style="font-size:12px; color:#888;"></div>
   </div>
@@ -111,7 +101,6 @@ async function selectTheme(themeId) {
 
     initWithConfig(currentRendererConfig);
     setupAccessories();
-    setupLayoutEditor();
     showState(currentState);
     updateThemeInfo();
     setStatus(`Loaded: ${themeId}`);
@@ -171,7 +160,6 @@ function showState(state) {
 
   if (file) {
     swapToFile(file, state);
-    setupPartsEditor();
   }
 }
 
@@ -306,155 +294,6 @@ function setupTransformEditor(accName, def) {
   });
 
   updateTransform();
-}
-
-// ── SVG Parts Editor ──
-let selectedPart = null;
-
-function setupPartsEditor() {
-  const editor = document.getElementById("parts-editor");
-
-  setTimeout(() => {
-    const parts = getSvgParts();
-    if (parts.length === 0) {
-      editor.innerHTML = '<p style="color:#666; font-size:12px;">No editable parts</p>';
-      return;
-    }
-
-    let html = '<div class="parts-list">';
-    for (const p of parts) {
-      html += `<button class="state-btn part-btn" data-part-id="${p.id}" style="font-size:11px; margin:2px;">${p.id}</button>`;
-    }
-    html += '</div><div id="part-transform-editor"></div>';
-    editor.innerHTML = html;
-
-    for (const btn of editor.querySelectorAll(".part-btn")) {
-      btn.addEventListener("click", () => {
-        editor.querySelectorAll(".part-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        const part = parts.find(p => p.id === btn.dataset.partId);
-        if (part) setupPartSliders(part);
-      });
-    }
-  }, 500);
-}
-
-function setupPartSliders(part) {
-  selectedPart = part;
-  const container = document.getElementById("part-transform-editor");
-
-  let tx = 0, ty = 0;
-  const tm = part.transform.match(/translate\(\s*([-\d.]+)(?:px)?\s*,\s*([-\d.]+)(?:px)?\s*\)/);
-  if (tm) { tx = parseFloat(tm[1]); ty = parseFloat(tm[2]); }
-
-  container.innerHTML = `
-    <div style="font-size:13px; color:#4fc3f7; margin: 8px 0 4px;">${part.id}</div>
-    <div class="slider-group">
-      <label>translateX <span id="pval-tx">${tx}</span></label>
-      <input type="range" id="psl-tx" min="-30" max="30" step="0.5" value="${tx}">
-    </div>
-    <div class="slider-group">
-      <label>translateY <span id="pval-ty">${ty}</span></label>
-      <input type="range" id="psl-ty" min="-30" max="30" step="0.5" value="${ty}">
-    </div>
-    <div class="transform-output" id="part-output"></div>
-    <button class="copy-btn" id="part-copy-btn">Copy transform</button>
-  `;
-
-  function updatePartTransform() {
-    const ntx = parseFloat(document.getElementById("psl-tx").value);
-    const nty = parseFloat(document.getElementById("psl-ty").value);
-    document.getElementById("pval-tx").textContent = ntx;
-    document.getElementById("pval-ty").textContent = nty;
-
-    const usesPx = part.transform.includes("px");
-    const unit = usesPx ? "px" : "";
-    const transform = `translate(${ntx}${unit}, ${nty}${unit})`;
-    updateSvgPartTransform(part.id, transform);
-    document.getElementById("part-output").textContent = `transform="${transform}"`;
-  }
-
-  document.getElementById("psl-tx").addEventListener("input", updatePartTransform);
-  document.getElementById("psl-ty").addEventListener("input", updatePartTransform);
-  document.getElementById("part-copy-btn").addEventListener("click", () => {
-    const text = document.getElementById("part-output").textContent;
-    navigator.clipboard.writeText(text).then(() => {
-      const btn = document.getElementById("part-copy-btn");
-      btn.textContent = "Copied!";
-      btn.classList.add("copied");
-      setTimeout(() => { btn.textContent = "Copy transform"; btn.classList.remove("copied"); }, 1500);
-    });
-  });
-
-  updatePartTransform();
-}
-
-// ── Layout Editor ──
-function setupLayoutEditor() {
-  const editor = document.getElementById("layout-editor");
-  const defaults = getLayoutDefaults();
-
-  if (!defaults) {
-    editor.innerHTML = '<p style="color:#666; font-size:12px;">No layout data for this theme</p>';
-    return;
-  }
-
-  const sliders = [
-    { id: "baselineY", label: "baselineY", min: -5, max: 25, step: 0.5, val: defaults.baselineY },
-    { id: "visibleHeightRatio", label: "visibleHeightRatio", min: 0.1, max: 1.2, step: 0.01, val: defaults.visibleHeightRatio },
-    { id: "baselineBottomRatio", label: "baselineBottomRatio", min: -0.2, max: 0.3, step: 0.01, val: defaults.baselineBottomRatio },
-    { id: "centerX", label: "centerX", min: -15, max: 25, step: 0.5, val: defaults.centerX },
-  ];
-
-  let html = ``;
-
-  for (const s of sliders) {
-    html += `
-      <div class="slider-group">
-        <label>${s.label} <span id="lval-${s.id}">${s.val}</span></label>
-        <input type="range" id="lsl-${s.id}" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.val}">
-      </div>
-    `;
-  }
-
-  html += `<div class="transform-output" id="layout-output"></div>`;
-  html += `<button class="copy-btn" id="layout-copy-btn">Copy layout JSON</button>`;
-
-  editor.innerHTML = html;
-
-  function updateLayoutFromSliders() {
-    const overrides = {};
-    for (const s of sliders) {
-      const v = parseFloat(document.getElementById(`lsl-${s.id}`).value);
-      document.getElementById(`lval-${s.id}`).textContent = v;
-      overrides[s.id] = v;
-    }
-    updateLayoutOverrides(overrides);
-
-    const json = JSON.stringify({
-      baselineY: overrides.baselineY,
-      visibleHeightRatio: overrides.visibleHeightRatio,
-      baselineBottomRatio: overrides.baselineBottomRatio,
-      centerX: overrides.centerX,
-    }, null, 2);
-    document.getElementById("layout-output").textContent = json;
-  }
-
-  for (const s of sliders) {
-    document.getElementById(`lsl-${s.id}`).addEventListener("input", updateLayoutFromSliders);
-  }
-
-  document.getElementById("layout-copy-btn").addEventListener("click", () => {
-    const text = document.getElementById("layout-output").textContent;
-    navigator.clipboard.writeText(text).then(() => {
-      const btn = document.getElementById("layout-copy-btn");
-      btn.textContent = "Copied!";
-      btn.classList.add("copied");
-      setTimeout(() => { btn.textContent = "Copy layout JSON"; btn.classList.remove("copied"); }, 1500);
-    });
-  });
-
-  updateLayoutFromSliders();
 }
 
 // ── Theme info ──

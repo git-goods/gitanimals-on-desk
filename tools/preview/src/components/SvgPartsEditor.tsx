@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { Slider, CodeOutput, CopyButton, parseTranslate } from "./shared";
 
 interface SvgPart {
   id: string;
@@ -15,9 +16,8 @@ function parseParts(obj: HTMLObjectElement | null): SvgPart[] {
   try {
     const doc = obj.contentDocument;
     if (!doc) return [];
-    const groups = doc.querySelectorAll("g[id]");
     const parts: SvgPart[] = [];
-    for (const g of groups) {
+    for (const g of doc.querySelectorAll("g[id]")) {
       if (g.getAttribute("data-accessory")) continue;
       parts.push({ id: g.id, transform: g.getAttribute("transform") || "" });
     }
@@ -32,39 +32,36 @@ export default function SvgPartsEditor({ svgObject, onPartChange }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
-  const [copied, setCopied] = useState(false);
-
-  const refresh = useCallback(() => {
-    setTimeout(() => setParts(parseParts(svgObject)), 300);
-  }, [svgObject]);
+  const [usesPx, setUsesPx] = useState(false);
 
   useEffect(() => {
-    refresh();
+    if (!svgObject) { setParts([]); setSelected(null); return; }
+
+    const tryParse = () => setParts(parseParts(svgObject));
+
+    if (svgObject.contentDocument?.documentElement) {
+      tryParse();
+    }
+    svgObject.addEventListener("load", tryParse);
     setSelected(null);
-  }, [svgObject, refresh]);
+
+    return () => svgObject.removeEventListener("load", tryParse);
+  }, [svgObject]);
 
   const selectPart = (part: SvgPart) => {
     setSelected(part.id);
-    const m = part.transform.match(/translate\(\s*([-\d.]+)(?:px)?\s*,\s*([-\d.]+)(?:px)?\s*\)/);
-    setTx(m ? parseFloat(m[1]) : 0);
-    setTy(m ? parseFloat(m[2]) : 0);
+    const parsed = parseTranslate(part.transform);
+    setTx(parsed.x);
+    setTy(parsed.y);
+    setUsesPx(parsed.usesPx);
   };
 
-  const usesPx = selected
-    ? (parts.find((p) => p.id === selected)?.transform.includes("px") ?? false)
-    : false;
-
-  const updateTransform = (ntx: number, nty: number) => {
-    if (!selected) return;
+  const buildTransform = (x: number, y: number) => {
     const unit = usesPx ? "px" : "";
-    const transform = `translate(${ntx}${unit}, ${nty}${unit})`;
-    onPartChange(selected, transform);
+    return `translate(${x}${unit}, ${y}${unit})`;
   };
 
-  const transformStr = (() => {
-    const unit = usesPx ? "px" : "";
-    return `translate(${tx}${unit}, ${ty}${unit})`;
-  })();
+  const transformStr = buildTransform(tx, ty);
 
   if (parts.length === 0) {
     return <div style={{ color: "#666", fontSize: 12 }}>No editable parts</div>;
@@ -94,70 +91,12 @@ export default function SvgPartsEditor({ svgObject, onPartChange }: Props) {
 
       {selected && (
         <>
-          {([
-            { label: "translateX", value: tx, setter: setTx },
-            { label: "translateY", value: ty, setter: setTy },
-          ] as const).map(({ label, value, setter }) => (
-            <div key={label} style={{ margin: "6px 0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#aaa" }}>
-                <span>{label}</span>
-                <span style={{ color: "#e94560", fontWeight: "bold" }}>{value}</span>
-              </div>
-              <input
-                type="range"
-                min={-30}
-                max={30}
-                step={0.5}
-                value={value}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  setter(v);
-                  const ntx = label === "translateX" ? v : tx;
-                  const nty = label === "translateY" ? v : ty;
-                  updateTransform(ntx, nty);
-                }}
-                style={{ width: "100%", accentColor: "#e94560" }}
-              />
-            </div>
-          ))}
-
-          <div
-            style={{
-              marginTop: 8,
-              padding: 8,
-              background: "#0a0a1a",
-              border: "1px solid #333",
-              borderRadius: 4,
-              fontFamily: "monospace",
-              fontSize: 12,
-              color: "#4fc3f7",
-            }}
-          >
-            {`transform="${transformStr}"`}
-          </div>
-
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(`transform="${transformStr}"`).then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              });
-            }}
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 8,
-              marginTop: 8,
-              background: copied ? "#27ae60" : "#e94560",
-              color: "#fff",
-              border: "none",
-              borderRadius: 4,
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            {copied ? "Copied!" : "Copy transform"}
-          </button>
+          <Slider label="translateX" value={tx} min={-30} max={30} step={0.5}
+            onChange={(v) => { setTx(v); onPartChange(selected, buildTransform(v, ty)); }} />
+          <Slider label="translateY" value={ty} min={-30} max={30} step={0.5}
+            onChange={(v) => { setTy(v); onPartChange(selected, buildTransform(tx, v)); }} />
+          <CodeOutput>{`transform="${transformStr}"`}</CodeOutput>
+          <CopyButton text={`transform="${transformStr}"`} label="Copy transform" />
         </>
       )}
     </div>

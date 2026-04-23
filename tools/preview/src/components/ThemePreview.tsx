@@ -1,5 +1,6 @@
-import { useRef, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import type { ThemeConfig, LayoutOverrides } from "../types";
+import { resolveLayoutDefaults } from "./shared";
 
 interface Props {
   config: ThemeConfig;
@@ -10,10 +11,7 @@ interface Props {
   accessoryOverride?: { name: string; transform: string } | null;
   layoutOverrides?: LayoutOverrides | null;
   svgPartOverride?: { id: string; transform: string } | null;
-}
-
-export interface ThemePreviewHandle {
-  getObject: () => HTMLObjectElement | null;
+  onSvgLoad?: (obj: HTMLObjectElement) => void;
 }
 
 function computeLayoutStyle(config: ThemeConfig, overrides: LayoutOverrides) {
@@ -37,13 +35,8 @@ function computeLayoutStyle(config: ThemeConfig, overrides: LayoutOverrides) {
   };
 }
 
-const ThemePreview = forwardRef<ThemePreviewHandle, Props>(
-  ({ config, file, state, size = 200, label, accessoryOverride, layoutOverrides, svgPartOverride }, ref) => {
+function ThemePreview({ config, file, state, size = 200, label, accessoryOverride, layoutOverrides, svgPartOverride, onSvgLoad }: Props) {
     const objRef = useRef<HTMLObjectElement>(null);
-
-    useImperativeHandle(ref, () => ({
-      getObject: () => objRef.current,
-    }));
 
     useEffect(() => {
       const obj = objRef.current;
@@ -52,29 +45,25 @@ const ThemePreview = forwardRef<ThemePreviewHandle, Props>(
       const onLoad = () => {
         injectAccessories(obj, config, state, accessoryOverride);
         if (svgPartOverride) applySvgPartOverride(obj, svgPartOverride);
+        onSvgLoad?.(obj);
       };
       obj.addEventListener("load", onLoad);
       injectAccessories(obj, config, state, accessoryOverride);
       if (svgPartOverride) applySvgPartOverride(obj, svgPartOverride);
 
       return () => obj.removeEventListener("load", onLoad);
-    }, [config, file, state, accessoryOverride, svgPartOverride]);
+    }, [config, file, state, accessoryOverride, svgPartOverride, onSvgLoad]);
 
     const url = `${config.assetsPath}/${file}`;
-    const os = config.objectScale || { widthRatio: 1.9, heightRatio: 1.3, offsetX: -0.45, offsetY: -0.25 };
 
-    const posStyle = layoutOverrides
-      ? computeLayoutStyle(config, layoutOverrides)
-      : null;
+    const layoutSource = useMemo(
+      () => layoutOverrides || resolveLayoutDefaults(config),
+      [layoutOverrides, config]
+    );
 
-    const defaultStyle = {
-      width: `${os.widthRatio * 100}%`,
-      height: `${os.heightRatio * 100}%`,
-      left: `${os.offsetX * 100}%`,
-      bottom: `${(os.objBottom != null ? os.objBottom : 1 - os.offsetY - os.heightRatio) * 100}%`,
+    const style = computeLayoutStyle(config, layoutSource) || {
+      width: "190%", height: "130%", left: "-45%", bottom: "-5%",
     };
-
-    const style = posStyle || defaultStyle;
 
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -113,22 +102,19 @@ const ThemePreview = forwardRef<ThemePreviewHandle, Props>(
         </div>
       </div>
     );
-  }
-);
+}
 
-ThemePreview.displayName = "ThemePreview";
 export default ThemePreview;
 
-function applySvgPartOverride(
-  obj: HTMLObjectElement,
-  override: { id: string; transform: string }
-) {
+function applySvgPartOverride(obj: HTMLObjectElement, override: { id: string; transform: string }) {
   try {
     const doc = obj.contentDocument;
     if (!doc) return;
     const el = doc.getElementById(override.id);
     if (el) el.setAttribute("transform", override.transform);
-  } catch {}
+  } catch (e) {
+    console.warn("[SvgParts] Failed to apply override:", e);
+  }
 }
 
 function injectAccessories(
@@ -181,6 +167,8 @@ function injectAccessories(
         }
         parent.appendChild(wrapper);
       })
-      .catch(() => {});
+      .catch((e) => {
+        console.warn("[accessory] Injection failed:", e);
+      });
   }
 }

@@ -1,12 +1,12 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useThemeList, useThemeConfig } from "./hooks/useThemeConfig";
 import { useSSE } from "./hooks/useSSE";
 import ThemePreview from "./components/ThemePreview";
-import type { ThemePreviewHandle } from "./components/ThemePreview";
 import ThemeGallery from "./components/ThemeGallery";
 import AccessoryEditor from "./components/AccessoryEditor";
 import LayoutEditor from "./components/LayoutEditor";
 import SvgPartsEditor from "./components/SvgPartsEditor";
+import { SectionHeading, resolveLayoutDefaults } from "./components/shared";
 import { MAIN_STATES } from "./types";
 import type { LayoutOverrides } from "./types";
 
@@ -23,7 +23,7 @@ export default function App() {
   const [accOverride, setAccOverride] = useState<{ name: string; transform: string } | null>(null);
   const [layoutOverrides, setLayoutOverrides] = useState<LayoutOverrides | null>(null);
   const [svgPartOverride, setSvgPartOverride] = useState<{ id: string; transform: string } | null>(null);
-  const previewRef = useRef<ThemePreviewHandle>(null);
+  const [svgObj, setSvgObj] = useState<HTMLObjectElement | null>(null);
 
   // Auto-select first theme
   if (themes.length > 0 && !selectedTheme) {
@@ -31,7 +31,11 @@ export default function App() {
   }
 
   const { config, reload } = useThemeConfig(mode === "single" ? selectedTheme : null);
-  // Also load when switching to single mode from gallery
+
+  useEffect(() => {
+    if (config) setLayoutOverrides(resolveLayoutDefaults(config));
+  }, [config]);
+
   const connected = useSSE(
     useCallback(() => {
       reload();
@@ -176,7 +180,6 @@ export default function App() {
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "#111" }}>
             {config && currentFile ? (
               <ThemePreview
-                ref={previewRef}
                 config={config}
                 file={currentFile}
                 state={selectedState}
@@ -184,6 +187,7 @@ export default function App() {
                 accessoryOverride={accOverride}
                 layoutOverrides={layoutOverrides}
                 svgPartOverride={svgPartOverride}
+                onSvgLoad={setSvgObj}
               />
             ) : (
               <div style={{ color: "#666" }}>Select a theme</div>
@@ -192,24 +196,18 @@ export default function App() {
 
           {/* Controls */}
           <div style={{ width: 320, background: "#16213e", borderLeft: "1px solid #333", overflowY: "auto", padding: 16 }}>
-            <h3 style={{ fontSize: 13, color: "#e94560", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>
-              SVG Parts
-            </h3>
+            <SectionHeading>SVG Parts</SectionHeading>
             <SvgPartsEditor
-              svgObject={previewRef.current?.getObject() ?? null}
+              svgObject={svgObj}
               onPartChange={(id, transform) => setSvgPartOverride({ id, transform })}
             />
 
-            <h3 style={{ fontSize: 13, color: "#e94560", margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Layout
-            </h3>
-            {config && (
-              <LayoutEditor config={config} onLayoutChange={setLayoutOverrides} />
+            <SectionHeading>Layout</SectionHeading>
+            {config && layoutOverrides && (
+              <LayoutEditor defaults={layoutOverrides} onLayoutChange={setLayoutOverrides} />
             )}
 
-            <h3 style={{ fontSize: 13, color: "#e94560", margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Accessories
-            </h3>
+            <SectionHeading>Accessories</SectionHeading>
             {config && (
               <div style={{ marginBottom: 16 }}>
                 {Object.entries(config.accessories || {}).map(([name, def]) => (
@@ -232,9 +230,7 @@ export default function App() {
               </div>
             )}
 
-            <h3 style={{ fontSize: 13, color: "#e94560", margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Transform Editor
-            </h3>
+            <SectionHeading>Transform Editor</SectionHeading>
             {config && (
               <AccessoryEditor
                 config={config}
@@ -242,9 +238,7 @@ export default function App() {
               />
             )}
 
-            <h3 style={{ fontSize: 13, color: "#e94560", margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: 0.5 }}>
-              Info
-            </h3>
+            <SectionHeading>Info</SectionHeading>
             {config && (
               <div style={{ fontSize: 12, color: "#888" }}>
                 <div>States: {Object.keys(config.states || {}).length}</div>
