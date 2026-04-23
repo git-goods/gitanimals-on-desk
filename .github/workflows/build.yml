@@ -17,22 +17,23 @@ jobs:
       - run: npm install
       - run: npm test
 
-  build-windows:
-    needs: test
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - run: npx electron-builder --win --publish never
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-installer
-          path: |
-            dist/*.exe
-            dist/latest.yml
+  # build-windows:
+  #   needs: test
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #     - run: npm install
+  #     - run: npm run transpile:ts-sources
+  #     - run: npx electron-builder --win --publish never
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: windows-installer
+  #         path: |
+  #           dist/*.exe
+  #           dist/latest.yml
 
   build-mac:
     needs: test
@@ -43,6 +44,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install
+      - run: npm run transpile:ts-sources
       - run: npx electron-builder --mac --publish never
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
@@ -58,26 +60,27 @@ jobs:
             dist/*.zip
             dist/latest-mac.yml
 
-  build-linux:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - run: npx electron-builder --linux --publish never
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-installer
-          path: |
-            dist/*.AppImage
-            dist/*.deb
-            dist/latest-linux.yml
+  # build-linux:
+  #   needs: test
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #     - run: npm install
+  #     - run: npm run transpile:ts-sources
+  #     - run: npx electron-builder --linux --publish never
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: linux-installer
+  #         path: |
+  #           dist/*.AppImage
+  #           dist/*.deb
+  #           dist/latest-linux.yml
 
   release:
-    needs: [build-windows, build-mac, build-linux]
+    needs: [build-mac]
     runs-on: ubuntu-latest
     permissions:
       contents: write
