@@ -8,10 +8,20 @@ import LayoutEditor from "./components/LayoutEditor";
 import SvgPartsEditor from "./components/SvgPartsEditor";
 import { SectionHeading, resolveLayoutDefaults } from "./components/shared";
 import { MAIN_STATES } from "./types";
-import type { LayoutOverrides } from "./types";
+import type { ThemeConfig, LayoutOverrides } from "./types";
 
 type Mode = "single" | "gallery";
 type SingleTab = "editor" | "all-states";
+
+function getVisibleAccessories(config: ThemeConfig, state: string): string[] {
+  const defs = config.accessories || {};
+  return Object.keys(defs).filter((name) => {
+    const anchors = defs[name]?.anchors;
+    if (!anchors) return false;
+    const anchor = anchors[state] !== undefined ? anchors[state] : anchors["*"];
+    return anchor != null;
+  });
+}
 
 export default function App() {
   const themes = useThemeList();
@@ -35,6 +45,13 @@ export default function App() {
   useEffect(() => {
     if (config) setLayoutOverrides(resolveLayoutDefaults(config));
   }, [config]);
+
+  useEffect(() => {
+    if (config) {
+      config.activeAccessories = getVisibleAccessories(config, selectedState);
+      setRefreshKey((k) => k + 1);
+    }
+  }, [config, selectedState]);
 
   const connected = useSSE(
     useCallback(() => {
@@ -208,27 +225,32 @@ export default function App() {
             )}
 
             <SectionHeading>Accessories</SectionHeading>
-            {config && (
-              <div style={{ marginBottom: 16 }}>
-                {Object.entries(config.accessories || {}).map(([name, def]) => (
-                  <label key={name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 13, cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={config.activeAccessories?.includes(name)}
-                      onChange={() => {
-                        const active = config.activeAccessories || [];
-                        config.activeAccessories = active.includes(name)
-                          ? active.filter((a) => a !== name)
-                          : [...active, name];
-                        setRefreshKey((k) => k + 1);
-                      }}
-                      style={{ accentColor: "#e94560" }}
-                    />
-                    {def.name || name}
-                  </label>
-                ))}
-              </div>
-            )}
+            {config && (() => {
+              const visible = getVisibleAccessories(config, selectedState);
+              const defs = config.accessories || {};
+              if (visible.length === 0) return <div style={{ color: "#666", fontSize: 12 }}>No accessories for this state</div>;
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  {visible.map((name) => (
+                    <label key={name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 13, cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={config.activeAccessories?.includes(name)}
+                        onChange={() => {
+                          const active = config.activeAccessories || [];
+                          config.activeAccessories = active.includes(name)
+                            ? active.filter((a) => a !== name)
+                            : [...active, name];
+                          setRefreshKey((k) => k + 1);
+                        }}
+                        style={{ accentColor: "#e94560" }}
+                      />
+                      {defs[name]?.name || name}
+                    </label>
+                  ))}
+                </div>
+              );
+            })()}
 
             <SectionHeading>Transform Editor</SectionHeading>
             {config && (
