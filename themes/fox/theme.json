@@ -11,11 +11,11 @@
   "viewBox": { "x": -15, "y": -25, "width": 45, "height": 45 },
 
   "layout": {
-    "contentBox": { "x": -2, "y": -2, "width": 20, "height": 18 },
+    "contentBox": { "x": -1, "y": -6, "width": 20, "height": 18 },
     "centerX": 7.5,
-    "baselineY": 15,
+    "baselineY": 8,
     "visibleHeightRatio": 0.58,
-    "baselineBottomRatio": 0.05
+    "baselineBottomRatio": 0.08
   },
 
   "eyeTracking": {
