@@ -1,6 +1,6 @@
 {
   "name": "gitanimals-on-desk",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A desktop pet that reacts to your Claude Code sessions in real-time.",
   "main": "src/core/main.js",
   "scripts": {
@@ -40,6 +40,7 @@
     "appId": "com.gitanimals.on-desk",
     "productName": "GitAnimals on Desk",
     "mac": {
+      "artifactName": "GitAnimals-on-Desk-${version}-${arch}-mac.${ext}",
       "icon": "assets/icon.png",
       "target": [
         {
