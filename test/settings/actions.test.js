@@ -77,6 +77,7 @@ describe("updateRegistry pure-data validators", () => {
     for (const key of [
       "soundMuted", "bubbleFollowPet", "hideBubbles",
       "showSessionId", "miniMode", "openAtLoginHydrated",
+      "timeRemindersEnabled",
     ]) {
       assert.strictEqual(updateRegistry[key](true, deps).status, "ok", `${key}(true)`);
       assert.strictEqual(updateRegistry[key](false, deps).status, "ok", `${key}(false)`);
@@ -256,6 +257,14 @@ describe("update discovery validators", () => {
       ? updateRegistry.pendingUpdateVersion
       : updateRegistry.pendingUpdateVersion.validate;
     assert.strictEqual(validate(123, { snapshot: prefs.getDefaults() }).status, "error");
+  });
+
+  it("reminder times accept HH:MM 24-hour format only", () => {
+    const deps = { snapshot: prefs.getDefaults() };
+    assert.strictEqual(updateRegistry.lunchReminderTime("11:50", deps).status, "ok");
+    assert.strictEqual(updateRegistry.leaveReminderTime("06:05", deps).status, "ok");
+    assert.strictEqual(updateRegistry.lunchReminderTime("24:00", deps).status, "error");
+    assert.strictEqual(updateRegistry.leaveReminderTime("6pm", deps).status, "error");
   });
 });
 

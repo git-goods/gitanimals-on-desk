@@ -271,6 +271,7 @@ let openAtLogin = _settingsController.get("openAtLogin");
 let bubbleFollowPet = _settingsController.get("bubbleFollowPet");
 let hideBubbles = _settingsController.get("hideBubbles");
 let showSessionId = _settingsController.get("showSessionId");
+let timeRemindersEnabled = _settingsController.get("timeRemindersEnabled");
 let soundMuted = _settingsController.get("soundMuted");
 let flip = _settingsController.get("flip");
 let petHidden = false;
@@ -301,6 +302,7 @@ function togglePetVisibility() {
     syncUpdateBubbleVisibility();
     reapplyMacVisibility();
     petHidden = false;
+    syncReminderVisibility();
   } else {
     win.hide();
     if (hitWin && !hitWin.isDestroyed()) hitWin.hide();
@@ -309,6 +311,7 @@ function togglePetVisibility() {
       if (perm.bubble && !perm.bubble.isDestroyed()) perm.bubble.hide();
     }
     hideUpdateBubble();
+    hideReminder();
     petHidden = true;
   }
   syncPermissionShortcuts();
@@ -549,6 +552,45 @@ const {
   syncVisibility: syncUpdateBubbleVisibility,
 } = _updateBubble;
 
+const _remindersCtx = {
+  get doNotDisturb() {
+    return doNotDisturb;
+  },
+  get hideBubbles() {
+    return hideBubbles;
+  },
+  get petHidden() {
+    return petHidden;
+  },
+  get timeRemindersEnabled() {
+    return timeRemindersEnabled;
+  },
+  getLunchReminderTime() {
+    return _settingsController.get("lunchReminderTime");
+  },
+  getLeaveReminderTime() {
+    return _settingsController.get("leaveReminderTime");
+  },
+  showReminder(payload) {
+    sendToRenderer("reminder-show", payload);
+  },
+  hideReminder() {
+    sendToRenderer("reminder-hide");
+  },
+  t(key) {
+    return typeof t === "function" ? t(key) : key;
+  },
+};
+const _reminders = require("./reminders")(_remindersCtx);
+const {
+  start: startReminderScheduler,
+  stop: stopReminderScheduler,
+  check: checkReminderSchedule,
+  hideReminder,
+  syncVisibility: syncReminderVisibility,
+  getActiveReminder,
+} = _reminders;
+
 function repositionFloatingBubbles() {
   if (pendingPermissions.length) repositionBubbles();
   repositionUpdateBubble();
@@ -598,6 +640,8 @@ const _stateCtx = {
   set doNotDisturb(v) {
     const wasOn = doNotDisturb;
     doNotDisturb = v;
+    if (v) hideReminder();
+    else syncReminderVisibility();
     if (wasOn && !v) {
       try { reevaluateDeferred(); } catch (err) {
         console.warn("GitAnimals: reevaluateDeferred after DND off failed:", err && err.message);
@@ -1164,6 +1208,7 @@ function wireSettingsSubscribers() {
     if ("bubbleFollowPet" in changes) bubbleFollowPet = changes.bubbleFollowPet;
     if ("hideBubbles" in changes) hideBubbles = changes.hideBubbles;
     if ("showSessionId" in changes) showSessionId = changes.showSessionId;
+    if ("timeRemindersEnabled" in changes) timeRemindersEnabled = changes.timeRemindersEnabled;
     if ("soundMuted" in changes) soundMuted = changes.soundMuted;
     if ("flip" in changes) {
       flip = changes.flip;
@@ -1183,6 +1228,12 @@ function wireSettingsSubscribers() {
           err && err.message,
         );
       }
+      if (changes.hideBubbles) hideReminder();
+      else syncReminderVisibility();
+    }
+    if ("timeRemindersEnabled" in changes) {
+      if (!changes.timeRemindersEnabled) hideReminder();
+      else syncReminderVisibility();
     }
     if ("bubbleFollowPet" in changes) {
       try {
@@ -1197,6 +1248,11 @@ function wireSettingsSubscribers() {
     if ("miniMode" in changes && !changes.miniMode) {
       try { reevaluateDeferred(); } catch (err) {
         console.warn("GitAnimals: reevaluateDeferred failed:", err && err.message);
+      }
+    }
+    if ("lunchReminderTime" in changes || "leaveReminderTime" in changes) {
+      try { checkReminderSchedule(); } catch (err) {
+        console.warn("GitAnimals: reminder schedule check failed:", err && err.message);
       }
     }
 
@@ -1802,6 +1858,10 @@ function createWindow() {
       return;
     }
     syncRendererStateAfterLoad();
+    const activeReminder = getActiveReminder();
+    if (activeReminder) {
+      sendToRenderer("reminder-show", activeReminder);
+    }
   });
 
   // ── Crash recovery: renderer process can die from <object> churn ──
@@ -1985,6 +2045,8 @@ const _miniCtx = {
   set doNotDisturb(v) {
     const wasOn = doNotDisturb;
     doNotDisturb = v;
+    if (v) hideReminder();
+    else syncReminderVisibility();
     if (wasOn && !v) {
       try { reevaluateDeferred(); } catch (err) {
         console.warn("GitAnimals: reevaluateDeferred after DND off failed:", err && err.message);
@@ -2317,6 +2379,8 @@ if (!gotTheLock) {
     // Auto-updater: setup event handlers (user triggers check via tray menu)
     setupAutoUpdater();
     startScheduler();
+    startReminderScheduler();
+    checkReminderSchedule();
   }
 
   app.whenReady().then(async () => {
@@ -2399,6 +2463,7 @@ if (!gotTheLock) {
     unregisterToggleShortcut();
     globalShortcut.unregisterAll();
     stopScheduler();
+    stopReminderScheduler();
     _perm.cleanup();
     _server.cleanup();
     _updateBubble.cleanup();

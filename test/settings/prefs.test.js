@@ -39,6 +39,13 @@ describe("prefs.getDefaults", () => {
     assert.strictEqual(d.version, prefs.CURRENT_VERSION);
   });
 
+  it("includes reminder defaults", () => {
+    const d = prefs.getDefaults();
+    assert.strictEqual(d.timeRemindersEnabled, true);
+    assert.strictEqual(d.lunchReminderTime, "11:50");
+    assert.strictEqual(d.leaveReminderTime, "18:00");
+  });
+
   it("seeds all known agents as enabled", () => {
     const d = prefs.getDefaults();
     for (const id of ["claude-code", "codex", "copilot-cli", "cursor-agent", "gemini-cli", "codebuddy", "kiro-cli", "opencode"]) {
@@ -85,6 +92,8 @@ describe("prefs.validate", () => {
       size: "P:15",
       miniEdge: "left",
       theme: "calico",
+      lunchReminderTime: "09:05",
+      leaveReminderTime: "18:45",
     });
     assert.strictEqual(v.lang, "zh");
     assert.strictEqual(v.soundMuted, true);
@@ -94,6 +103,17 @@ describe("prefs.validate", () => {
     assert.strictEqual(v.size, "P:15");
     assert.strictEqual(v.miniEdge, "left");
     assert.strictEqual(v.theme, "calico");
+    assert.strictEqual(v.lunchReminderTime, "09:05");
+    assert.strictEqual(v.leaveReminderTime, "18:45");
+  });
+
+  it("drops invalid reminder times and uses defaults", () => {
+    const v = prefs.validate({
+      lunchReminderTime: "25:00",
+      leaveReminderTime: "6pm",
+    });
+    assert.strictEqual(v.lunchReminderTime, "11:50");
+    assert.strictEqual(v.leaveReminderTime, "18:00");
   });
 
   it("normalizes agents (drops malformed entries)", () => {

@@ -38,6 +38,61 @@ html, body {
   pointer-events: none;
 }
 
+#reminder-bubble {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  min-width: 112px;
+  max-width: 78%;
+  transform: translate(-16%, 0) scale(0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+  z-index: 5;
+}
+
+#reminder-bubble.visible {
+  opacity: 1;
+  transform: translate(-16%, -4px) scale(1);
+}
+
+.reminder-bubble-body {
+  position: relative;
+  padding: 10px 14px;
+  border: 3px solid #101010;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 244, 232, 0.98));
+  color: #111111;
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+}
+
+#reminder-bubble-text {
+  display: block;
+  font-family: "Silom", "Osaka-Mono", "DungGeunMo", "Courier New", monospace;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.reminder-bubble-tail {
+  position: absolute;
+  left: 24px;
+  bottom: -15px;
+  width: 20px;
+  height: 20px;
+  background: rgba(248, 244, 232, 0.98);
+  border-right: 3px solid #101010;
+  border-bottom: 3px solid #101010;
+  transform: rotate(32deg) skewX(-12deg);
+  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.08);
+}
+
 #pet-container.mini-left,
 #pet-container.flip {
   transform: scaleX(-1);

@@ -24,6 +24,7 @@ const STRINGS = {
     sectionAppearance: "Appearance",
     sectionStartup: "Startup",
     sectionBubbles: "Bubbles",
+    sectionReminders: "Time Reminders",
     agentsTitle: "Agents",
     agentsSubtitle: "Turn tracking on or off per agent. Disabled agents stop log monitors and drop hook events at the HTTP boundary — they won't drive the pet, show permission bubbles, or keep sessions.",
     agentsEmpty: "No agents registered.",
@@ -51,6 +52,12 @@ const STRINGS = {
     rowHideBubblesDesc: "Suppress permission, notification, and update bubbles entirely.",
     rowShowSessionId: "Show session ID",
     rowShowSessionIdDesc: "Append the short session ID to bubble headers and the Sessions menu.",
+    rowTimeReminders: "Time reminders",
+    rowTimeRemindersDesc: "Show a comic-style speech bubble on the pet at scheduled times.",
+    rowLunchReminderTime: "Lunch reminder time",
+    rowLunchReminderTimeDesc: "Daily lunch reminder bubble time.",
+    rowLeaveReminderTime: "Leave work reminder time",
+    rowLeaveReminderTimeDesc: "Daily leave-work reminder bubble time.",
     sectionMacOS: "macOS",
     rowShowInMenuBar: "Show in Menu Bar",
     rowShowInMenuBarDesc: "Display the GitAnimals icon in the macOS menu bar.",
@@ -78,6 +85,7 @@ const STRINGS = {
     userCardSignOut: "Sign out",
     userCardSignInAgain: "Sign in again",
     sessionExpiredToast: "Session expired — please sign in again.",
+    invalidTimeToast: "Enter a valid 24-hour time like 11:50.",
   },
   zh: {
     settingsTitle: "设置",
@@ -92,6 +100,7 @@ const STRINGS = {
     sectionAppearance: "外观",
     sectionStartup: "启动",
     sectionBubbles: "气泡",
+    sectionReminders: "定时提醒",
     agentsTitle: "Agent 管理",
     agentsSubtitle: "按 agent 类型开关追踪。关闭后会停掉日志监视器、在 HTTP 入口丢弃 hook 事件——不会再驱动桌宠、不弹权限气泡、不记会话。",
     agentsEmpty: "没有已注册的 agent。",
@@ -119,6 +128,12 @@ const STRINGS = {
     rowHideBubblesDesc: "完全屏蔽权限、通知和更新气泡。",
     rowShowSessionId: "显示会话 ID",
     rowShowSessionIdDesc: "在气泡标题和会话菜单后追加短会话 ID。",
+    rowTimeReminders: "定时提醒",
+    rowTimeRemindersDesc: "在设定时间让宠物显示漫画风对话气泡。",
+    rowLunchReminderTime: "午饭提醒时间",
+    rowLunchReminderTimeDesc: "每天午饭提醒气泡出现的时间。",
+    rowLeaveReminderTime: "下班提醒时间",
+    rowLeaveReminderTimeDesc: "每天下班提醒气泡出现的时间。",
     sectionMacOS: "macOS",
     rowShowInMenuBar: "在菜单栏中显示",
     rowShowInMenuBarDesc: "在 macOS 菜单栏中显示 GitAnimals 图标。",
@@ -146,6 +161,7 @@ const STRINGS = {
     userCardSignOut: "退出登录",
     userCardSignInAgain: "重新登录",
     sessionExpiredToast: "会话已过期 — 请重新登录。",
+    invalidTimeToast: "请输入有效的 24 小时时间，例如 11:50。",
   },
   ko: {
     settingsTitle: "설정",
@@ -160,6 +176,7 @@ const STRINGS = {
     sectionAppearance: "모양",
     sectionStartup: "시작",
     sectionBubbles: "버블",
+    sectionReminders: "시간 리마인더",
     agentsTitle: "Agents",
     agentsSubtitle: "Agent별로 추적을 켜거나 끌 수 있어요. 비활성화된 agent는 로그 모니터가 멈추고 HTTP 경계에서 hook 이벤트가 드롭돼요 — 펫을 움직이지도, 권한 버블을 표시하지도, 세션을 유지하지도 않아요.",
     agentsEmpty: "등록된 agent가 없어요.",
@@ -187,6 +204,12 @@ const STRINGS = {
     rowHideBubblesDesc: "권한·알림·업데이트 버블을 모두 숨겨요.",
     rowShowSessionId: "세션 ID 표시",
     rowShowSessionIdDesc: "버블 헤더와 세션 메뉴에 짧은 세션 ID를 추가해요.",
+    rowTimeReminders: "시간 리마인더",
+    rowTimeRemindersDesc: "정해진 시간에 펫 위에 만화풍 말풍선을 표시해요.",
+    rowLunchReminderTime: "점심 리마인더 시간",
+    rowLunchReminderTimeDesc: "매일 점심 말풍선이 뜨는 시간이에요.",
+    rowLeaveReminderTime: "퇴근 리마인더 시간",
+    rowLeaveReminderTimeDesc: "매일 퇴근 말풍선이 뜨는 시간이에요.",
     sectionMacOS: "macOS",
     rowShowInMenuBar: "메뉴 막대에 표시",
     rowShowInMenuBarDesc: "macOS 메뉴 막대에 GitAnimals 아이콘을 표시해요.",
@@ -214,6 +237,7 @@ const STRINGS = {
     userCardSignOut: "로그아웃",
     userCardSignInAgain: "다시 로그인",
     sessionExpiredToast: "세션이 만료되었습니다 — 다시 로그인해 주세요.",
+    invalidTimeToast: "11:50 같은 24시간 형식으로 입력해 주세요.",
   },
 };
 
@@ -368,7 +392,7 @@ function UserCard({ t, userInfo, pending, onLogout, onSignInAgain }) {
   );
 }
 
-function GeneralTab({ snapshot, t, pending, runUpdate, runCommand, userInfo }) {
+function GeneralTab({ snapshot, t, pending, runUpdate, runCommand, userInfo, pushToast }) {
   const soundEnabled = !snapshot.soundMuted;
 
   return h(
@@ -479,6 +503,37 @@ function GeneralTab({ snapshot, t, pending, runUpdate, runCommand, userInfo }) {
     ),
     h(
       Section,
+      { title: t("sectionReminders") },
+      h(ToggleRow, {
+        label: t("rowTimeReminders"),
+        desc: t("rowTimeRemindersDesc"),
+        on: snapshot.timeRemindersEnabled !== false,
+        pending: !!pending.timeRemindersEnabled,
+        onToggle: () => runUpdate(
+          "timeRemindersEnabled",
+          "timeRemindersEnabled",
+          snapshot.timeRemindersEnabled === false
+        ),
+      }),
+      h(TimeInputRow, {
+        label: t("rowLunchReminderTime"),
+        desc: t("rowLunchReminderTimeDesc"),
+        value: snapshot.lunchReminderTime || "11:50",
+        pending: !!pending.lunchReminderTime,
+        onCommit: (nextValue) => runUpdate("lunchReminderTime", "lunchReminderTime", nextValue),
+        onInvalid: () => pushToast(t("invalidTimeToast"), { error: true }),
+      }),
+      h(TimeInputRow, {
+        label: t("rowLeaveReminderTime"),
+        desc: t("rowLeaveReminderTimeDesc"),
+        value: snapshot.leaveReminderTime || "18:00",
+        pending: !!pending.leaveReminderTime,
+        onCommit: (nextValue) => runUpdate("leaveReminderTime", "leaveReminderTime", nextValue),
+        onInvalid: () => pushToast(t("invalidTimeToast"), { error: true }),
+      })
+    ),
+    h(
+      Section,
       { title: t("sectionPrivacy") },
       h(ToggleRow, {
         label: t("rowSendDiagnostics"),
@@ -498,6 +553,67 @@ function ToggleRow({ label, desc, on, pending, disabled, onToggle, extraClass })
     extraClass,
     control: h(SwitchControl, { on, pending, disabled, onToggle }),
   });
+}
+
+function normalizeTimeInput(value) {
+  if (typeof value !== "string") return null;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function TimeInputRow({ label, desc, value, pending, onCommit, onInvalid }) {
+  const [draft, setDraft] = useState(value || "");
+
+  useEffect(() => {
+    setDraft(value || "");
+  }, [value]);
+
+  function commitDraft() {
+    const normalized = normalizeTimeInput(draft);
+    if (!normalized) {
+      setDraft(value || "");
+      if (typeof onInvalid === "function") onInvalid();
+      return;
+    }
+    setDraft(normalized);
+    if (normalized !== value) onCommit(normalized);
+  }
+
+  return h(
+    "div",
+    { className: "row" },
+    h(
+      "div",
+      { className: "row-text" },
+      h("span", { className: "row-label" }, label),
+      h("span", { className: "row-desc" }, desc)
+    ),
+    h(
+      "div",
+      { className: "row-control" },
+      h("input", {
+        className: "time-input",
+        type: "time",
+        step: 60,
+        value: draft,
+        disabled: pending,
+        onChange: (event) => setDraft(event.target.value),
+        onBlur: commitDraft,
+        onKeyDown: (event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+          if (event.key === "Escape") {
+            setDraft(value || "");
+            event.currentTarget.blur();
+          }
+        },
+      })
+    )
+  );
 }
 
 function LanguageRow({ snapshot, t, pending, onChange }) {
@@ -847,6 +963,7 @@ function App() {
         runUpdate,
         runCommand,
         userInfo,
+        pushToast,
       });
     }
     if (activeTab === "agents") {

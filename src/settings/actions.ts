@@ -56,6 +56,15 @@ function requirePlainObject(key: string) {
   };
 }
 
+function requireTimeString(key: string) {
+  return function (value: unknown): SettingsResult {
+    if (typeof value !== "string" || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+      return { status: "error", message: `${key} must be HH:MM (24-hour)` };
+    }
+    return { status: "ok" };
+  };
+}
+
 export const updateRegistry: SettingsUpdateRegistry = {
   x: requireFiniteNumber("x"),
   y: requireFiniteNumber("y"),
@@ -85,6 +94,9 @@ export const updateRegistry: SettingsUpdateRegistry = {
   bubbleFollowPet: requireBoolean("bubbleFollowPet"),
   hideBubbles: requireBoolean("hideBubbles"),
   showSessionId: requireBoolean("showSessionId"),
+  timeRemindersEnabled: requireBoolean("timeRemindersEnabled"),
+  lunchReminderTime: requireTimeString("lunchReminderTime"),
+  leaveReminderTime: requireTimeString("leaveReminderTime"),
   sendDiagnostics: {
     validate: requireBoolean("sendDiagnostics"),
     effect(value, deps: Deps) {

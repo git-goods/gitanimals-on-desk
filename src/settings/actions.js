@@ -6,6 +6,7 @@ exports.requireFiniteNumber = requireFiniteNumber;
 exports.requireEnum = requireEnum;
 exports.requireString = requireString;
 exports.requirePlainObject = requirePlainObject;
+exports.requireTimeString = requireTimeString;
 const prefs_1 = require("./prefs");
 function requireBoolean(key) {
     return function (value) {
@@ -50,6 +51,14 @@ function requirePlainObject(key) {
         return { status: "ok" };
     };
 }
+function requireTimeString(key) {
+    return function (value) {
+        if (typeof value !== "string" || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+            return { status: "error", message: `${key} must be HH:MM (24-hour)` };
+        }
+        return { status: "ok" };
+    };
+}
 exports.updateRegistry = {
     x: requireFiniteNumber("x"),
     y: requireFiniteNumber("y"),
@@ -81,6 +90,9 @@ exports.updateRegistry = {
     bubbleFollowPet: requireBoolean("bubbleFollowPet"),
     hideBubbles: requireBoolean("hideBubbles"),
     showSessionId: requireBoolean("showSessionId"),
+    timeRemindersEnabled: requireBoolean("timeRemindersEnabled"),
+    lunchReminderTime: requireTimeString("lunchReminderTime"),
+    leaveReminderTime: requireTimeString("leaveReminderTime"),
     sendDiagnostics: {
         validate: requireBoolean("sendDiagnostics"),
         effect(value, deps) {

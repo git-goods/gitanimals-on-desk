@@ -244,6 +244,26 @@ html, body {
   align-items: center;
 }
 
+.time-input {
+  width: 98px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+.time-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.time-input:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* ── Switch (iOS-style) ── */
 .switch {
   position: relative;

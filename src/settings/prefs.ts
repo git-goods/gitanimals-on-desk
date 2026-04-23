@@ -18,6 +18,8 @@ type SchemaField = {
 
 export const CURRENT_VERSION = 1;
 
+const TIME_RE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+
 export const SCHEMA: Record<string, SchemaField> = {
   version: {
     type: "number",
@@ -46,6 +48,17 @@ export const SCHEMA: Record<string, SchemaField> = {
   bubbleFollowPet: { type: "boolean", default: false },
   hideBubbles: { type: "boolean", default: false },
   showSessionId: { type: "boolean", default: false },
+  timeRemindersEnabled: { type: "boolean", default: true },
+  lunchReminderTime: {
+    type: "string",
+    default: "11:50",
+    validate: (v) => typeof v === "string" && TIME_RE.test(v),
+  },
+  leaveReminderTime: {
+    type: "string",
+    default: "18:00",
+    validate: (v) => typeof v === "string" && TIME_RE.test(v),
+  },
   soundMuted: { type: "boolean", default: false },
   flip: { type: "boolean", default: false },
   autoCheckForUpdates: { type: "boolean", default: true },

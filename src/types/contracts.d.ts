@@ -65,6 +65,9 @@ export interface SettingsSnapshot {
   bubbleFollowPet: boolean;
   hideBubbles: boolean;
   showSessionId: boolean;
+  timeRemindersEnabled: boolean;
+  lunchReminderTime: string;
+  leaveReminderTime: string;
   soundMuted: boolean;
   flip: boolean;
   autoCheckForUpdates: boolean;

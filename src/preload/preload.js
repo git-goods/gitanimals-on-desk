@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onStartDragReaction: (cb) => ipcRenderer.on("start-drag-reaction", () => cb()),
   onEndDragReaction: (cb) => ipcRenderer.on("end-drag-reaction", () => cb()),
   onPlayClickReaction: (cb) => ipcRenderer.on("play-click-reaction", (_, svg, duration) => cb(svg, duration)),
+  onReminderShow: (cb) => ipcRenderer.on("reminder-show", (_, payload) => cb(payload)),
+  onReminderHide: (cb) => ipcRenderer.on("reminder-hide", () => cb()),
   // Sound playback (from main)
   onPlaySound: (cb) => ipcRenderer.on("play-sound", (_, name) => cb(name)),
   // Render window → main (cursor polling control during reactions)

@@ -34,6 +34,9 @@ try {
 const container = document.getElementById("pet-container");
 let petEl = document.getElementById("gitanimals");
 let pendingNext = null;
+const reminderBubbleEl = document.getElementById("reminder-bubble");
+const reminderBubbleTextEl = document.getElementById("reminder-bubble-text");
+let reminderHideTimer = null;
 
 // ── Theme config (injected via preload.js additionalArguments) ──
 let tc = window.themeConfig || {};
@@ -228,9 +231,30 @@ let dndEnabled = false;
 let miniLeftFlip = false;
 let flipMode = false;
 
+function hideReminderBubble() {
+  if (reminderHideTimer) {
+    clearTimeout(reminderHideTimer);
+    reminderHideTimer = null;
+  }
+  if (!reminderBubbleEl) return;
+  reminderBubbleEl.classList.remove("visible");
+  reminderBubbleEl.setAttribute("aria-hidden", "true");
+}
+
+function showReminderBubble(payload) {
+  if (!reminderBubbleEl || !reminderBubbleTextEl) return;
+  if (reminderHideTimer) clearTimeout(reminderHideTimer);
+  reminderBubbleTextEl.textContent = (payload && payload.message) || "";
+  reminderBubbleEl.classList.add("visible");
+  reminderBubbleEl.setAttribute("aria-hidden", "false");
+  reminderHideTimer = setTimeout(() => hideReminderBubble(), 10000);
+}
+
 function isFlipped() { return miniLeftFlip || (!_inMiniMode && flipMode); }
 
 window.electronAPI.onDndChange((enabled) => { dndEnabled = enabled; });
+window.electronAPI.onReminderShow((payload) => showReminderBubble(payload));
+window.electronAPI.onReminderHide(() => hideReminderBubble());
 
 window.electronAPI.onFlipChange((enabled) => {
   flipMode = enabled;
