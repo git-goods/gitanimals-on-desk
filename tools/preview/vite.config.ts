@@ -7,9 +7,10 @@ import fs from "fs";
 const require = createRequire(import.meta.url);
 const ROOT = path.resolve(__dirname, "../..");
 const THEMES_DIR = path.join(ROOT, "themes");
+const RUNTIME_ROOT = path.join(ROOT, ".tsbuild", "runtime");
 
-// Reuse existing theme-loader (CJS)
-const themeLoader = require(path.join(ROOT, "src", "theme", "loader"));
+// Reuse transpiled theme-loader produced by the root runtime build.
+const themeLoader = require(path.join(RUNTIME_ROOT, "src", "theme", "loader.js"));
 themeLoader.init(path.join(ROOT, "src"), null);
 
 const MIME: Record<string, string> = {

@@ -3,13 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build"
+    "dev": "npm --prefix ../.. run transpile:runtime && vite",
+    "build": "npm --prefix ../.. run transpile:runtime && tsc && vite build"
   },
   "dependencies": {
     "jszip": "^3.10.1",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.14.2"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",

@@ -1,9 +1,24 @@
 import { useState, useCallback } from "react";
 import type { ThemeConfig } from "../types";
+import { Slider, CodeOutput, CopyButton } from "./shared";
 
 interface Props {
   config: ThemeConfig;
   onTransformChange: (accName: string, transform: string) => void;
+}
+
+const SLIDERS = [
+  { key: "tx" as const, label: "translateX", min: -10, max: 10, step: 0.1 },
+  { key: "ty" as const, label: "translateY", min: -10, max: 10, step: 0.1 },
+  { key: "s" as const, label: "scale", min: 0.1, max: 3, step: 0.05 },
+  { key: "r" as const, label: "rotate", min: -180, max: 180, step: 1 },
+];
+
+function buildTransformString(v: { tx: number; ty: number; s: number; r: number }) {
+  let t = `translate(${v.tx}, ${v.ty})`;
+  if (v.s !== 1) t += ` scale(${v.s})`;
+  if (v.r !== 0) t += ` rotate(${v.r})`;
+  return t;
 }
 
 export default function AccessoryEditor({ config, onTransformChange }: Props) {
@@ -35,28 +50,11 @@ export default function AccessoryEditor({ config, onTransformChange }: Props) {
   const updateValue = (key: keyof typeof values, val: number) => {
     const next = { ...values, [key]: val };
     setValues(next);
-
-    let transform = `translate(${next.tx}, ${next.ty})`;
-    if (next.s !== 1) transform += ` scale(${next.s})`;
-    if (next.r !== 0) transform += ` rotate(${next.r})`;
-
-    if (selected) onTransformChange(selected, transform);
+    if (selected) onTransformChange(selected, buildTransformString(next));
   };
 
-  const transformString = (() => {
-    let t = `translate(${values.tx}, ${values.ty})`;
-    if (values.s !== 1) t += ` scale(${values.s})`;
-    if (values.r !== 0) t += ` rotate(${values.r})`;
-    return t;
-  })();
-
-  const [copied, setCopied] = useState(false);
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(`"transform": "${transformString}"`).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
+  const transformString = buildTransformString(values);
+  const copyText = `"transform": "${transformString}"`;
 
   if (accNames.length === 0) {
     return <div style={{ color: "#666", fontSize: 12 }}>No accessories</div>;
@@ -86,62 +84,19 @@ export default function AccessoryEditor({ config, onTransformChange }: Props) {
 
       {selected && (
         <>
-          {([
-            { key: "tx" as const, label: "translateX", min: -10, max: 10, step: 0.1 },
-            { key: "ty" as const, label: "translateY", min: -10, max: 10, step: 0.1 },
-            { key: "s" as const, label: "scale", min: 0.1, max: 3, step: 0.05 },
-            { key: "r" as const, label: "rotate", min: -180, max: 180, step: 1 },
-          ]).map(({ key, label, min, max, step }) => (
-            <div key={key} style={{ margin: "6px 0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#aaa" }}>
-                <span>{label}</span>
-                <span style={{ color: "#e94560", fontWeight: "bold" }}>{values[key]}</span>
-              </div>
-              <input
-                type="range"
-                min={min}
-                max={max}
-                step={step}
-                value={values[key]}
-                onChange={(e) => updateValue(key, parseFloat(e.target.value))}
-                style={{ width: "100%", accentColor: "#e94560" }}
-              />
-            </div>
+          {SLIDERS.map(({ key, label, min, max, step }) => (
+            <Slider
+              key={key}
+              label={label}
+              value={values[key]}
+              min={min}
+              max={max}
+              step={step}
+              onChange={(v) => updateValue(key, v)}
+            />
           ))}
-
-          <div
-            style={{
-              marginTop: 8,
-              padding: 8,
-              background: "#0a0a1a",
-              border: "1px solid #333",
-              borderRadius: 4,
-              fontFamily: "monospace",
-              fontSize: 12,
-              color: "#4fc3f7",
-              wordBreak: "break-all",
-            }}
-          >
-            {`"transform": "${transformString}"`}
-          </div>
-
-          <button
-            onClick={copyToClipboard}
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 8,
-              marginTop: 8,
-              background: copied ? "#27ae60" : "#e94560",
-              color: "#fff",
-              border: "none",
-              borderRadius: 4,
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            {copied ? "Copied!" : "Copy transform"}
-          </button>
+          <CodeOutput>{copyText}</CodeOutput>
+          <CopyButton text={copyText} label="Copy transform" />
         </>
       )}
     </div>
