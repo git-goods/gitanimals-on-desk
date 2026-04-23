@@ -67,6 +67,10 @@ export interface SettingsSnapshot {
   showSessionId: boolean;
   soundMuted: boolean;
   flip: boolean;
+  autoCheckForUpdates: boolean;
+  lastUpdateCheckAt: number;
+  updateSnoozeUntil: number;
+  pendingUpdateVersion: string;
   sendDiagnostics: boolean;
   theme: string;
   agents: Record<string, Partial<AgentFlags>>;

@@ -78,6 +78,7 @@ function initUpdater(ctx, deps = {}) {
   let repoRootCache;
   let autoUpdaterInstance = null;
   let overlayKind = null;
+  let pendingVersion = "";
 
   function rebuildMenus() {
     if (typeof ctx.rebuildAllMenus === "function") ctx.rebuildAllMenus();
@@ -301,9 +302,17 @@ function initUpdater(ctx, deps = {}) {
     });
 
     if (action === "primary") return onPrimary();
+    const SNOOZE_DURATION = 24 * 60 * 60 * 1000;
+    pendingVersion = version;
+    if (typeof ctx.savePendingState === "function") {
+      ctx.savePendingState({
+        pendingUpdateVersion: version,
+        updateSnoozeUntil: Date.now() + SNOOZE_DURATION,
+      });
+    }
     hideBubble();
     dismissToResolvedState();
-    updateStatus = "idle";
+    updateStatus = "available";
     rebuildMenus();
     manualUpdateCheck = false;
     return null;
@@ -331,6 +340,60 @@ function initUpdater(ctx, deps = {}) {
     updateStatus = "idle";
     rebuildMenus();
     return null;
+  }
+
+  async function reevaluateDeferred(force = false) {
+    if (!force && isSilentMode()) return;
+    if (updateStatus === "checking" || updateStatus === "downloading") return;
+
+    const pending = pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" ? ctx.getPendingUpdateVersion() : "");
+    if (!pending) return;
+
+    const snoozeUntil = typeof ctx.getUpdateSnoozeUntil === "function" ? ctx.getUpdateSnoozeUntil() : 0;
+    if (snoozeUntil && Date.now() < snoozeUntil) return;
+
+    pendingVersion = pending;
+    updateStatus = "available";
+    rebuildMenus();
+
+    const repoRoot = getRepoRoot();
+    await promptAvailableUpdate({
+      mode: repoRoot ? "git" : "win",
+      version: pending,
+      onPrimary: async () => {
+        if (repoRoot) {
+          const branch = await gitCmd(["rev-parse", "--abbrev-ref", "HEAD"], repoRoot);
+          const localHead = await gitCmd(["rev-parse", "HEAD"], repoRoot);
+          const dirty = await gitCmd(["status", "--porcelain"], repoRoot);
+          if (dirty) {
+            updateStatus = "error";
+            rebuildMenus();
+            clearOverlay();
+            await showErrorBubble({
+              failureType: "Dirty Worktree",
+              operation: "Apply Git Update",
+              reason: "Local files have uncommitted changes.",
+              nextStep: "Commit or stash your changes, then try the update again.",
+              detail: dirty,
+              message: t("updateDirtyMsg", "Local files have been modified. Please commit or stash your changes before updating."),
+            });
+            return;
+          }
+          await runGitUpdate(repoRoot, branch, localHead);
+        } else {
+          updateStatus = "downloading";
+          setOverlay("downloading");
+          rebuildMenus();
+          await showInfoBubble(
+            "downloading",
+            t("updateDownloading", "Downloading Update..."),
+            t("updateDownloading", "Downloading Update...")
+          );
+          const autoUpdater = getAutoUpdater();
+          if (autoUpdater) autoUpdater.downloadUpdate();
+        }
+      },
+    });
   }
 
   async function runGitUpdate(repoRoot, branch, localHead) {
@@ -398,6 +461,12 @@ function initUpdater(ctx, deps = {}) {
       const remoteHead = await gitCmd(["rev-parse", `origin/${branch}`], repoRoot);
 
       if (localHead === remoteHead) {
+        if (pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" && ctx.getPendingUpdateVersion())) {
+          pendingVersion = "";
+          if (typeof ctx.savePendingState === "function") {
+            ctx.savePendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
+          }
+        }
         updateStatus = "idle";
         manualUpdateCheck = false;
         rebuildMenus();
@@ -418,9 +487,17 @@ function initUpdater(ctx, deps = {}) {
       rebuildMenus();
 
       if (!manual && isSilentMode()) {
+        pendingVersion = remoteVersion;
+        if (typeof ctx.savePendingState === "function") {
+          ctx.savePendingState({
+            pendingUpdateVersion: remoteVersion,
+            lastUpdateCheckAt: Date.now(),
+          });
+        }
+        updateStatus = "available";
         hideBubble();
         dismissToResolvedState();
-        updateStatus = "idle";
+        rebuildMenus();
         manualUpdateCheck = false;
         return;
       }
@@ -477,7 +554,14 @@ function initUpdater(ctx, deps = {}) {
       rebuildMenus();
 
       if (!wasManual && isSilentMode()) {
-        updateStatus = "idle";
+        pendingVersion = info.version;
+        if (typeof ctx.savePendingState === "function") {
+          ctx.savePendingState({
+            pendingUpdateVersion: info.version,
+            lastUpdateCheckAt: Date.now(),
+          });
+        }
+        rebuildMenus();
         dismissToResolvedState();
         return;
       }
@@ -560,6 +644,10 @@ function initUpdater(ctx, deps = {}) {
       return;
     }
 
+    if (typeof ctx.savePendingState === "function") {
+      ctx.savePendingState({ lastUpdateCheckAt: Date.now() });
+    }
+
     const repoRoot = getRepoRoot();
     if (repoRoot) return gitCheckForUpdates(repoRoot, manual);
 
@@ -595,6 +683,12 @@ function initUpdater(ctx, deps = {}) {
     }
 
     if (compareVersions(currentVersion, latestVersion) >= 0) {
+      if (pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" && ctx.getPendingUpdateVersion())) {
+        pendingVersion = "";
+        if (typeof ctx.savePendingState === "function") {
+          ctx.savePendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
+        }
+      }
       updateStatus = "idle";
       manualUpdateCheck = false;
       rebuildMenus();
@@ -619,6 +713,14 @@ function initUpdater(ctx, deps = {}) {
         });
       }
       return;
+    }
+
+    const currentPending = pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" ? ctx.getPendingUpdateVersion() : "");
+    if (currentPending && compareVersions(currentPending, latestVersion) < 0) {
+      pendingVersion = "";
+      if (typeof ctx.savePendingState === "function") {
+        ctx.savePendingState({ updateSnoozeUntil: 0, pendingUpdateVersion: "" });
+      }
     }
 
     try {
@@ -654,6 +756,31 @@ function initUpdater(ctx, deps = {}) {
     }
   }
 
+  const STARTUP_DELAY = 30 * 1000;
+  const CHECK_INTERVAL = 12 * 60 * 60 * 1000;
+  let schedulerStartupTimer = null;
+  let schedulerIntervalTimer = null;
+
+  function scheduledCheck() {
+    if (!ctx.autoCheckForUpdates) return;
+    if (updateStatus === "checking" || updateStatus === "downloading") return;
+    checkForUpdates(false);
+  }
+
+  function startScheduler() {
+    if (!app.isPackaged) return;
+    stopScheduler();
+    schedulerStartupTimer = setTimeout(() => {
+      scheduledCheck();
+      schedulerIntervalTimer = setInterval(scheduledCheck, CHECK_INTERVAL);
+    }, STARTUP_DELAY);
+  }
+
+  function stopScheduler() {
+    if (schedulerStartupTimer) { clearTimeout(schedulerStartupTimer); schedulerStartupTimer = null; }
+    if (schedulerIntervalTimer) { clearInterval(schedulerIntervalTimer); schedulerIntervalTimer = null; }
+  }
+
   function getUpdateMenuLabel() {
     switch (updateStatus) {
       case "checking":
@@ -664,6 +791,9 @@ function initUpdater(ctx, deps = {}) {
           : t("updateDownloading", "Downloading Update...");
       case "ready":
         return t("updateReady", "Update Ready");
+      case "available":
+        return t("updateAvailableMenu", "Update Available (v{version})")
+          .replace("{version}", pendingVersion || "");
       default:
         return t("checkForUpdates", "Check for Updates");
     }
@@ -673,9 +803,16 @@ function initUpdater(ctx, deps = {}) {
     return {
       label: getUpdateMenuLabel(),
       enabled: updateStatus !== "checking" && updateStatus !== "downloading",
-      click: () => updateStatus === "ready"
-        ? getAutoUpdater()?.quitAndInstall(false, true)
-        : checkForUpdates(true),
+      click: () => {
+        if (updateStatus === "ready") {
+          const au = getAutoUpdater();
+          if (au) au.quitAndInstall(false, true);
+        } else if (updateStatus === "available" && pendingVersion) {
+          reevaluateDeferred(true);
+        } else {
+          checkForUpdates(true);
+        }
+      },
     };
   }
 
@@ -684,6 +821,9 @@ function initUpdater(ctx, deps = {}) {
     checkForUpdates,
     getUpdateMenuItem,
     getUpdateMenuLabel,
+    startScheduler,
+    stopScheduler,
+    reevaluateDeferred,
   };
 }
 

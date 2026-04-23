@@ -48,6 +48,10 @@ export const SCHEMA: Record<string, SchemaField> = {
   showSessionId: { type: "boolean", default: false },
   soundMuted: { type: "boolean", default: false },
   flip: { type: "boolean", default: false },
+  autoCheckForUpdates: { type: "boolean", default: true },
+  lastUpdateCheckAt: { type: "number", default: 0, validate: (v) => Number.isFinite(v) },
+  updateSnoozeUntil: { type: "number", default: 0, validate: (v) => Number.isFinite(v) },
+  pendingUpdateVersion: { type: "string", default: "" },
   sendDiagnostics: { type: "boolean", default: true },
   theme: { type: "string", default: "fox" },
   agents: {
