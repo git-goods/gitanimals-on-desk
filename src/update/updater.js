@@ -133,6 +133,7 @@ function initUpdater(ctx, deps = {}) {
   }
 
   function dismissToResolvedState() {
+    hideBubble();
     clearOverlay();
     rebuildMenus();
   }
@@ -213,7 +214,7 @@ function initUpdater(ctx, deps = {}) {
       repoRootCache = null;
       return repoRootCache;
     }
-    const root = path.join(__dirname, "..");
+    const root = path.join(__dirname, "../..");
     try {
       if (fsApi.statSync(path.join(root, ".git")).isDirectory()) {
         repoRootCache = root;
@@ -337,7 +338,7 @@ function initUpdater(ctx, deps = {}) {
     if (action === "primary") return onPrimary();
     hideBubble();
     dismissToResolvedState();
-    updateStatus = "idle";
+    updateStatus = "ready";
     rebuildMenus();
     return null;
   }
@@ -357,43 +358,51 @@ function initUpdater(ctx, deps = {}) {
     rebuildMenus();
 
     const repoRoot = getRepoRoot();
-    await promptAvailableUpdate({
-      mode: repoRoot ? "git" : "win",
-      version: pending,
-      onPrimary: async () => {
-        if (repoRoot) {
-          const branch = await gitCmd(["rev-parse", "--abbrev-ref", "HEAD"], repoRoot);
-          const localHead = await gitCmd(["rev-parse", "HEAD"], repoRoot);
-          const dirty = await gitCmd(["status", "--porcelain"], repoRoot);
-          if (dirty) {
-            updateStatus = "error";
+    try {
+      await promptAvailableUpdate({
+        mode: repoRoot ? "git" : "win",
+        version: pending,
+        onPrimary: async () => {
+          if (repoRoot) {
+            const branch = await gitCmd(["rev-parse", "--abbrev-ref", "HEAD"], repoRoot);
+            const localHead = await gitCmd(["rev-parse", "HEAD"], repoRoot);
+            const dirty = await gitCmd(["status", "--porcelain"], repoRoot);
+            if (dirty) {
+              updateStatus = "error";
+              rebuildMenus();
+              clearOverlay();
+              await showErrorBubble({
+                failureType: "Dirty Worktree",
+                operation: "Apply Git Update",
+                reason: "Local files have uncommitted changes.",
+                nextStep: "Commit or stash your changes, then try the update again.",
+                detail: dirty,
+                message: t("updateDirtyMsg", "Local files have been modified. Please commit or stash your changes before updating."),
+              });
+              return;
+            }
+            await runGitUpdate(repoRoot, branch, localHead);
+          } else {
+            updateStatus = "downloading";
+            setOverlay("downloading");
             rebuildMenus();
-            clearOverlay();
-            await showErrorBubble({
-              failureType: "Dirty Worktree",
-              operation: "Apply Git Update",
-              reason: "Local files have uncommitted changes.",
-              nextStep: "Commit or stash your changes, then try the update again.",
-              detail: dirty,
-              message: t("updateDirtyMsg", "Local files have been modified. Please commit or stash your changes before updating."),
-            });
-            return;
+            await showInfoBubble(
+              "downloading",
+              t("updateDownloading", "Downloading Update..."),
+              t("updateDownloading", "Downloading Update...")
+            );
+            const autoUpdater = getAutoUpdater();
+            if (autoUpdater) autoUpdater.downloadUpdate();
           }
-          await runGitUpdate(repoRoot, branch, localHead);
-        } else {
-          updateStatus = "downloading";
-          setOverlay("downloading");
-          rebuildMenus();
-          await showInfoBubble(
-            "downloading",
-            t("updateDownloading", "Downloading Update..."),
-            t("updateDownloading", "Downloading Update...")
-          );
-          const autoUpdater = getAutoUpdater();
-          if (autoUpdater) autoUpdater.downloadUpdate();
-        }
-      },
-    });
+        },
+      });
+    } catch (err) {
+      updateStatus = "error";
+      hideBubble();
+      clearOverlay();
+      rebuildMenus();
+      log(`ERROR: reevaluateDeferred: ${err.message}`);
+    }
   }
 
   async function runGitUpdate(repoRoot, branch, localHead) {
@@ -584,6 +593,12 @@ function initUpdater(ctx, deps = {}) {
     });
 
     autoUpdater.on("update-not-available", async () => {
+      if (pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" && ctx.getPendingUpdateVersion())) {
+        pendingVersion = "";
+        if (typeof ctx.savePendingState === "function") {
+          ctx.savePendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
+        }
+      }
       updateStatus = "idle";
       rebuildMenus();
       if (manualUpdateCheck) {
@@ -638,11 +653,78 @@ function initUpdater(ctx, deps = {}) {
     });
   }
 
+  async function simulateUpdate(simMode) {
+    const simVersion = "v99.0.0";
+    manualUpdateCheck = true;
+    updateStatus = "checking";
+    setOverlay("checking");
+    rebuildMenus();
+    await showInfoBubble("checking", t("checkForUpdates", "Check for Updates"), t("checkingForUpdates", "Checking for Updates..."));
+    await new Promise((r) => setTimeout(r, 800));
+
+    if (simMode === "error") {
+      updateStatus = "error";
+      rebuildMenus();
+      clearOverlay();
+      await showErrorBubble({
+        failureType: "Network Error",
+        operation: "Check for Updates",
+        reason: "[Simulated] GitHub API request timed out (10s)",
+        nextStep: "This is a simulated error for dev testing.",
+        detail: "[DEV_SIMULATE_UPDATE=error] Simulated network failure",
+      });
+      return;
+    }
+
+    if (simMode === "ready") {
+      updateStatus = "ready";
+      rebuildMenus();
+      clearOverlay();
+      await promptReadyUpdate(simVersion, async () => {
+        log("DEV: Simulated restart (no actual relaunch)");
+        await showSuccessBubble({
+          title: "Simulated Restart",
+          message: "In production, the app would restart now.",
+          version: simVersion,
+        });
+      });
+      return;
+    }
+
+    updateStatus = "available";
+    rebuildMenus();
+    await promptAvailableUpdate({
+      mode: "win",
+      version: simVersion,
+      onPrimary: async () => {
+        updateStatus = "downloading";
+        setOverlay("downloading");
+        rebuildMenus();
+        await showInfoBubble("downloading", t("updateDownloading", "Downloading Update..."), t("updateDownloading", "Downloading Update..."));
+        await new Promise((r) => setTimeout(r, 1500));
+        updateStatus = "ready";
+        rebuildMenus();
+        clearOverlay();
+        await promptReadyUpdate(simVersion, async () => {
+          log("DEV: Simulated restart (no actual relaunch)");
+          await showSuccessBubble({
+            title: "Simulated Restart",
+            message: "In production, the app would restart now.",
+            version: simVersion,
+          });
+        });
+      },
+    });
+  }
+
   async function checkForUpdates(manual = false) {
     if (updateStatus === "checking" || updateStatus === "downloading") {
       log(`Check skipped: already ${updateStatus}`);
       return;
     }
+
+    const simMode = !app.isPackaged && process.env.DEV_SIMULATE_UPDATE;
+    if (simMode) return simulateUpdate(simMode);
 
     if (typeof ctx.savePendingState === "function") {
       ctx.savePendingState({ lastUpdateCheckAt: Date.now() });
@@ -651,7 +733,6 @@ function initUpdater(ctx, deps = {}) {
     const repoRoot = getRepoRoot();
     if (repoRoot) return gitCheckForUpdates(repoRoot, manual);
 
-    const currentVersion = app.getVersion();
     manualUpdateCheck = manual;
     updateStatus = "checking";
     setOverlay("checking");
@@ -661,41 +742,6 @@ function initUpdater(ctx, deps = {}) {
       t("checkForUpdates", "Check for Updates"),
       t("checkingForUpdates", "Checking for Updates...")
     );
-
-    let latestVersion;
-    try {
-      latestVersion = await fetchLatestVersion();
-    } catch (err) {
-      updateStatus = "error";
-      manualUpdateCheck = false;
-      rebuildMenus();
-      clearOverlay();
-      if (manual) {
-        await showErrorBubble({
-          failureType: classifyFailureType(err.message),
-          operation: "Check for Updates",
-          reason: getErrorMessage(err),
-          nextStep: "Check your network connection and try again.",
-          detail: getErrorMessage(err),
-        });
-      }
-      return;
-    }
-
-    if (compareVersions(currentVersion, latestVersion) >= 0) {
-      if (pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" && ctx.getPendingUpdateVersion())) {
-        pendingVersion = "";
-        if (typeof ctx.savePendingState === "function") {
-          ctx.savePendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
-        }
-      }
-      updateStatus = "idle";
-      manualUpdateCheck = false;
-      rebuildMenus();
-      if (manual) await showUpToDateBubble(currentVersion);
-      else dismissToResolvedState();
-      return;
-    }
 
     const autoUpdater = getAutoUpdater();
     if (!autoUpdater) {
@@ -711,16 +757,10 @@ function initUpdater(ctx, deps = {}) {
           nextStep: "Restart GitAnimals or reinstall the packaged app, then try again.",
           detail: "AutoUpdater not available",
         });
+      } else {
+        hideBubble();
       }
       return;
-    }
-
-    const currentPending = pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" ? ctx.getPendingUpdateVersion() : "");
-    if (currentPending && compareVersions(currentPending, latestVersion) < 0) {
-      pendingVersion = "";
-      if (typeof ctx.savePendingState === "function") {
-        ctx.savePendingState({ updateSnoozeUntil: 0, pendingUpdateVersion: "" });
-      }
     }
 
     try {
@@ -736,7 +776,7 @@ function initUpdater(ctx, deps = {}) {
         updateStatus = "idle";
         manualUpdateCheck = false;
         rebuildMenus();
-        if (manual) await showUpToDateBubble(currentVersion);
+        if (manual) await showUpToDateBubble(app.getVersion());
         else dismissToResolvedState();
       } else {
         updateStatus = "error";
@@ -751,6 +791,8 @@ function initUpdater(ctx, deps = {}) {
             nextStep: "Check your network connection and try again.",
             detail: getErrorMessage(err),
           });
+        } else {
+          hideBubble();
         }
       }
     }
