@@ -79,22 +79,24 @@ describe("updater visual flow", () => {
       getSvgOverride: (state) => state === "sweeping" ? "gitanimals-working-debugger.svg" : null,
       showUpdateBubble: (payload) => bubbles.push(payload),
     });
+    const handlers = {};
     const updater = initUpdater(ctx, makeDeps({
-      httpsGetImpl: (options, cb) => {
-        const res = {
-          statusCode: 200,
-          on(event, handler) {
-            if (event === "data") handler(Buffer.from(JSON.stringify({ tag_name: "v0.5.10" })));
-            if (event === "end") handler();
-            return this;
-          },
-        };
-        cb(res);
-        return { on() { return this; }, setTimeout() {} };
-      },
+      autoUpdaterFactory: () => ({
+        autoDownload: false,
+        autoInstallOnAppQuit: true,
+        on(event, handler) { handlers[event] = handler; },
+        async checkForUpdates() {
+          process.nextTick(() => handlers["update-not-available"]?.());
+          return {};
+        },
+        quitAndInstall() {},
+        downloadUpdate() {},
+      }),
     }));
+    updater.setupAutoUpdater();
 
     await updater.checkForUpdates(true);
+    await new Promise((r) => setTimeout(r, 20));
 
     assert.deepStrictEqual(visualStates, ["checking", null]);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "up-to-date"]);
@@ -103,7 +105,7 @@ describe("updater visual flow", () => {
     );
   });
 
-  it("shows error state and detail bubble when GitHub API check fails", async () => {
+  it("shows error state and detail bubble when autoUpdater check fails", async () => {
     const visualStates = [];
     const appliedStates = [];
     const bubbles = [];
@@ -112,20 +114,18 @@ describe("updater visual flow", () => {
       applyState: (state) => appliedStates.push(state),
       showUpdateBubble: (payload) => bubbles.push(payload),
     });
+    const handlers = {};
     const updater = initUpdater(ctx, makeDeps({
-      httpsGetImpl: () => {
-        const req = {
-          on(event, handler) {
-            if (event === "error") {
-              process.nextTick(() => handler(new Error("network down")));
-            }
-            return this;
-          },
-          setTimeout() {},
-        };
-        return req;
-      },
+      autoUpdaterFactory: () => ({
+        autoDownload: false,
+        autoInstallOnAppQuit: true,
+        on(event, handler) { handlers[event] = handler; },
+        async checkForUpdates() { throw new Error("network down"); },
+        quitAndInstall() {},
+        downloadUpdate() {},
+      }),
     }));
+    updater.setupAutoUpdater();
 
     await updater.checkForUpdates(true);
 
@@ -448,26 +448,29 @@ describe("pending version cleanup", () => {
     const savedState = {};
     const ctx = makeCtx({
       showUpdateBubble: (p) => "dismiss",
+      hideUpdateBubble() {},
       savePendingState(partial) { Object.assign(savedState, partial); },
       getPendingUpdateVersion: () => "0.5.10",
       getUpdateSnoozeUntil: () => 0,
     });
+    const handlers = {};
     const updater = initUpdater(ctx, makeDeps({
       app: { isPackaged: true, getVersion: () => "0.5.10", relaunch() {}, exit() {} },
-      httpsGetImpl: (options, cb) => {
-        const res = {
-          statusCode: 200,
-          on(evt, fn) {
-            if (evt === "data") fn(JSON.stringify({ tag_name: "v0.5.10" }));
-            if (evt === "end") fn();
-          },
-        };
-        cb(res);
-        return { on() {}, setTimeout() {} };
-      },
+      autoUpdaterFactory: () => ({
+        autoDownload: false,
+        autoInstallOnAppQuit: true,
+        on(event, handler) { handlers[event] = handler; },
+        async checkForUpdates() {
+          process.nextTick(() => handlers["update-not-available"]?.());
+          return {};
+        },
+        quitAndInstall() {},
+        downloadUpdate() {},
+      }),
     }));
     updater.setupAutoUpdater();
     await updater.checkForUpdates(false);
+    await new Promise((r) => setTimeout(r, 20));
 
     assert.strictEqual(savedState.pendingUpdateVersion, "");
   });
