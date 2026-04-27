@@ -14,8 +14,7 @@ function makeCtx(overrides = {}) {
     rebuildAllMenus() {},
     updateLog() {},
     t: (k) => k,
-    showUpdateBubble() {},
-    hideUpdateBubble() {},
+    showUpdateDialog() {},
     setUpdateVisualState() {},
     applyState() {},
     resolveDisplayState: () => "idle",
@@ -77,64 +76,64 @@ describe("updater visual flow", () => {
       applyState: (state, svgOverride) => applied.push({ state, svgOverride }),
       resolveDisplayState: () => overlayState ? "sweeping" : "idle",
       getSvgOverride: (state) => state === "sweeping" ? "gitanimals-working-debugger.svg" : null,
-      showUpdateBubble: (payload) => bubbles.push(payload),
+      showUpdateDialog: (payload) => bubbles.push(payload),
     });
+    const handlers = {};
     const updater = initUpdater(ctx, makeDeps({
-      httpsGetImpl: (options, cb) => {
-        const res = {
-          statusCode: 200,
-          on(event, handler) {
-            if (event === "data") handler(Buffer.from(JSON.stringify({ tag_name: "v0.5.10" })));
-            if (event === "end") handler();
-            return this;
-          },
-        };
-        cb(res);
-        return { on() { return this; }, setTimeout() {} };
-      },
+      autoUpdaterFactory: () => ({
+        autoDownload: false,
+        autoInstallOnAppQuit: true,
+        on(event, handler) { handlers[event] = handler; },
+        async checkForUpdates() {
+          process.nextTick(() => handlers["update-not-available"]?.());
+          return {};
+        },
+        quitAndInstall() {},
+        downloadUpdate() {},
+      }),
     }));
+    updater.setupAutoUpdater();
 
     await updater.checkForUpdates(true);
+    await new Promise((r) => setTimeout(r, 20));
 
     assert.deepStrictEqual(visualStates, ["checking", null]);
-    assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "up-to-date"]);
+    assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["up-to-date"]);
     assert.ok(
       applied.some((entry) => entry.state === "sweeping" && entry.svgOverride === "gitanimals-working-debugger.svg")
     );
   });
 
-  it("shows error state and detail bubble when GitHub API check fails", async () => {
+  it("shows error state and detail bubble when autoUpdater check fails", async () => {
     const visualStates = [];
     const appliedStates = [];
     const bubbles = [];
     const ctx = makeCtx({
       setUpdateVisualState: (state) => visualStates.push(state),
       applyState: (state) => appliedStates.push(state),
-      showUpdateBubble: (payload) => bubbles.push(payload),
+      showUpdateDialog: (payload) => bubbles.push(payload),
     });
+    const handlers = {};
     const updater = initUpdater(ctx, makeDeps({
-      httpsGetImpl: () => {
-        const req = {
-          on(event, handler) {
-            if (event === "error") {
-              process.nextTick(() => handler(new Error("network down")));
-            }
-            return this;
-          },
-          setTimeout() {},
-        };
-        return req;
-      },
+      autoUpdaterFactory: () => ({
+        autoDownload: false,
+        autoInstallOnAppQuit: true,
+        on(event, handler) { handlers[event] = handler; },
+        async checkForUpdates() { throw new Error("network down"); },
+        quitAndInstall() {},
+        downloadUpdate() {},
+      }),
     }));
+    updater.setupAutoUpdater();
 
     await updater.checkForUpdates(true);
 
     assert.deepStrictEqual(visualStates, ["checking", null]);
     assert.ok(appliedStates.includes("error"));
-    assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "error"]);
-    assert.match(bubbles[1].detail, /Operation: Check for Updates/);
-    assert.match(bubbles[1].detail, /Reason: network down/);
-    assert.match(bubbles[1].detail, /network down/);
+    assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["error"]);
+    assert.match(bubbles[0].detail, /Operation: Check for Updates/);
+    assert.match(bubbles[0].detail, /Reason: network down/);
+    assert.match(bubbles[0].detail, /network down/);
   });
 
   it("shows a real error bubble when packaged download fails after user starts it", async () => {
@@ -145,7 +144,7 @@ describe("updater visual flow", () => {
     const bubbles = [];
     const handlers = {};
     const ctx = makeCtx({
-      showUpdateBubble: async (payload) => {
+      showUpdateDialog: async (payload) => {
         bubbles.push(payload);
         if (payload.mode === "available") return "primary";
         if (payload.mode === "error") return "dismiss";
@@ -183,8 +182,8 @@ describe("updater visual flow", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available", "downloading", "error"]);
-    assert.match(bubbles[3].detail, /download exploded/);
+    assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["available", "error"]);
+    assert.match(bubbles[1].detail, /download exploded/);
     Object.defineProperty(process, "platform", { value: originalPlatform });
   });
 
@@ -198,7 +197,7 @@ describe("updater visual flow", () => {
       delete require.cache[require.resolve("../../src/update/updater")];
       initUpdater = require("../../src/update/updater");
       const ctx = makeCtx({
-        showUpdateBubble: async (payload) => {
+        showUpdateDialog: async (payload) => {
           bubbles.push(payload);
           if (payload.mode === "available") return "primary";
           if (payload.mode === "ready") return "dismiss";
@@ -234,7 +233,7 @@ describe("updater visual flow", () => {
       await updater.checkForUpdates(true);
       await handlers["update-available"]({ version: "0.5.11" });
 
-      assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available", "downloading"]);
+      assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["available"]);
       assert.strictEqual(downloadCalled, true);
     } finally {
       Object.defineProperty(process, "platform", { value: originalPlatform });
@@ -244,7 +243,7 @@ describe("updater visual flow", () => {
   it("uses a friendly dirty-worktree message while keeping detailed file status", async () => {
     const bubbles = [];
     const ctx = makeCtx({
-      showUpdateBubble: async (payload) => {
+      showUpdateDialog: async (payload) => {
         bubbles.push(payload);
         if (payload.mode === "available") return "primary";
         if (payload.mode === "error") return "dismiss";
@@ -280,11 +279,11 @@ describe("updater visual flow", () => {
 
     await updater.checkForUpdates(true);
 
-    assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available", "error"]);
-    assert.match(bubbles[2].message, /modified|commit|stash/i);
-    assert.match(bubbles[2].detail, /Failure Type: Dirty Worktree/i);
-    assert.match(bubbles[2].detail, /Operation: Apply Git Update/i);
-    assert.match(bubbles[2].detail, /package-lock\.json/);
+    assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["available", "error"]);
+    assert.match(bubbles[1].message, /modified|commit|stash/i);
+    assert.match(bubbles[1].detail, /Failure Type: Dirty Worktree/i);
+    assert.match(bubbles[1].detail, /Operation: Apply Git Update/i);
+    assert.match(bubbles[1].detail, /package-lock\.json/);
   });
 
   it("pulses attention on packaged update download completion so the success sound path runs", async () => {
@@ -294,7 +293,7 @@ describe("updater visual flow", () => {
     const ctx = makeCtx({
       resetSoundCooldown: () => { resetSoundCooldownCalls++; },
       applyState: (state) => appliedStates.push(state),
-      showUpdateBubble: async (payload) => {
+      showUpdateDialog: async (payload) => {
         if (payload.mode === "ready") return "later";
         return payload.defaultAction || null;
       },
@@ -353,7 +352,7 @@ describe("defer", () => {
     const bubbles = [];
     const ctx = makeCtx({
       doNotDisturb: true,
-      showUpdateBubble: (p) => { bubbles.push(p); return "later"; },
+      showUpdateDialog: (p) => { bubbles.push(p); return "later"; },
       savePendingState(partial) { Object.assign(savedState, partial); },
     });
     const autoUpdater = {
@@ -377,7 +376,7 @@ describe("defer", () => {
   it("reevaluateDeferred prompts when not silent and snooze expired", async () => {
     const bubbles = [];
     const ctx = makeCtx({
-      showUpdateBubble: (p) => { bubbles.push(p); return "later"; },
+      showUpdateDialog: (p) => { bubbles.push(p); return "later"; },
       getPendingUpdateVersion: () => "2.0.0",
       getUpdateSnoozeUntil: () => 0,
       savePendingState() {},
@@ -394,7 +393,7 @@ describe("defer", () => {
     const bubbles = [];
     const ctx = makeCtx({
       doNotDisturb: true,
-      showUpdateBubble: (p) => { bubbles.push(p); return "later"; },
+      showUpdateDialog: (p) => { bubbles.push(p); return "later"; },
       getPendingUpdateVersion: () => "2.0.0",
       savePendingState() {},
     });
@@ -414,7 +413,7 @@ describe("menu reflects available state", () => {
   it("getUpdateMenuLabel shows version when status is available", async () => {
     const savedState = {};
     const ctx = makeCtx({
-      showUpdateBubble: () => "later",
+      showUpdateDialog: () => "later",
       savePendingState(partial) { Object.assign(savedState, partial); },
     });
     const autoUpdater = {
@@ -447,27 +446,29 @@ describe("pending version cleanup", () => {
   it("clears pendingUpdateVersion when current version is up-to-date", async () => {
     const savedState = {};
     const ctx = makeCtx({
-      showUpdateBubble: (p) => "dismiss",
+      showUpdateDialog: (p) => "dismiss",
       savePendingState(partial) { Object.assign(savedState, partial); },
       getPendingUpdateVersion: () => "0.5.10",
       getUpdateSnoozeUntil: () => 0,
     });
+    const handlers = {};
     const updater = initUpdater(ctx, makeDeps({
       app: { isPackaged: true, getVersion: () => "0.5.10", relaunch() {}, exit() {} },
-      httpsGetImpl: (options, cb) => {
-        const res = {
-          statusCode: 200,
-          on(evt, fn) {
-            if (evt === "data") fn(JSON.stringify({ tag_name: "v0.5.10" }));
-            if (evt === "end") fn();
-          },
-        };
-        cb(res);
-        return { on() {}, setTimeout() {} };
-      },
+      autoUpdaterFactory: () => ({
+        autoDownload: false,
+        autoInstallOnAppQuit: true,
+        on(event, handler) { handlers[event] = handler; },
+        async checkForUpdates() {
+          process.nextTick(() => handlers["update-not-available"]?.());
+          return {};
+        },
+        quitAndInstall() {},
+        downloadUpdate() {},
+      }),
     }));
     updater.setupAutoUpdater();
     await updater.checkForUpdates(false);
+    await new Promise((r) => setTimeout(r, 20));
 
     assert.strictEqual(savedState.pendingUpdateVersion, "");
   });
@@ -476,7 +477,7 @@ describe("pending version cleanup", () => {
     const savedState = {};
     const before = Date.now();
     const ctx = makeCtx({
-      showUpdateBubble: (p) => "dismiss",
+      showUpdateDialog: (p) => "dismiss",
       savePendingState(partial) { Object.assign(savedState, partial); },
     });
     const updater = initUpdater(ctx, makeDeps({
@@ -509,7 +510,7 @@ describe("snooze", () => {
   it("Later sets snooze and keeps pendingUpdateVersion", async () => {
     const savedState = {};
     const ctx = makeCtx({
-      showUpdateBubble: () => "later",
+      showUpdateDialog: () => "later",
       savePendingState(partial) { Object.assign(savedState, partial); },
     });
     const autoUpdater = {
@@ -533,7 +534,7 @@ describe("snooze", () => {
   it("reevaluateDeferred skips when snooze not expired", async () => {
     const bubbles = [];
     const ctx = makeCtx({
-      showUpdateBubble: (p) => { bubbles.push(p); return "later"; },
+      showUpdateDialog: (p) => { bubbles.push(p); return "later"; },
       getPendingUpdateVersion: () => "2.0.0",
       getUpdateSnoozeUntil: () => Date.now() + 86400000,
       savePendingState() {},

@@ -1,11 +1,11 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-// token-store depends on Electron (safeStorage, app) — skip when not in Electron.
+// token-store depends on Electron (app.getPath) — skip when not in Electron.
 let tokenStore;
 try {
-  const { safeStorage } = require("electron");
-  if (typeof safeStorage.isEncryptionAvailable === "function" && safeStorage.isEncryptionAvailable()) {
+  const { app } = require("electron");
+  if (typeof app.getPath === "function") {
     tokenStore = require("../src/auth/token-store");
   }
 } catch {
