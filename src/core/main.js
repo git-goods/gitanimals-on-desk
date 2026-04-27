@@ -8,6 +8,7 @@ const {
   nativeTheme,
   powerMonitor,
   Notification,
+  shell,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -125,6 +126,15 @@ function _deferredDismissPermissionsByAgent(id) {
     : 0;
 }
 
+function getOwnedThemes() {
+  const all = themeLoader.discoverThemes();
+  const ownedIds = new Set(personaSync.loadCachedPersonas().map((p) => p.id));
+  const activeId = activeTheme ? activeTheme._id : "fox";
+  return all.filter(
+    (t) => t.type !== "persona" || ownedIds.has(t.id) || t.id === activeId,
+  );
+}
+
 const _settingsController = createSettingsController({
   prefsPath: PREFS_PATH,
   loadResult: _initialPrefsLoad,
@@ -138,7 +148,7 @@ const _settingsController = createSettingsController({
     clearSessionsByAgent: _deferredClearSessionsByAgent,
     dismissPermissionsByAgent: _deferredDismissPermissionsByAgent,
     setTelemetryEnabled: (v) => telemetry.setEnabled(v),
-    getDiscoveredThemes: () => themeLoader.discoverThemes(),
+    getDiscoveredThemes: () => getOwnedThemes(),
     getActiveThemeId: () => (activeTheme ? activeTheme._id : "fox"),
     resyncPersonas: () => personaSync.syncAll({ force: true }),
     logout: () => {
@@ -298,7 +308,6 @@ function togglePetVisibility() {
         if (isLinux) perm.bubble.setSkipTaskbar(true);
       }
     }
-    syncUpdateBubbleVisibility();
     reapplyMacVisibility();
     petHidden = false;
   } else {
@@ -523,35 +532,27 @@ const pendingPermissions = _perm.pendingPermissions;
 let permDebugLog = null; // set after app.whenReady()
 let updateDebugLog = null; // set after app.whenReady()
 
-const _updateBubbleCtx = {
-  get win() {
-    return win;
-  },
-  get bubbleFollowPet() {
-    return bubbleFollowPet;
-  },
-  get petHidden() {
-    return petHidden;
-  },
-  getPendingPermissions: () => pendingPermissions,
-  getNearestWorkArea,
-  getHitRectScreen,
-  guardAlwaysOnTop,
-  reapplyMacVisibility,
-};
-const _updateBubble = require("../update/bubble")(_updateBubbleCtx);
-const {
-  showUpdateBubble,
-  hideUpdateBubble,
-  repositionUpdateBubble,
-  handleUpdateBubbleAction,
-  handleUpdateBubbleHeight,
-  syncVisibility: syncUpdateBubbleVisibility,
-} = _updateBubble;
+async function showUpdateDialog(payload) {
+  const { dialog } = require("electron");
+  const actions = payload.actions || [];
+  const buttons = actions.map((a) => a.label);
+  if (!buttons.length) buttons.push("OK");
+
+  const result = await dialog.showMessageBox({
+    type: payload.mode === "error" ? "error" : "info",
+    title: payload.title || "Update",
+    message: payload.message || "",
+    detail: payload.detail || undefined,
+    buttons,
+    defaultId: 0,
+    cancelId: buttons.length - 1,
+  });
+
+  return actions[result.response]?.id || payload.defaultAction || null;
+}
 
 function repositionFloatingBubbles() {
   if (pendingPermissions.length) repositionBubbles();
-  repositionUpdateBubble();
 }
 
 // ── macOS cross-Space visibility helper ──
@@ -577,7 +578,6 @@ function reapplyMacVisibility() {
   apply(win);
   apply(hitWin);
   for (const perm of pendingPermissions) apply(perm.bubble);
-  apply(_updateBubble.getBubbleWindow());
   apply(contextMenuOwner);
 }
 
@@ -908,14 +908,6 @@ function startTopmostWatchdog() {
       if (perm.bubble && !perm.bubble.isDestroyed() && perm.bubble.isVisible())
         perm.bubble.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
     }
-    const updateBubbleWin = _updateBubble.getBubbleWindow();
-    if (
-      updateBubbleWin &&
-      !updateBubbleWin.isDestroyed() &&
-      updateBubbleWin.isVisible()
-    ) {
-      updateBubbleWin.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
-    }
   }, TOPMOST_WATCHDOG_MS);
 }
 
@@ -1079,7 +1071,7 @@ const _menuCtx = {
   getNearestWorkArea,
   reapplyMacVisibility,
   switchTheme: (id) => switchTheme(id),
-  discoverThemes: () => themeLoader.discoverThemes(),
+  discoverThemes: () => getOwnedThemes(),
   getActiveThemeId: () => (activeTheme ? activeTheme._id : "fox"),
   getPinnedThemes: () => _settingsController.get("pinnedThemes") || {},
   openSettingsWindow: (initialTab) => openSettingsWindow(initialTab),
@@ -1291,10 +1283,15 @@ ipcMain.handle("settings:list-agents", () => {
 
 ipcMain.handle("settings:list-themes", () => {
   try {
-    return themeLoader.discoverThemes().map((t) => ({
+    const all = themeLoader.discoverThemes();
+    const ownedIds = new Set(personaSync.loadCachedPersonas().map((p) => p.id));
+    const activeId = activeTheme ? activeTheme._id : "fox";
+    return all.map((t) => ({
       id: t.id,
       name: t.name,
       builtin: t.builtin || false,
+      type: t.type || "free",
+      owned: t.type !== "persona" || ownedIds.has(t.id) || t.id === activeId,
     }));
   } catch (err) {
     console.warn(
@@ -1302,6 +1299,12 @@ ipcMain.handle("settings:list-themes", () => {
       err && err.message,
     );
     return [];
+  }
+});
+
+ipcMain.handle("settings:open-external", (_event, url) => {
+  if (typeof url === "string" && url.startsWith("https://")) {
+    shell.openExternal(url);
   }
 });
 
@@ -1331,8 +1334,7 @@ const _updaterCtx = {
   t,
   rebuildAllMenus,
   updateLog,
-  showUpdateBubble: (payload) => showUpdateBubble(payload),
-  hideUpdateBubble: () => hideUpdateBubble(),
+  showUpdateDialog: (payload) => showUpdateDialog(payload),
   setUpdateVisualState: (kind) => _state.setUpdateVisualState(kind),
   applyState: (state, svgOverride) => applyState(state, svgOverride),
   resolveDisplayState: () => resolveDisplayState(),
@@ -1610,7 +1612,6 @@ function createWindow() {
     const syncFloatingWindows = () => {
       syncHitWin();
       if (bubbleFollowPet) repositionFloatingBubbles();
-      else repositionUpdateBubble();
     };
     win.on("move", syncFloatingWindows);
     win.on("resize", syncFloatingWindows);
@@ -1716,7 +1717,6 @@ function createWindow() {
         const clamped = clampToScreen(x, y, size.width, size.height);
         win.setBounds({ ...clamped, width: size.width, height: size.height });
         syncHitWin();
-        repositionUpdateBubble();
       }
     }
   });
@@ -1756,13 +1756,6 @@ function createWindow() {
   ipcMain.on("permission-decide", (event, behavior) =>
     _perm.handleDecide(event, behavior),
   );
-  ipcMain.on("update-bubble-height", (event, height) =>
-    handleUpdateBubbleHeight(event, height),
-  );
-  ipcMain.on("update-bubble-action", (event, actionId) =>
-    handleUpdateBubbleAction(event, actionId),
-  );
-
   initFocusHelper();
   startMainTick();
   startHttpServer();
@@ -1878,7 +1871,6 @@ function createWindow() {
     if (isProportionalMode() || clamped.x !== x || clamped.y !== y) {
       win.setBounds({ ...clamped, width: size.width, height: size.height });
       syncHitWin();
-      repositionUpdateBubble();
     }
   });
   screen.on("display-removed", (_event, display) => {
@@ -1902,7 +1894,6 @@ function createWindow() {
     const clamped = clampToScreen(x, y, size.width, size.height);
     win.setBounds({ ...clamped, width: size.width, height: size.height });
     syncHitWin();
-    repositionUpdateBubble();
   });
   screen.on("display-added", (_event, display) => {
     try {
@@ -1912,7 +1903,6 @@ function createWindow() {
       });
     } catch {}
     reapplyMacVisibility();
-    repositionUpdateBubble();
   });
 }
 
@@ -2401,7 +2391,6 @@ if (!gotTheLock) {
     stopScheduler();
     _perm.cleanup();
     _server.cleanup();
-    _updateBubble.cleanup();
     _state.cleanup();
     _tick.cleanup();
     _mini.cleanup();
