@@ -62,18 +62,30 @@ class LoginWindow extends EventEmitter {
     this._cbServer = new AuthCallbackServer();
     await this._cbServer.start();
 
-    this._cbServer.once("token", (token) => {
+    this._cbServer.once("token", async (token) => {
+      console.log("[login-window] token received — len=%d prefix=%s", token.length, token.slice(0, 12) + "…");
+      bc("auth", "login.token_received", { len: token.length });
+
       try {
+        const { getUser } = require("../api/gitanimals-client");
         tokenStore.set(token);
-        bc("auth", "login.success");
+        const user = await getUser();
+        if (!user || typeof user.username !== "string") {
+          throw new Error("unexpected /users response — no username field");
+        }
+        console.log("[login-window] token verified — user=%s", user.username);
+        bc("auth", "login.success", { username: user.username });
         this._authenticated = true;
         this._closeWin();
         this.emit("authenticated", token);
       } catch (err) {
-        console.error("[login-window] failed to store token:", err.message);
-        bc("auth", "login.error", { kind: "token_store_failed", error: err.message });
+        console.error("[login-window] token validation failed:", err.message);
+        const isUnauth = err.name === "UnauthorizedError";
+        const kind = isUnauth ? "token_rejected" : "token_store_failed";
+        bc("auth", "login.error", { kind, error: err.message });
+        if (isUnauth) tokenStore.clear();
         this._resetForRetry();
-        this._sendError("token_store_failed");
+        this._sendError(kind);
       }
     });
 
