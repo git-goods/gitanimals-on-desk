@@ -181,7 +181,7 @@ function _scanThemesDir(
               builtin,
               source: (opts.source as ThemeSource) || null,
             };
-            const item: ThemeCatalogEntry = { id: v.id, name: v.name, path: jsonPath, builtin };
+            const item: ThemeCatalogEntry = { id: v.id, name: v.name, path: jsonPath, builtin, type: cfg.type || "free" };
             if (opts.source) item.source = opts.source;
             themes.push(item);
             seen.add(v.id);
@@ -189,7 +189,7 @@ function _scanThemesDir(
           // Also mark the directory name as seen to prevent duplicate entries
           seen.add(entry.name);
         } else {
-          const item: ThemeCatalogEntry = { id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin };
+          const item: ThemeCatalogEntry = { id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin, type: cfg.type || "free" };
           if (opts.source) item.source = opts.source;
           themes.push(item);
           seen.add(entry.name);

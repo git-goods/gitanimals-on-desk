@@ -252,6 +252,7 @@ function _rewriteToLocal(theme, urlMap, persona) {
 
   const out = { ...theme };
   out.name = persona.name || persona.personaType;
+  out.type = "persona";
   out._personaType = persona.personaType;  // kept for future API calls
   out.states = rewriteStates(theme.states);
   if (theme.miniMode) out.miniMode = { ...theme.miniMode, states: rewriteStates(theme.miniMode.states) };

@@ -12,6 +12,8 @@ export interface SettingsPanelThemeEntry {
   id: string;
   name: string;
   builtin: boolean;
+  type: "free" | "persona";
+  owned: boolean;
 }
 
 export interface SettingsPanelUser {
@@ -37,6 +39,7 @@ export interface SettingsAPI {
   command(action: string, payload?: unknown): Promise<SettingsCommandResult>;
   listAgents(): Promise<SettingsPanelAgentEntry[]>;
   listThemes(): Promise<SettingsPanelThemeEntry[]>;
+  openExternal(url: string): Promise<void>;
   getUser(): Promise<SettingsPanelUser | null>;
   onChanged(cb: (payload: SettingsChangedPayload) => void): () => void;
   onSetTab(cb: (tab: SettingsTabId | string) => void): () => void;

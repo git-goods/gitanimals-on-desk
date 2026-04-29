@@ -67,6 +67,7 @@ export function createSettingsBridge({
       invoke("settings:command", { action, payload }) as Promise<any>,
     listAgents: () => invoke("settings:list-agents") as Promise<any>,
     listThemes: () => invoke("settings:list-themes") as Promise<any>,
+    openExternal: (url: string) => invoke("settings:open-external", url) as Promise<void>,
     getUser: () => invoke("settings:get-user") as Promise<any>,
     onChanged: (cb) => addListener(changedListeners, cb),
     onSetTab: (cb) => addListener(tabListeners, cb),

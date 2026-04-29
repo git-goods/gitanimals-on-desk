@@ -43,6 +43,7 @@ function createSettingsBridge({ invoke, subscribe, }) {
         command: (action, payload) => invoke("settings:command", { action, payload }),
         listAgents: () => invoke("settings:list-agents"),
         listThemes: () => invoke("settings:list-themes"),
+        openExternal: (url) => invoke("settings:open-external", url),
         getUser: () => invoke("settings:get-user"),
         onChanged: (cb) => addListener(changedListeners, cb),
         onSetTab: (cb) => addListener(tabListeners, cb),

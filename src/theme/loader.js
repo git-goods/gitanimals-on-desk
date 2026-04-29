@@ -152,7 +152,7 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
                             builtin,
                             source: opts.source || null,
                         };
-                        const item = { id: v.id, name: v.name, path: jsonPath, builtin };
+                        const item = { id: v.id, name: v.name, path: jsonPath, builtin, type: cfg.type || "free" };
                         if (opts.source)
                             item.source = opts.source;
                         themes.push(item);
@@ -162,7 +162,7 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
                     seen.add(entry.name);
                 }
                 else {
-                    const item = { id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin };
+                    const item = { id: entry.name, name: cfg.name || entry.name, path: jsonPath, builtin, type: cfg.type || "free" };
                     if (opts.source)
                         item.source = opts.source;
                     themes.push(item);

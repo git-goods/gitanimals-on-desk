@@ -143,6 +143,7 @@ export interface ThemeCatalogEntry {
   path: string;
   builtin: boolean;
   source?: string;
+  type: "free" | "persona";
 }
 
 export interface HookStatePayload {
