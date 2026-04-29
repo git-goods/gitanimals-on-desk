@@ -14,14 +14,8 @@
       50%  { transform: translate(5.2px, -4.0px); }
       100% { transform: translate(5.2px, -3.8px); }
     }
-    @keyframes cap-typing-notebook {
-      0%   { transform: translate(13px, 8px) scale(1.8); }
-      50%  { transform: translate(13px, 8.2px) scale(1.8); }
-      100% { transform: translate(13px, 8px) scale(1.8); }
-    }
     #cap-typing-head-nod { animation: cap-typing-head-nod 0.8s ease-in-out infinite; }
     #cap-typing-carrot   { animation: cap-typing-carrot 0.3s ease-in-out infinite; }
-    #cap-typing-notebook { animation: cap-typing-notebook 0.3s ease-in-out infinite; }
   </style>
 
   <!-- Shadow -->
@@ -68,18 +62,4 @@
     </g>
   </g>
 
-  <!-- Notebook (outside obj — fox-style, larger, right-bottom of head) -->
-  <g id="cap-typing-notebook" transform="translate(13, 8) scale(1.8)">
-    <rect width="4.66667" height="3.33333" transform="matrix(-1 0 0 1 6.6665 0)" fill="#E4E4E4"/>
-    <rect width="6" height="3.33333" transform="matrix(-1 0 0 1 7.33325 0.666687)" fill="#E4E4E4"/>
-    <rect width="6" height="1.33333" transform="matrix(-1 0 0 1 6.6665 2.66669)" fill="#E4E4E4"/>
-    <rect width="6" height="0.666667" transform="matrix(-1 0 0 1 6 3.33331)" fill="#E4E4E4"/>
-    <rect width="0.666667" height="1.33333" transform="matrix(-1 0 0 1 1.33325 2.66669)" fill="black" fill-opacity="0.1"/>
-    <rect width="0.666667" height="0.666667" transform="matrix(-1 0 0 1 0.666504 3.33331)" fill="black" fill-opacity="0.1"/>
-    <rect width="6" height="0.666667" transform="matrix(-1 0 0 1 7.33325 3.33331)" fill="black" fill-opacity="0.1"/>
-    <rect x="5.33325" y="2.33331" width="0.666667" height="0.333333" transform="rotate(180 5.33325 2.33331)" fill="#242427"/>
-    <rect width="0.666667" height="0.333333" transform="matrix(-1 0 0 1 5 1.66669)" fill="#242427"/>
-    <rect width="0.333333" height="1.33333" transform="matrix(-1 0 0 1 5.33325 1.33331)" fill="#242427"/>
-    <rect width="1" height="0.333333" transform="matrix(-1 0 0 1 5.33325 2.33331)" fill="#242427"/>
-  </g>
 </svg>

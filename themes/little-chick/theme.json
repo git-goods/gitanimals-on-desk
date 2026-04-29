@@ -2,6 +2,7 @@
   "_comment": "Little Chick theme — pixel-art chick with optional sunglasses accessory",
 
   "schemaVersion": 1,
+  "type": "free",
   "name": "Little Chick",
   "author": "sumi",
   "version": "1.0.0",
@@ -12,12 +13,12 @@
     {
       "id": "little-chick",
       "name": "Little Chick",
-      "accessories": ["notebook"]
+      "accessories": ["notebook", "zzz", "bubble-thinking"]
     },
     {
       "id": "little-chick-sunglasses",
       "name": "Little Chick Sunglasses",
-      "accessories": ["sunglasses", "notebook"]
+      "accessories": ["sunglasses", "notebook", "zzz", "bubble-thinking"]
     }
   ],
 
@@ -40,6 +41,24 @@
       "anchors": {
         "*": null,
         "working": { "parentId": "root", "transform": "translate(7, 5)" }
+      }
+    },
+    "zzz": {
+      "name": "Zzz",
+      "file": "shared:acc-zzz.svg",
+      "anchors": {
+        "sleeping":         { "parentId": "root", "transform": "translate(10, -2)" },
+        "mini-sleep":       { "parentId": "root", "transform": "translate(12, -2)" },
+        "mini-enter-sleep": { "parentId": "root", "transform": "translate(12, -2)" },
+        "*": null
+      }
+    },
+    "bubble-thinking": {
+      "name": "말풍선",
+      "file": "shared:acc-bubble-thinking.svg",
+      "anchors": {
+        "thinking": { "parentId": "root", "transform": "translate(10, -8)" },
+        "*": null
       }
     }
   },

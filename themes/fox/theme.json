@@ -2,6 +2,7 @@
   "_comment": "Dessert Fox theme — adapted from GitAnimals dessert-fox pixel art",
 
   "schemaVersion": 1,
+  "type": "free",
   "name": "Dessert Fox",
   "author": "sumi",
   "version": "1.0.0",
@@ -99,6 +100,22 @@
         "mini-enter-sleep": { "parentId": "root", "transform": "translate(15, -2)" },
         "*": null
       }
+    },
+    "notebook": {
+      "name": "노트북",
+      "file": "shared:acc-notebook.svg",
+      "anchors": {
+        "*": null,
+        "working": { "parentId": "root", "transform": "translate(8, 4.5)" }
+      }
+    },
+    "bubble-thinking": {
+      "name": "말풍선",
+      "file": "shared:acc-bubble-thinking.svg",
+      "anchors": {
+        "thinking": { "parentId": "root", "transform": "translate(14, -12)" },
+        "*": null
+      }
     }
   },
 
@@ -106,7 +123,7 @@
     {
       "id": "fox",
       "name": "Dessert Fox",
-      "accessories": ["zzz"]
+      "accessories": ["zzz", "notebook", "bubble-thinking"]
     }
   ],
 

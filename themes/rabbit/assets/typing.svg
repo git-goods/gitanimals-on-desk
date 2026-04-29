@@ -17,16 +17,9 @@
       30%  { transform: translate(-2px, 0px) scaleX(1); }
       100% { transform: translate(-2px, 0px) scaleX(1); }
     }
-    @keyframes rabbit-typing-notebook {
-      0%   { transform: translate(4px, -5px); }
-      50%  { transform: translate(4px, -4.7px); }
-      100% { transform: translate(4px, -5px); }
-    }
-
     #rabbit-typing-head { animation: rabbit-typing-head 1s ease-in-out infinite; }
     #rabbit-typing-obj { animation: rabbit-typing-obj 2s ease-in-out infinite; }
     #rabbit-typing-shadow { animation: rabbit-typing-shadow 2s ease-in-out infinite; }
-    #rabbit-typing-notebook { animation: rabbit-typing-notebook 0.3s ease-in-out infinite; }
   </style>
 
   <g transform="translate(1, 7) scale(1.5)">
@@ -72,19 +65,5 @@
       </g>
     </g>
 
-    <!-- Notebook (inside scale group, positioned relative to body) -->
-    <g id="rabbit-typing-notebook" transform="translate(4, -5)">
-      <rect width="4.67" height="3.33" transform="matrix(-1 0 0 1 6.67 0)" fill="#E4E4E4"/>
-      <rect width="6" height="3.33" transform="matrix(-1 0 0 1 7.33 0.67)" fill="#E4E4E4"/>
-      <rect width="6" height="1.33" transform="matrix(-1 0 0 1 6.67 2.67)" fill="#E4E4E4"/>
-      <rect width="6" height="0.67" transform="matrix(-1 0 0 1 6 3.33)" fill="#E4E4E4"/>
-      <rect width="0.67" height="1.33" transform="matrix(-1 0 0 1 1.33 2.67)" fill="black" fill-opacity="0.1"/>
-      <rect width="0.67" height="0.67" transform="matrix(-1 0 0 1 0.67 3.33)" fill="black" fill-opacity="0.1"/>
-      <rect width="6" height="0.67" transform="matrix(-1 0 0 1 7.33 3.33)" fill="black" fill-opacity="0.1"/>
-      <rect x="5.33" y="2.33" width="0.67" height="0.33" transform="rotate(180 5.33 2.33)" fill="#242427"/>
-      <rect width="0.67" height="0.33" transform="matrix(-1 0 0 1 5 1.67)" fill="#242427"/>
-      <rect width="0.33" height="1.33" transform="matrix(-1 0 0 1 5.33 1.33)" fill="#242427"/>
-      <rect width="1" height="0.33" transform="matrix(-1 0 0 1 5.33 2.33)" fill="#242427"/>
-    </g>
   </g>
 </svg>

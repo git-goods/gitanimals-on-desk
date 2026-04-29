@@ -98,11 +98,16 @@ description: >
 
 </g>
 
-<!-- 3. 고정 소품 (obj 바깥 = 몸 움직임과 독립) -->
-<g id="dfox-POSE-notebook" transform="translate(8, 4.5)">
-  ... notebook rects ...
+<!-- 3. 공유 액세서리로 대체 가능한 소품은 하드코딩하지 않음 (Step 5-b 참조) -->
+<!-- 공유 에셋이 없는 테마 고유 소품만 obj 바깥에 배치 -->
+<g id="dfox-POSE-custom-prop" transform="translate(14, -12)">
+  ... theme-specific prop rects ...
 </g>
 ```
+
+> **⚠️ 노트북, Zzz, 선글라스 등 공유 에셋이 있는 소품은 SVG에 하드코딩하지 말 것.**
+> `theme.json` 의 `accessories` 앵커 시스템으로 런타임 주입해야 테마 간 일관성 유지.
+> → Step 5-b 참조.
 
 ---
 
@@ -155,7 +160,7 @@ sleep  → dfox-sleep-*
 | obj (hop) | 2s | ease-in-out | y 0→-2.5px→0 (앉으면 -1px) |
 | leg sway | 1s | ease-in-out | ±10deg 회전 |
 | head nod | 1s | ease-in-out | delta (2px,-1px) + 10deg |
-| prop vibrate | 0.3s | ease-in-out | y ±0.2px (타이핑 진동) |
+| prop vibrate | 0.3s | ease-in-out | y ±0.2px (테마 고유 소품만. 노트북 등 공유 에셋은 Step 5-b) |
 
 ---
 
@@ -198,6 +203,90 @@ sleep  → dfox-sleep-*
 
 아직 없는 상태는 임시로 `idle-follow.svg` 로 유지 (validator 통과 목적).
 
+### 5-b. 공유 액세서리 (shared accessories) 등록
+
+`themes/_shared/accessories/` 에 있는 공유 에셋을 `theme.json` 의 `accessories` 로 등록.
+**SVG에 소품을 하드코딩하지 않고**, 앵커 시스템으로 런타임 주입한다.
+
+#### 사용 가능한 공유 에셋
+
+| 파일 | 용도 | 표시 상태 예시 |
+|------|------|--------------|
+| `acc-notebook.svg` | 노트북 (타이핑) | working, juggling, sweeping |
+| `acc-zzz.svg` | 수면 Zzz | sleeping, dozing, yawning, collapsing |
+| `acc-sunglasses.svg` | 선글라스 (variant) | `*` (전체), sleeping 제외 |
+
+#### theme.json 구조
+
+```json
+"accessories": {
+  "notebook": {
+    "name": "노트북",
+    "file": "shared:acc-notebook.svg",
+    "anchors": {
+      "*": null,
+      "working": { "parentId": "root", "transform": "translate(8, 4.5)" }
+    }
+  },
+  "zzz": {
+    "name": "Zzz",
+    "file": "shared:acc-zzz.svg",
+    "anchors": {
+      "sleeping":         { "parentId": "root", "transform": "translate(12, -2)" },
+      "mini-sleep":       { "parentId": "root", "transform": "translate(15, -2)" },
+      "mini-enter-sleep": { "parentId": "root", "transform": "translate(15, -2)" },
+      "*": null
+    }
+  }
+},
+
+"variants": [
+  {
+    "id": "my-theme",
+    "name": "My Theme",
+    "accessories": ["zzz", "notebook"]
+  }
+]
+```
+
+#### 핵심 규칙
+
+| 규칙 | 설명 |
+|------|------|
+| `shared:` 접두사 | `themes/_shared/accessories/` 에서 로드. 테마 로컬 에셋은 접두사 없이 파일명만 |
+| `"*": null` | 기본값: 해당 액세서리 숨김. 명시한 상태에서만 표시 |
+| `parentId: "root"` | SVG 루트 좌표계 기준 배치 (obj 움직임과 독립) |
+| `parentId: "<id>"` | 특정 SVG 요소에 부착 (예: `"little-chick-head"` → 머리와 함께 움직임) |
+| `transform` | `translate(x, y)`, `scale(s)`, `rotate(deg)` 조합 |
+| variants `accessories` 배열 | 해당 variant가 활성화할 액세서리 목록. 여기 없으면 표시 안 됨 |
+
+#### 앵커 해석 순서 (renderer.js)
+
+```
+def.anchors[현재상태] → (없으면) def.anchors["*"] → (없으면) 표시 안 함
+```
+
+상태 이름은 **정확히 일치**해야 함. `working` 앵커만 있으면 `juggling`, `sweeping`은 별도 등록 필요.
+
+#### 포지셔닝 가이드
+
+1. **캐릭터 크기에 따라 scale 조정**: 카피바라처럼 큰 캐릭터는 `scale(1.8)`, 래빗은 `scale(1.5)`
+2. **obj 그룹 바깥 위치 기준**: 노트북은 캐릭터 앞 바닥에 → `translate(centerX+2, baselineY-3)` 부근
+3. **parent scale 그룹 안에 있던 소품 이전 시**: 부모 transform을 풀어서 root 좌표로 환산
+   - 부모 `translate(tx, ty) scale(s)` + 로컬 `translate(lx, ly)` → root `translate(tx + lx*s, ty + ly*s) scale(s)`
+4. **tools/preview 의 Transform Editor 활용**: 슬라이더로 실시간 위치 조정 → "Copy transform" 복사해서 theme.json에 붙여넣기
+
+#### 프리뷰 도구에서 확인
+
+```bash
+cd tools/preview && npm run dev
+```
+
+1. 테마 선택 → Editor → 상태를 `working`으로 전환
+2. Accessories 체크박스로 on/off 확인
+3. Transform Editor 슬라이더로 위치/스케일/회전 미세 조정
+4. 최종 transform 값을 Copy → theme.json 에 반영
+
 ---
 
 ## Step 6 — 검증 및 반복
@@ -214,7 +303,7 @@ node scripts/validate-theme.js themes/<name>
 | 특정 부위가 아래로 쏠림 | 포즈 좌표 세트 혼용 | 동일 포즈의 좌표 세트 통째로 교체 |
 | 목/허리 분리 현상 | 위치+delta 혼합 애니메이션 | 중첩 그룹으로 위치/delta 분리 |
 | 눈이 다른 픽셀에 묻힘 | z-order 문제 | 눈 rect를 head 그룹 끝으로 이동 |
-| 소품이 몸과 같이 움직임 | obj 안에 소품 배치 | obj 그룹 바깥으로 이동 |
+| 소품이 몸과 같이 움직임 | obj 안에 소품 배치 | obj 그룹 바깥으로 이동 (공유 에셋이면 Step 5-b 액세서리로 전환) |
 | 아이 트래킹 깜빡임 | `#eyes-js`에 CSS transform | 자식 그룹으로 애니메이션 내리기 |
 | hitBox 클릭 안 됨 | hitBox y 가 캐릭터보다 아래 | Debug Hitbox 켜서 확인 후 y 올리기 (Step 11) |
 | scaleX 시 캐릭터 튕김 | transform-origin 미설정 (기본 0,0 기준 flip) | CSS `transform-origin: 7.5px 7px` 캐릭터 중심 설정 |

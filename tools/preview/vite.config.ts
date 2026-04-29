@@ -99,6 +99,9 @@ export default defineConfig({
             const themeAssetPath = path.join(THEMES_DIR, themeDir, "assets", file);
 
             let filePath = themeAssetPath;
+            if (!fs.existsSync(filePath) && file.startsWith("shared:")) {
+              filePath = path.join(THEMES_DIR, "_shared", "accessories", file.slice("shared:".length));
+            }
             if (!fs.existsSync(filePath)) {
               filePath = path.join(ROOT, "assets", "svg", file);
             }

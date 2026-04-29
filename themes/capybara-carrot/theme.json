@@ -2,6 +2,7 @@
   "_comment": "Capybara Carrot theme — ported from GitAnimals capybara pixel art (carrot variant)",
 
   "schemaVersion": 1,
+  "type": "free",
   "name": "Capybara Carrot",
   "author": "sumi",
   "version": "1.0.0",
@@ -24,21 +25,21 @@
   },
 
   "states": {
-    "idle":         ["idle-follow.svg"],
-    "thinking":     ["thinking.svg"],
-    "working":      ["typing.svg"],
-    "juggling":     ["typing.svg"],
-    "carrying":     ["idle-follow.svg"],
-    "sweeping":     ["typing.svg"],
-    "error":        ["error.svg"],
-    "attention":    ["happy.svg"],
+    "idle": ["idle-follow.svg"],
+    "thinking": ["thinking.svg"],
+    "working": ["typing.svg"],
+    "juggling": ["typing.svg"],
+    "carrying": ["idle-follow.svg"],
+    "sweeping": ["typing.svg"],
+    "error": ["error.svg"],
+    "attention": ["happy.svg"],
     "notification": ["notification.svg"],
-    "sleeping":     ["sleeping.svg"],
-    "waking":       ["waking.svg"],
-    "idle-look":    ["idle-follow.svg"],
-    "yawning":      ["sleeping.svg"],
-    "dozing":       ["sleeping.svg"],
-    "collapsing":   ["sleeping.svg"]
+    "sleeping": ["sleeping.svg"],
+    "waking": ["waking.svg"],
+    "idle-look": ["idle-follow.svg"],
+    "yawning": ["sleeping.svg"],
+    "dozing": ["sleeping.svg"],
+    "collapsing": ["sleeping.svg"]
   },
 
   "timings": {
@@ -68,13 +69,13 @@
     "offsetRatio": 0.3,
     "flipAssets": true,
     "states": {
-      "mini-idle":        ["mini-idle.svg"],
-      "mini-alert":       ["mini-idle.svg"],
-      "mini-happy":       ["mini-idle.svg"],
-      "mini-enter":       ["mini-idle.svg"],
-      "mini-peek":        ["mini-idle.svg"],
+      "mini-idle": ["mini-idle.svg"],
+      "mini-alert": ["mini-idle.svg"],
+      "mini-happy": ["mini-idle.svg"],
+      "mini-enter": ["mini-idle.svg"],
+      "mini-peek": ["mini-idle.svg"],
       "mini-enter-sleep": ["mini-sleep.svg"],
-      "mini-sleep":       ["mini-sleep.svg"]
+      "mini-sleep": ["mini-sleep.svg"]
     },
     "timings": {
       "minDisplay": { "mini-alert": 4000, "mini-happy": 4000 },
@@ -87,12 +88,42 @@
       "name": "Zzz",
       "file": "shared:acc-zzz.svg",
       "anchors": {
-        "sleeping":         { "parentId": "root", "transform": "translate(15, -2)" },
-        "dozing":           { "parentId": "root", "transform": "translate(15, -2)" },
-        "yawning":          { "parentId": "root", "transform": "translate(15, -2)" },
-        "collapsing":       { "parentId": "root", "transform": "translate(15, -2)" },
-        "mini-sleep":       { "parentId": "root", "transform": "translate(15, -2)" },
-        "mini-enter-sleep": { "parentId": "root", "transform": "translate(15, -2)" },
+        "sleeping": { "parentId": "root", "transform": "translate(15, -2)" },
+        "dozing": { "parentId": "root", "transform": "translate(15, -2)" },
+        "yawning": { "parentId": "root", "transform": "translate(15, -2)" },
+        "collapsing": { "parentId": "root", "transform": "translate(15, -2)" },
+        "mini-sleep": { "parentId": "root", "transform": "translate(15, -2)" },
+        "mini-enter-sleep": {
+          "parentId": "root",
+          "transform": "translate(15, -2)"
+        },
+        "*": null
+      }
+    },
+    "notebook": {
+      "name": "노트북",
+      "file": "shared:acc-notebook.svg",
+      "anchors": {
+        "*": null,
+        "working": {
+          "parentId": "root",
+          "transform": "translate(8.7, 8) scale(1.8)"
+        },
+        "juggling": {
+          "parentId": "root",
+          "transform": "translate(13, 8) scale(1.8)"
+        },
+        "sweeping": {
+          "parentId": "root",
+          "transform": "translate(13, 8) scale(1.8)"
+        }
+      }
+    },
+    "bubble-thinking": {
+      "name": "말풍선",
+      "file": "shared:acc-bubble-thinking.svg",
+      "anchors": {
+        "thinking": { "parentId": "root", "transform": "translate(13, -10)" },
         "*": null
       }
     }
@@ -102,7 +133,7 @@
     {
       "id": "capybara-carrot",
       "name": "Capybara Carrot",
-      "accessories": ["zzz"]
+      "accessories": ["zzz", "notebook", "bubble-thinking"]
     }
   ],
 

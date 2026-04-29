@@ -3,31 +3,6 @@
     Little Chick — sleeping (no movement, closed eyes, Zzz particles)
     Keyframe prefix: lchick-sleep-
   -->
-  <defs>
-    <style>
-      @keyframes lchick-sleep-zzz {
-        0%   { transform: translate(10px, -2px) scale(0.5); opacity: 0; }
-        10%  { opacity: 1; }
-        50%  { transform: translate(14px, -8px) scale(0.8); opacity: 1; }
-        90%  { opacity: 0.7; }
-        100% { transform: translate(18px, -14px) scale(1.1); opacity: 0; }
-      }
-      .lchick-sleep-z {
-        opacity: 0;
-        animation: lchick-sleep-zzz 6s ease-in-out infinite;
-      }
-      .lchick-sleep-z1 { animation-delay: 0s; }
-      .lchick-sleep-z2 { animation-delay: 2s; }
-      .lchick-sleep-z3 { animation-delay: 4s; }
-    </style>
-    <!-- Pixel-art "Z" (3x3 grid) -->
-    <g id="lchick-sleep-pixel-z">
-      <rect x="0" y="0" width="3" height="1"/>
-      <rect x="1" y="1" width="1" height="1"/>
-      <rect x="0" y="2" width="3" height="1"/>
-    </g>
-  </defs>
-
   <!-- Leg (static) -->
   <g transform="translate(2, 6)">
     <rect width="2" height="2" fill="#FF6F0F"/>
@@ -69,8 +44,4 @@
     <rect x="3.5" y="2" width="2" height="0.8" fill="black"/>
   </g>
 
-  <!-- Zzz particles -->
-  <use href="#lchick-sleep-pixel-z" class="lchick-sleep-z lchick-sleep-z1" fill="#90A4AE"/>
-  <use href="#lchick-sleep-pixel-z" class="lchick-sleep-z lchick-sleep-z2" fill="#B0BEC5"/>
-  <use href="#lchick-sleep-pixel-z" class="lchick-sleep-z lchick-sleep-z3" fill="#CFD8DC"/>
 </svg>

@@ -2,6 +2,7 @@
   "_comment": "Rabbit theme — adapted from GitAnimals rabbit pixel art",
 
   "schemaVersion": 1,
+  "type": "persona",
   "name": "Rabbit",
   "author": "sumi",
   "version": "1.0.0",
@@ -87,6 +88,22 @@
         "mini-enter-sleep": { "parentId": "root", "transform": "translate(14, -4)" },
         "*": null
       }
+    },
+    "notebook": {
+      "name": "노트북",
+      "file": "shared:acc-notebook.svg",
+      "anchors": {
+        "*": null,
+        "working": { "parentId": "root", "transform": "translate(7, -0.5) scale(1.5)" }
+      }
+    },
+    "bubble-thinking": {
+      "name": "말풍선",
+      "file": "shared:acc-bubble-thinking.svg",
+      "anchors": {
+        "thinking": { "parentId": "root", "transform": "translate(12, -18)" },
+        "*": null
+      }
     }
   },
 
@@ -94,7 +111,7 @@
     {
       "id": "rabbit",
       "name": "Rabbit",
-      "accessories": ["zzz"]
+      "accessories": ["zzz", "notebook", "bubble-thinking"]
     }
   ],
 
