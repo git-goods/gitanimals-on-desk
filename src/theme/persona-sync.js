@@ -311,4 +311,4 @@ function _isStale(fetchedAt, ttlMs = PERSONA_TTL_MS) {
   return (Date.now() - (fetchedAt || 0)) >= ttlMs;
 }
 
-module.exports = { init, syncAll, loadCachedPersonas, onSyncComplete, onUnauthorized };
+module.exports = { init, syncAll, loadCachedPersonas, onSyncComplete, onUnauthorized, triggerUnauthorized: _notifyUnauthorized };

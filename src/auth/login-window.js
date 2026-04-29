@@ -62,17 +62,63 @@ class LoginWindow extends EventEmitter {
     this._cbServer = new AuthCallbackServer();
     await this._cbServer.start();
 
-    this._cbServer.once("token", (token) => {
+    this._cbServer.once("token", async (token) => {
+      const hasDots = token.includes(".");
+      const parts = hasDots ? token.split(".") : [];
+      console.log("[login-window] token received — len=%d dots=%d prefix=%s", token.length, parts.length - 1, token.slice(0, 30));
+      if (hasDots) {
+        for (let i = 0; i < Math.min(parts.length, 2); i++) {
+          try {
+            const seg = JSON.parse(Buffer.from(parts[i], "base64url").toString("utf8"));
+            console.log("[login-window] jwt segment[%d] keys=%s", i, JSON.stringify(Object.keys(seg)));
+            if (seg.exp || seg.iat) {
+              const now = Math.floor(Date.now() / 1000);
+              console.log("[login-window] jwt timing — iat=%d exp=%d now=%d expired=%s ttl=%ds",
+                seg.iat, seg.exp, now, seg.exp < now, seg.exp - now);
+            }
+          } catch (_e) { console.log("[login-window] jwt segment[%d] not JSON", i); }
+        }
+      } else if (token.startsWith("eyJ")) {
+        try {
+          const d = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
+          console.log("[login-window] base64 decoded keys=%s", JSON.stringify(Object.keys(d)));
+        } catch (_e) { console.log("[login-window] not decodable as base64 JSON either"); }
+      }
+      bc("auth", "login.token_received", { len: token.length, hasDots });
+
       try {
+        if (hasDots && parts.length >= 2) {
+          try {
+            const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+            if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+              console.error("[login-window] received EXPIRED jwt — exp=%d, expired %ds ago", payload.exp, Math.floor(Date.now() / 1000) - payload.exp);
+              bc("auth", "login.error", { kind: "token_expired", expiredAgo: Math.floor(Date.now() / 1000) - payload.exp });
+              this._resetForRetry();
+              this._sendError("token_expired");
+              return;
+            }
+          } catch (_e) {}
+        }
+
+        const { getUser } = require("../api/gitanimals-client");
         tokenStore.set(token);
-        bc("auth", "login.success");
+        const user = await getUser();
+        if (!user || typeof user.username !== "string") {
+          throw new Error("unexpected /users response — no username field");
+        }
+        console.log("[login-window] token verified — user=%s", user.username);
+        bc("auth", "login.success", { username: user.username });
         this._authenticated = true;
         this._closeWin();
         this.emit("authenticated", token);
       } catch (err) {
-        console.error("[login-window] failed to store token:", err.message);
-        bc("auth", "login.error", { kind: "token_store_failed" });
-        this._sendError("token_store_failed");
+        console.error("[login-window] token validation failed:", err.message);
+        const isUnauth = err.name === "UnauthorizedError";
+        const kind = isUnauth ? "token_rejected" : "token_store_failed";
+        bc("auth", "login.error", { kind, error: err.message });
+        if (isUnauth) tokenStore.clear();
+        this._resetForRetry();
+        this._sendError(kind);
       }
     });
 
@@ -80,13 +126,27 @@ class LoginWindow extends EventEmitter {
       const kind = err.message.includes("state") ? "state_mismatch"
         : err.message.includes("timeout") ? "auth_timeout"
         : "server_error";
-      bc("auth", "login.error", { kind });
+      bc("auth", "login.error", { kind, error: err.message });
+      this._resetForRetry();
       this._sendError(kind);
     });
   }
 
-  _openBrowser() {
-    if (!this._cbServer) return;
+  _resetForRetry() {
+    if (this._cbServer) { this._cbServer.stop(); }
+    this._cbServer = null;
+  }
+
+  async _openBrowser() {
+    if (!this._cbServer) {
+      try {
+        await this._startCallbackServer();
+      } catch (err) {
+        bc("auth", "login.error", { kind: "port_conflict", error: err.message });
+        this._sendError("port_conflict");
+        return;
+      }
+    }
     const redirectUri = `http://127.0.0.1:${this._cbServer.port}/auth/callback`;
     const url = new URL(`${WEB_BASE}/auth/desktop`);
     url.searchParams.set("redirect_uri", redirectUri);

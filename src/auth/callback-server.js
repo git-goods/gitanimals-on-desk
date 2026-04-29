@@ -5,6 +5,10 @@ const crypto = require("crypto");
 const { URL } = require("url");
 const EventEmitter = require("events");
 
+const { bc } = (() => {
+  try { return require("../core/telemetry"); } catch { return { bc() {} }; }
+})();
+
 const PORT_START = 23338;
 const PORT_COUNT = 5;
 const TIMEOUT_MS = 5 * 60 * 1000;
@@ -25,6 +29,7 @@ class AuthCallbackServer extends EventEmitter {
     this._state = crypto.randomBytes(32).toString("hex");
     this._port = await this._listen();
     this._timer = setTimeout(() => {
+      bc("auth", "callback.timeout", { port: this._port });
       this.emit("error", new Error("auth timeout"));
       this.stop();
     }, TIMEOUT_MS);
@@ -76,6 +81,7 @@ class AuthCallbackServer extends EventEmitter {
     const stateOk = state && state.length === this._state.length &&
       crypto.timingSafeEqual(Buffer.from(state), Buffer.from(this._state));
     if (!stateOk) {
+      bc("auth", "callback.state_mismatch", { hasState: !!state, stateLen: state ? state.length : 0 });
       this._respond(res, 400, "state mismatch");
       this.stop();
       this.emit("error", new Error("state mismatch — possible CSRF"));
@@ -83,6 +89,7 @@ class AuthCallbackServer extends EventEmitter {
     }
 
     if (!token) {
+      bc("auth", "callback.missing_token");
       this._respond(res, 400, "missing token");
       this.stop();
       this.emit("error", new Error("no token in callback"));

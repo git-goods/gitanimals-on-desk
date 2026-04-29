@@ -153,6 +153,7 @@ const _settingsController = createSettingsController({
     resyncPersonas: () => personaSync.syncAll({ force: true }),
     logout: () => {
       tokenStore.clear();
+      _userCache = null;
       const _cacheDir = path.join(app.getPath("userData"), "theme-cache");
       try {
         require("fs").rmSync(_cacheDir, { recursive: true, force: true });
@@ -167,6 +168,7 @@ const _settingsController = createSettingsController({
 
 let _userCache = null; // { username: string } — cached after first settings:get-user call
 let _lastUnauthorizedNotifiedAt = 0; // epoch ms — debounce OS notification (30s)
+let _reloginInFlight = false;
 
 // Mirror of `_settingsController.get("lang")` so existing sync read sites in
 // menu.js / state.js / etc. don't have to round-trip through the controller.
@@ -1311,11 +1313,15 @@ ipcMain.handle("settings:open-external", (_event, url) => {
 ipcMain.handle("settings:get-user", async () => {
   if (_userCache) return { username: _userCache.username };
   try {
-    const { getUser } = require("../api/gitanimals-client");
+    const { getUser, UnauthorizedError } = require("../api/gitanimals-client");
     const u = await getUser();
     if (u && u.username) _userCache = { username: u.username };
     return _userCache ? { username: _userCache.username } : null;
-  } catch (_e) {
+  } catch (e) {
+    if (e && e.name === "UnauthorizedError") {
+      bc("auth", "get-user.401");
+      personaSync.triggerUnauthorized();
+    }
     return null;
   }
 });
@@ -2180,6 +2186,7 @@ if (!gotTheLock) {
         bc("auth", "session.expired");
       } catch {}
       tokenStore.clear();
+      _userCache = null;
 
       // OS notification + settings toast — debounce 30 s to avoid spam on repeated 401s
       const now = Date.now();
@@ -2207,14 +2214,22 @@ if (!gotTheLock) {
         }
       }
 
+      if (_reloginInFlight) return;
+      _reloginInFlight = true;
+
       const reloginWin = new LoginWindow();
       reloginWin.once("authenticated", () => {
+        _reloginInFlight = false;
         reloginWin.cleanup();
         personaSync.syncAll({ force: true });
       });
+      reloginWin.once("closed", () => {
+        _reloginInFlight = false;
+        reloginWin.cleanup();
+      });
       reloginWin
         .open()
-        .catch((e) => console.warn("[auth] relogin window failed:", e.message));
+        .catch((e) => { _reloginInFlight = false; console.warn("[auth] relogin window failed:", e.message); });
     });
     personaSync.syncAll();
 
