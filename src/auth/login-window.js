@@ -71,7 +71,8 @@ class LoginWindow extends EventEmitter {
         this.emit("authenticated", token);
       } catch (err) {
         console.error("[login-window] failed to store token:", err.message);
-        bc("auth", "login.error", { kind: "token_store_failed" });
+        bc("auth", "login.error", { kind: "token_store_failed", error: err.message });
+        this._resetForRetry();
         this._sendError("token_store_failed");
       }
     });
@@ -80,13 +81,27 @@ class LoginWindow extends EventEmitter {
       const kind = err.message.includes("state") ? "state_mismatch"
         : err.message.includes("timeout") ? "auth_timeout"
         : "server_error";
-      bc("auth", "login.error", { kind });
+      bc("auth", "login.error", { kind, error: err.message });
+      this._resetForRetry();
       this._sendError(kind);
     });
   }
 
-  _openBrowser() {
-    if (!this._cbServer) return;
+  _resetForRetry() {
+    if (this._cbServer) { this._cbServer.stop(); }
+    this._cbServer = null;
+  }
+
+  async _openBrowser() {
+    if (!this._cbServer) {
+      try {
+        await this._startCallbackServer();
+      } catch (err) {
+        bc("auth", "login.error", { kind: "port_conflict", error: err.message });
+        this._sendError("port_conflict");
+        return;
+      }
+    }
     const redirectUri = `http://127.0.0.1:${this._cbServer.port}/auth/callback`;
     const url = new URL(`${WEB_BASE}/auth/desktop`);
     url.searchParams.set("redirect_uri", redirectUri);

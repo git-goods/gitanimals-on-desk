@@ -4,6 +4,10 @@ const https = require("https");
 const http = require("http");
 const { URL } = require("url");
 
+const { bc } = (() => {
+  try { return require("../core/telemetry"); } catch { return { bc() {} }; }
+})();
+
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
@@ -73,7 +77,10 @@ function _request(url, token, opts = {}) {
         catch { return reject(new Error(`Invalid redirect Location from ${url}: ${res.headers.location}`)); }
         return resolve(_request(nextUrl, token, { json, redirectsLeft: redirectsLeft - 1, originHost: startHost }));
       }
-      if (status === 401) { res.resume(); return reject(new UnauthorizedError()); }
+      if (status === 401) {
+        bc("auth", "api.401", { endpoint: parsed.pathname });
+        res.resume(); return reject(new UnauthorizedError());
+      }
       if (status !== 200) { res.resume(); return reject(new Error(`HTTP ${status}: ${url}`)); }
 
       const chunks = [];
