@@ -63,10 +63,43 @@ class LoginWindow extends EventEmitter {
     await this._cbServer.start();
 
     this._cbServer.once("token", async (token) => {
-      console.log("[login-window] token received — len=%d prefix=%s", token.length, token.slice(0, 12) + "…");
-      bc("auth", "login.token_received", { len: token.length });
+      const hasDots = token.includes(".");
+      const parts = hasDots ? token.split(".") : [];
+      console.log("[login-window] token received — len=%d dots=%d prefix=%s", token.length, parts.length - 1, token.slice(0, 30));
+      if (hasDots) {
+        for (let i = 0; i < Math.min(parts.length, 2); i++) {
+          try {
+            const seg = JSON.parse(Buffer.from(parts[i], "base64url").toString("utf8"));
+            console.log("[login-window] jwt segment[%d] keys=%s", i, JSON.stringify(Object.keys(seg)));
+            if (seg.exp || seg.iat) {
+              const now = Math.floor(Date.now() / 1000);
+              console.log("[login-window] jwt timing — iat=%d exp=%d now=%d expired=%s ttl=%ds",
+                seg.iat, seg.exp, now, seg.exp < now, seg.exp - now);
+            }
+          } catch (_e) { console.log("[login-window] jwt segment[%d] not JSON", i); }
+        }
+      } else if (token.startsWith("eyJ")) {
+        try {
+          const d = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
+          console.log("[login-window] base64 decoded keys=%s", JSON.stringify(Object.keys(d)));
+        } catch (_e) { console.log("[login-window] not decodable as base64 JSON either"); }
+      }
+      bc("auth", "login.token_received", { len: token.length, hasDots });
 
       try {
+        if (hasDots && parts.length >= 2) {
+          try {
+            const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+            if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+              console.error("[login-window] received EXPIRED jwt — exp=%d, expired %ds ago", payload.exp, Math.floor(Date.now() / 1000) - payload.exp);
+              bc("auth", "login.error", { kind: "token_expired", expiredAgo: Math.floor(Date.now() / 1000) - payload.exp });
+              this._resetForRetry();
+              this._sendError("token_expired");
+              return;
+            }
+          } catch (_e) {}
+        }
+
         const { getUser } = require("../api/gitanimals-client");
         tokenStore.set(token);
         const user = await getUser();
