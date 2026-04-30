@@ -309,6 +309,27 @@ export const commandRegistry: SettingsCommandRegistry = {
     deps.logout();
     return { status: "ok" };
   },
+  checkForUpdatesFromSettings(_payload, deps: Deps) {
+    if (typeof deps.checkForUpdates !== "function") {
+      return { status: "error", message: "checkForUpdatesFromSettings: dep not available" };
+    }
+    return Promise.resolve(deps.checkForUpdates({ manual: true, source: "settings" }))
+      .then(() => ({ status: "ok" }));
+  },
+  applyUpdateFromSettings(_payload, deps: Deps) {
+    if (typeof deps.applyUpdateFromSettings !== "function") {
+      return { status: "error", message: "applyUpdateFromSettings: dep not available" };
+    }
+    return Promise.resolve(deps.applyUpdateFromSettings())
+      .then(() => ({ status: "ok" }));
+  },
+  restartToUpdateFromSettings(_payload, deps: Deps) {
+    if (typeof deps.restartToUpdateFromSettings !== "function") {
+      return { status: "error", message: "restartToUpdateFromSettings: dep not available" };
+    }
+    return Promise.resolve(deps.restartToUpdateFromSettings())
+      .then(() => ({ status: "ok" }));
+  },
   signIn(_payload, deps: Deps) {
     if (typeof deps.logout !== "function") return { status: "error", message: "signIn: dep not available" };
     deps.logout();

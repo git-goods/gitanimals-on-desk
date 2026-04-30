@@ -2,6 +2,7 @@ import type {
   SettingsAPI,
   SettingsChangedPayload,
   SettingsTabId,
+  SettingsUpdateState,
 } from "../types/settings-ui";
 
 type BridgeInvoke = (channel: string, payload?: unknown) => Promise<unknown>;
@@ -46,6 +47,7 @@ export function createSettingsBridge({
   }
 
   const changedListeners = new Set<BridgeListener<SettingsChangedPayload>>();
+  const updateStateListeners = new Set<BridgeListener<SettingsUpdateState>>();
   const tabListeners = new Set<BridgeListener<SettingsTabId | string>>();
   const sessionExpiredListeners = new Set<BridgeListener<void>>();
 
@@ -55,12 +57,16 @@ export function createSettingsBridge({
   subscribe("settings:set-tab", (_event, tab) => {
     emitTo(tabListeners, tab as SettingsTabId | string);
   });
+  subscribe("settings:update-state-changed", (_event, state) => {
+    emitTo(updateStateListeners, state as SettingsUpdateState);
+  });
   subscribe("auth:session-expired", () => {
     emitTo(sessionExpiredListeners, undefined);
   });
 
   return {
     getSnapshot: () => invoke("settings:get-snapshot") as Promise<any>,
+    getUpdateState: () => invoke("settings:get-update-state") as Promise<any>,
     update: (key, value) =>
       invoke("settings:update", { key, value }) as Promise<any>,
     command: (action, payload) =>
@@ -70,6 +76,7 @@ export function createSettingsBridge({
     openExternal: (url: string) => invoke("settings:open-external", url) as Promise<void>,
     getUser: () => invoke("settings:get-user") as Promise<any>,
     onChanged: (cb) => addListener(changedListeners, cb),
+    onUpdateStateChanged: (cb) => addListener(updateStateListeners, cb),
     onSetTab: (cb) => addListener(tabListeners, cb),
     onSessionExpired: (cb) => addListener(sessionExpiredListeners, cb),
   };

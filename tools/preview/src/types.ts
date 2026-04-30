@@ -52,4 +52,8 @@ export interface LayoutOverrides {
   centerX: number;
 }
 
-export const MAIN_STATES = ["idle", "thinking", "working", "sleeping", "waking"] as const;
+export const MAIN_STATES = [
+  "idle", "thinking", "working", "juggling", "carrying", "sweeping",
+  "attention", "notification", "error",
+  "sleeping", "idle-look", "yawning", "dozing", "collapsing", "waking",
+] as const;

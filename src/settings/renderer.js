@@ -50,6 +50,24 @@ const STRINGS = {
     rowAutoCheckUpdates: "Automatically check for updates",
     rowAutoCheckUpdatesDesc:
       "Check for new versions in the background every 12 hours.",
+    sectionUpdates: "Updates",
+    updateCurrentVersion: "Current version",
+    updateLatestVersion: "Latest version",
+    updateLastChecked: "Last checked",
+    updateNeverChecked: "Never",
+    updateStatusIdle: "Ready to check for updates.",
+    updateStatusChecking: "Checking GitHub for the latest release…",
+    updateStatusAvailable: "A newer version is available.",
+    updateStatusDownloading: "Downloading the update now…",
+    updateStatusReady: "The update has been downloaded and is ready to install.",
+    updateStatusError: "The last update attempt failed.",
+    updateStatusUpToDate: "You're on the latest version.",
+    updateCheckNow: "Check now",
+    updateDownloadNow: "Download update",
+    updateInstallNow: "Install update",
+    updateRestartNow: "Restart to update",
+    updateFlowGit: "Development checkout",
+    updateFlowAuto: "Packaged app",
     rowBubbleFollow: "Bubbles follow the pet",
     rowBubbleFollowDesc:
       "Place permission and update bubbles next to the pet instead of the screen corner.",
@@ -131,6 +149,24 @@ const STRINGS = {
     rowStartWithClaudeDesc: "Claude Code 会话开始时自动拉起 GitAnimals。",
     rowAutoCheckUpdates: "自动检查更新",
     rowAutoCheckUpdatesDesc: "每 12 小时在后台检查新版本。",
+    sectionUpdates: "更新",
+    updateCurrentVersion: "当前版本",
+    updateLatestVersion: "最新版本",
+    updateLastChecked: "上次检查",
+    updateNeverChecked: "从未",
+    updateStatusIdle: "可以检查更新。",
+    updateStatusChecking: "正在从 GitHub 检查最新发布版本…",
+    updateStatusAvailable: "发现了新版本。",
+    updateStatusDownloading: "正在下载更新…",
+    updateStatusReady: "更新已下载完成，可以安装。",
+    updateStatusError: "上次更新失败。",
+    updateStatusUpToDate: "当前已是最新版本。",
+    updateCheckNow: "立即检查",
+    updateDownloadNow: "下载更新",
+    updateInstallNow: "安装更新",
+    updateRestartNow: "重启并更新",
+    updateFlowGit: "开发仓库",
+    updateFlowAuto: "已打包应用",
     rowBubbleFollow: "气泡跟随桌宠",
     rowBubbleFollowDesc: "把权限气泡和更新气泡放在桌宠旁边，而不是屏幕角落。",
     rowHideBubbles: "隐藏所有气泡",
@@ -211,6 +247,24 @@ const STRINGS = {
       "Claude Code 세션이 시작될 때마다 GitAnimals를 자동으로 실행해요.",
     rowAutoCheckUpdates: "자동으로 업데이트 확인",
     rowAutoCheckUpdatesDesc: "12시간마다 백그라운드에서 새 버전을 확인해요.",
+    sectionUpdates: "업데이트",
+    updateCurrentVersion: "현재 버전",
+    updateLatestVersion: "최신 버전",
+    updateLastChecked: "마지막 확인",
+    updateNeverChecked: "아직 없음",
+    updateStatusIdle: "업데이트를 확인할 준비가 됐어요.",
+    updateStatusChecking: "GitHub에서 최신 릴리스를 확인하는 중이에요…",
+    updateStatusAvailable: "더 새로운 버전이 있어요.",
+    updateStatusDownloading: "업데이트를 다운로드하는 중이에요…",
+    updateStatusReady: "업데이트가 다운로드되었고 설치할 준비가 됐어요.",
+    updateStatusError: "마지막 업데이트 시도가 실패했어요.",
+    updateStatusUpToDate: "현재 최신 버전을 사용 중이에요.",
+    updateCheckNow: "지금 확인",
+    updateDownloadNow: "업데이트 다운로드",
+    updateInstallNow: "업데이트 적용",
+    updateRestartNow: "재시작 후 업데이트",
+    updateFlowGit: "개발 체크아웃",
+    updateFlowAuto: "패키징 앱",
     rowBubbleFollow: "버블이 펫을 따라오기",
     rowBubbleFollowDesc:
       "권한 버블과 업데이트 버블을 화면 구석 대신 펫 옆에 표시해요.",
@@ -431,7 +485,136 @@ function UserCard({ t, userInfo, pending, onLogout, onSignInAgain }) {
   );
 }
 
-function GeneralTab({ snapshot, t, pending, runUpdate, runCommand, userInfo }) {
+function formatDateTime(value) {
+  if (!value) return "";
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  } catch {
+    return new Date(value).toLocaleString();
+  }
+}
+
+function UpdateSection({ t, updateState, pending, runCommand }) {
+  const status = (updateState && updateState.status) || "idle";
+  const currentVersion = (updateState && updateState.currentVersion) || "0.0.0";
+  const latestVersion = (updateState && updateState.latestVersion) || "";
+  const lastCheckedAt = updateState && updateState.lastCheckedAt;
+  const lastError = (updateState && updateState.lastError) || "";
+  const isUpToDate =
+    status === "idle" &&
+    latestVersion &&
+    String(latestVersion).replace(/^v/, "") === String(currentVersion).replace(/^v/, "");
+
+  let statusText = t("updateStatusIdle");
+  if (isUpToDate) statusText = t("updateStatusUpToDate");
+  else if (status === "checking") statusText = t("updateStatusChecking");
+  else if (status === "available") statusText = t("updateStatusAvailable");
+  else if (status === "downloading") statusText = t("updateStatusDownloading");
+  else if (status === "ready") statusText = t("updateStatusReady");
+  else if (status === "error") statusText = t("updateStatusError");
+
+  const actionButtons = [];
+  actionButtons.push(
+    h(
+      "button",
+      {
+        key: "check",
+        className: "btn",
+        type: "button",
+        disabled: !!pending.checkForUpdates || !updateState || !updateState.canCheck,
+        onClick: () =>
+          runCommand("checkForUpdates", () =>
+            window.settingsAPI.command("checkForUpdatesFromSettings"),
+          ),
+      },
+      t("updateCheckNow"),
+    ),
+  );
+  if (updateState && updateState.canApplyUpdate) {
+    actionButtons.push(
+      h(
+        "button",
+        {
+          key: "apply",
+          className: "btn primary",
+          type: "button",
+          disabled: !!pending.applyUpdate,
+          onClick: () =>
+            runCommand("applyUpdate", () =>
+              window.settingsAPI.command("applyUpdateFromSettings"),
+            ),
+        },
+        updateState.flow === "git" ? t("updateInstallNow") : t("updateDownloadNow"),
+      ),
+    );
+  }
+  if (updateState && updateState.canRestartToUpdate) {
+    actionButtons.push(
+      h(
+        "button",
+        {
+          key: "restart",
+          className: "btn primary",
+          type: "button",
+          disabled: !!pending.restartToUpdate,
+          onClick: () =>
+            runCommand("restartToUpdate", () =>
+              window.settingsAPI.command("restartToUpdateFromSettings"),
+            ),
+        },
+        t("updateRestartNow"),
+      ),
+    );
+  }
+
+  return h(
+    Section,
+    { title: t("sectionUpdates") },
+    h(
+      "div",
+      { className: "update-card" },
+      h(
+        "div",
+        { className: "update-summary" },
+        h("div", { className: cx("update-status", status) }, statusText),
+        h(
+          "div",
+          { className: "update-meta-grid" },
+          h("span", { className: "update-meta-label" }, t("updateCurrentVersion")),
+          h("span", { className: "update-meta-value mono" }, `v${currentVersion}`),
+          h("span", { className: "update-meta-label" }, t("updateLatestVersion")),
+          h(
+            "span",
+            { className: "update-meta-value mono" },
+            latestVersion ? `v${String(latestVersion).replace(/^v/, "")}` : "—",
+          ),
+          h("span", { className: "update-meta-label" }, t("updateLastChecked")),
+          h(
+            "span",
+            { className: "update-meta-value" },
+            lastCheckedAt ? formatDateTime(lastCheckedAt) : t("updateNeverChecked"),
+          ),
+        ),
+        updateState
+          ? h(
+              "div",
+              { className: "update-flow" },
+              updateState.flow === "git" ? t("updateFlowGit") : t("updateFlowAuto"),
+            )
+          : null,
+        lastError
+          ? h("div", { className: "update-error-text" }, lastError)
+          : null,
+      ),
+      h("div", { className: "update-actions" }, actionButtons),
+    ),
+  );
+}
+
+function GeneralTab({ snapshot, t, pending, runUpdate, runCommand, userInfo, updateState }) {
   const soundEnabled = !snapshot.soundMuted;
 
   return h(
@@ -508,6 +691,7 @@ function GeneralTab({ snapshot, t, pending, runUpdate, runCommand, userInfo }) {
           ),
       }),
     ),
+    h(UpdateSection, { t, updateState, pending, runCommand }),
     snapshot.platform === "darwin" &&
       h(
         Section,
@@ -852,6 +1036,7 @@ function PlaceholderTab({ t }) {
 
 function App() {
   const [snapshot, setSnapshot] = useState(null);
+  const [updateState, setUpdateState] = useState(null);
   const [activeTab, setActiveTab] = useState("general");
   const [agentMetadata, setAgentMetadata] = useState([]);
   const [themeMetadata, setThemeMetadata] = useState(null);
@@ -954,6 +1139,9 @@ function App() {
     window.settingsAPI.getSnapshot().then((nextSnapshot) => {
       if (mounted) setSnapshot(nextSnapshot || {});
     });
+    window.settingsAPI.getUpdateState().then((nextUpdateState) => {
+      if (mounted) setUpdateState(nextUpdateState || null);
+    });
 
     window.settingsAPI
       .listAgents()
@@ -992,6 +1180,9 @@ function App() {
         return current;
       });
     });
+    const offUpdateState = window.settingsAPI.onUpdateStateChanged((nextUpdateState) => {
+      if (mounted) setUpdateState(nextUpdateState || null);
+    });
 
     const offTab = window.settingsAPI.onSetTab((tab) => {
       const next = SIDEBAR_TABS.find(
@@ -1010,6 +1201,7 @@ function App() {
     return () => {
       mounted = false;
       offChanged();
+      offUpdateState();
       offTab();
       offExpired();
       for (const timer of toastTimers.current.values()) clearTimeout(timer);
@@ -1027,6 +1219,7 @@ function App() {
         runUpdate,
         runCommand,
         userInfo,
+        updateState,
       });
     }
     if (activeTab === "agents") {
@@ -1058,6 +1251,7 @@ function App() {
     themeMetadata,
     themeRefreshing,
     userInfo,
+    updateState,
   ]);
 
   return h(

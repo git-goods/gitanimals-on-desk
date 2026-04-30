@@ -151,6 +151,9 @@ const _settingsController = createSettingsController({
     getDiscoveredThemes: () => getOwnedThemes(),
     getActiveThemeId: () => (activeTheme ? activeTheme._id : "fox"),
     resyncPersonas: () => personaSync.syncAll({ force: true }),
+    checkForUpdates: (...args) => checkForUpdates(...args),
+    applyUpdateFromSettings: () => applyUpdateFromSettings(),
+    restartToUpdateFromSettings: () => restartToUpdateFromSettings(),
     logout: () => {
       tokenStore.clear();
       _userCache = null;
@@ -1241,6 +1244,7 @@ ipcMain.handle("settings:get-snapshot", () => ({
   ..._settingsController.getSnapshot(),
   platform: process.platform,
 }));
+ipcMain.handle("settings:get-update-state", () => _updater.getUpdateState());
 ipcMain.handle("settings:update", (_event, payload) => {
   if (!payload || typeof payload !== "object") {
     return {
@@ -1348,10 +1352,29 @@ const _updaterCtx = {
   resetSoundCooldown: () => resetSoundCooldown(),
   get autoCheckForUpdates() { return _settingsController.get("autoCheckForUpdates"); },
   getPendingUpdateVersion() { return _settingsController.get("pendingUpdateVersion"); },
+  getLastUpdateCheckAt() { return _settingsController.get("lastUpdateCheckAt"); },
   getUpdateSnoozeUntil() { return _settingsController.get("updateSnoozeUntil"); },
   savePendingState(partial) {
     try { _settingsController.applyBulk(partial); } catch (err) {
       console.warn("GitAnimals: savePendingState failed:", err && err.message);
+    }
+  },
+  onUpdateStateChanged(updateState) {
+    try {
+      for (const bw of BrowserWindow.getAllWindows()) {
+        if (
+          !bw.isDestroyed() &&
+          bw.webContents &&
+          !bw.webContents.isDestroyed()
+        ) {
+          bw.webContents.send("settings:update-state-changed", updateState);
+        }
+      }
+    } catch (err) {
+      console.warn(
+        "GitAnimals: settings:update-state-changed broadcast failed:",
+        err && err.message,
+      );
     }
   },
 };
@@ -1364,6 +1387,8 @@ const {
   startScheduler,
   stopScheduler,
   reevaluateDeferred,
+  applyUpdateFromSettings,
+  restartToUpdateFromSettings,
 } = _updater;
 
 // ── Settings panel window ──

@@ -73,12 +73,87 @@ function initUpdater(ctx, deps = {}) {
   const fsApi = deps.fsImpl || fs;
   const t = makeTranslate(ctx);
 
-  let updateStatus = "idle";
+  let pendingVersion =
+    (typeof ctx.getPendingUpdateVersion === "function" && ctx.getPendingUpdateVersion()) || "";
+  let updateStatus = pendingVersion ? "available" : "idle";
   let manualUpdateCheck = false;
+  let manualUpdateSource = "default";
   let repoRootCache;
   let autoUpdaterInstance = null;
   let overlayKind = null;
-  let pendingVersion = "";
+  let latestVersion = pendingVersion || "";
+  let lastError = "";
+
+  function getLastCheckedAt() {
+    return typeof ctx.getLastUpdateCheckAt === "function"
+      ? ctx.getLastUpdateCheckAt() || 0
+      : 0;
+  }
+
+  function getUpdateState() {
+    const repoRoot = getRepoRoot();
+    return {
+      status: updateStatus,
+      currentVersion: app.getVersion(),
+      latestVersion,
+      pendingVersion,
+      lastCheckedAt: getLastCheckedAt(),
+      lastError,
+      canCheck: updateStatus !== "checking" && updateStatus !== "downloading",
+      canApplyUpdate: updateStatus === "available",
+      canRestartToUpdate: updateStatus === "ready",
+      flow: repoRoot ? "git" : "auto-updater",
+      isPackaged: !!app.isPackaged,
+    };
+  }
+
+  function emitUpdateStateChanged() {
+    if (typeof ctx.onUpdateStateChanged === "function") {
+      ctx.onUpdateStateChanged(getUpdateState());
+    }
+  }
+
+  function setUpdateStatus(next) {
+    if (updateStatus === next) return;
+    updateStatus = next;
+    emitUpdateStateChanged();
+  }
+
+  function setLatestVersion(version) {
+    const next = version || "";
+    if (latestVersion === next) return;
+    latestVersion = next;
+    emitUpdateStateChanged();
+  }
+
+  function setPendingVersion(version) {
+    const next = version || "";
+    const statusChanged = pendingVersion !== next;
+    pendingVersion = next;
+    latestVersion = next;
+    if (statusChanged) emitUpdateStateChanged();
+  }
+
+  function clearPendingVersion() {
+    const hadValue = pendingVersion || latestVersion;
+    pendingVersion = "";
+    latestVersion = "";
+    if (hadValue) emitUpdateStateChanged();
+  }
+
+  function setLastError(message) {
+    const next = message || "";
+    if (lastError === next) return;
+    lastError = next;
+    emitUpdateStateChanged();
+  }
+
+  function persistPendingState(partial) {
+    if (typeof ctx.savePendingState === "function") {
+      ctx.savePendingState(partial);
+    }
+    emitUpdateStateChanged();
+  }
 
   function rebuildMenus() {
     if (typeof ctx.rebuildAllMenus === "function") ctx.rebuildAllMenus();
@@ -307,18 +382,17 @@ function initUpdater(ctx, deps = {}) {
 
     if (action === "primary") return onPrimary();
     const SNOOZE_DURATION = 24 * 60 * 60 * 1000;
-    pendingVersion = version;
-    if (typeof ctx.savePendingState === "function") {
-      ctx.savePendingState({
-        pendingUpdateVersion: version,
-        updateSnoozeUntil: Date.now() + SNOOZE_DURATION,
-      });
-    }
+    setPendingVersion(version);
+    persistPendingState({
+      pendingUpdateVersion: version,
+      updateSnoozeUntil: Date.now() + SNOOZE_DURATION,
+    });
     hideBubble();
     dismissToResolvedState();
-    updateStatus = "available";
+    setUpdateStatus("available");
     rebuildMenus();
     manualUpdateCheck = false;
+    manualUpdateSource = "default";
     return null;
   }
 
@@ -341,7 +415,7 @@ function initUpdater(ctx, deps = {}) {
     if (action === "primary") return onPrimary();
     hideBubble();
     dismissToResolvedState();
-    updateStatus = "ready";
+    setUpdateStatus("ready");
     rebuildMenus();
     return null;
   }
@@ -356,8 +430,8 @@ function initUpdater(ctx, deps = {}) {
     const snoozeUntil = typeof ctx.getUpdateSnoozeUntil === "function" ? ctx.getUpdateSnoozeUntil() : 0;
     if (snoozeUntil && Date.now() < snoozeUntil) return;
 
-    pendingVersion = pending;
-    updateStatus = "available";
+    setPendingVersion(pending);
+    setUpdateStatus("available");
     rebuildMenus();
 
     const repoRoot = getRepoRoot();
@@ -371,9 +445,10 @@ function initUpdater(ctx, deps = {}) {
             const localHead = await gitCmd(["rev-parse", "HEAD"], repoRoot);
             const dirty = await gitCmd(["status", "--porcelain"], repoRoot);
             if (dirty) {
-              updateStatus = "error";
+              setUpdateStatus("error");
               rebuildMenus();
               clearOverlay();
+              setLastError("Local files have uncommitted changes.");
               await showErrorBubble({
                 failureType: "Dirty Worktree",
                 operation: "Apply Git Update",
@@ -386,7 +461,8 @@ function initUpdater(ctx, deps = {}) {
             }
             await runGitUpdate(repoRoot, branch, localHead);
           } else {
-            updateStatus = "downloading";
+            setLastError("");
+            setUpdateStatus("downloading");
             setOverlay("downloading");
             rebuildMenus();
             await showInfoBubble(
@@ -400,16 +476,18 @@ function initUpdater(ctx, deps = {}) {
         },
       });
     } catch (err) {
-      updateStatus = "error";
+      setUpdateStatus("error");
       hideBubble();
       clearOverlay();
       rebuildMenus();
+      setLastError(getErrorMessage(err));
       log(`ERROR: reevaluateDeferred: ${err.message}`);
     }
   }
 
   async function runGitUpdate(repoRoot, branch, localHead) {
-    updateStatus = "downloading";
+    setLastError("");
+    setUpdateStatus("downloading");
     setOverlay("downloading");
     rebuildMenus();
     await showInfoBubble(
@@ -454,17 +532,21 @@ function initUpdater(ctx, deps = {}) {
     app.exit(0);
   }
 
-  async function gitCheckForUpdates(repoRoot, manual) {
-    log(`gitCheckForUpdates: repoRoot=${repoRoot}, manual=${manual}`);
-    updateStatus = "checking";
-    manualUpdateCheck = manual;
+  async function gitCheckForUpdates(repoRoot, options) {
+    log(`gitCheckForUpdates: repoRoot=${repoRoot}, manual=${options.manual}, source=${options.source}`);
+    setLastError("");
+    setUpdateStatus("checking");
+    manualUpdateCheck = options.manual;
+    manualUpdateSource = options.source;
     setOverlay("checking");
     rebuildMenus();
-    await showInfoBubble(
-      "checking",
-      t("checkForUpdates", "Check for Updates"),
-      t("checkingForUpdates", "Checking for Updates...")
-    );
+    if (options.source !== "settings") {
+      await showInfoBubble(
+        "checking",
+        t("checkForUpdates", "Check for Updates"),
+        t("checkingForUpdates", "Checking for Updates...")
+      );
+    }
 
     try {
       const branch = await gitCmd(["rev-parse", "--abbrev-ref", "HEAD"], repoRoot);
@@ -475,16 +557,17 @@ function initUpdater(ctx, deps = {}) {
 
       if (localHead === remoteHead) {
         if (pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" && ctx.getPendingUpdateVersion())) {
-          pendingVersion = "";
-          if (typeof ctx.savePendingState === "function") {
-            ctx.savePendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
-          }
+          clearPendingVersion();
+          persistPendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
         }
-        updateStatus = "idle";
+        setLatestVersion(app.getVersion());
+        setUpdateStatus("idle");
         manualUpdateCheck = false;
+        manualUpdateSource = "default";
         rebuildMenus();
-        if (manual) await showUpToDateBubble(app.getVersion());
-        else dismissToResolvedState();
+        if (options.manual && options.source !== "settings") await showUpToDateBubble(app.getVersion());
+        else if (options.source !== "settings") dismissToResolvedState();
+        else clearOverlay();
         return;
       }
 
@@ -496,22 +579,28 @@ function initUpdater(ctx, deps = {}) {
         remoteVersion = remoteHead.slice(0, 8);
       }
 
-      updateStatus = "available";
+      setPendingVersion(remoteVersion);
+      setUpdateStatus("available");
       rebuildMenus();
 
-      if (!manual && isSilentMode()) {
-        pendingVersion = remoteVersion;
-        if (typeof ctx.savePendingState === "function") {
-          ctx.savePendingState({
-            pendingUpdateVersion: remoteVersion,
-            lastUpdateCheckAt: Date.now(),
-          });
-        }
-        updateStatus = "available";
+      if (!options.manual && isSilentMode()) {
+        persistPendingState({
+          pendingUpdateVersion: remoteVersion,
+          lastUpdateCheckAt: Date.now(),
+        });
         hideBubble();
         dismissToResolvedState();
         rebuildMenus();
         manualUpdateCheck = false;
+        manualUpdateSource = "default";
+        return;
+      }
+
+      if (options.source === "settings") {
+        manualUpdateCheck = false;
+        manualUpdateSource = "default";
+        clearOverlay();
+        rebuildMenus();
         return;
       }
 
@@ -521,10 +610,12 @@ function initUpdater(ctx, deps = {}) {
         onPrimary: async () => {
           const dirty = await gitCmd(["status", "--porcelain"], repoRoot);
           if (dirty) {
-            updateStatus = "error";
+            setUpdateStatus("error");
             manualUpdateCheck = false;
+            manualUpdateSource = "default";
             rebuildMenus();
             clearOverlay();
+            setLastError("Local files have uncommitted changes.");
             await showErrorBubble({
               failureType: "Dirty Worktree",
               operation: "Apply Git Update",
@@ -539,11 +630,13 @@ function initUpdater(ctx, deps = {}) {
         },
       });
     } catch (err) {
-      updateStatus = "error";
+      setUpdateStatus("error");
       manualUpdateCheck = false;
+      manualUpdateSource = "default";
       rebuildMenus();
       clearOverlay();
-      if (manual) {
+      setLastError(getErrorMessage(err));
+      if (options.manual && options.source !== "settings") {
         await showErrorBubble({
           failureType: err.updateFailureType,
           operation: err.updateOperation || "Check for Updates",
@@ -563,20 +656,26 @@ function initUpdater(ctx, deps = {}) {
       log(`autoUpdater: update-available v${info && info.version}`);
       try { bc("updater", "update-available", { version: info && info.version }); } catch {}
       const wasManual = manualUpdateCheck;
+      const source = manualUpdateSource;
       manualUpdateCheck = false;
-      updateStatus = "available";
+      manualUpdateSource = "default";
+      setPendingVersion(info.version);
+      setLastError("");
+      setUpdateStatus("available");
       rebuildMenus();
 
       if (!wasManual && isSilentMode()) {
-        pendingVersion = info.version;
-        if (typeof ctx.savePendingState === "function") {
-          ctx.savePendingState({
-            pendingUpdateVersion: info.version,
-            lastUpdateCheckAt: Date.now(),
-          });
-        }
+        persistPendingState({
+          pendingUpdateVersion: info.version,
+          lastUpdateCheckAt: Date.now(),
+        });
         rebuildMenus();
         dismissToResolvedState();
+        return;
+      }
+
+      if (source === "settings") {
+        clearOverlay();
         return;
       }
 
@@ -584,7 +683,8 @@ function initUpdater(ctx, deps = {}) {
         mode: "win",
         version: info.version,
         onPrimary: async () => {
-          updateStatus = "downloading";
+          setLastError("");
+          setUpdateStatus("downloading");
           setOverlay("downloading");
           rebuildMenus();
           await showInfoBubble(
@@ -599,25 +699,30 @@ function initUpdater(ctx, deps = {}) {
 
     autoUpdater.on("update-not-available", async () => {
       if (pendingVersion || (typeof ctx.getPendingUpdateVersion === "function" && ctx.getPendingUpdateVersion())) {
-        pendingVersion = "";
-        if (typeof ctx.savePendingState === "function") {
-          ctx.savePendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
-        }
+        clearPendingVersion();
+        persistPendingState({ pendingUpdateVersion: "", updateSnoozeUntil: 0 });
       }
-      updateStatus = "idle";
+      setLatestVersion(app.getVersion());
+      setUpdateStatus("idle");
       rebuildMenus();
       log("autoUpdater: update-not-available");
       if (manualUpdateCheck) {
         manualUpdateCheck = false;
-        await showUpToDateBubble(app.getVersion());
+        const source = manualUpdateSource;
+        manualUpdateSource = "default";
+        if (source !== "settings") await showUpToDateBubble(app.getVersion());
+        else clearOverlay();
         return;
       }
+      manualUpdateSource = "default";
       dismissToResolvedState();
     });
 
     autoUpdater.on("update-downloaded", async (info) => {
       try { bc("updater", "update-downloaded", { version: info && info.version }); } catch {}
-      updateStatus = "ready";
+      setPendingVersion(info.version);
+      setLastError("");
+      setUpdateStatus("ready");
       rebuildMenus();
       clearOverlay();
       await promptReadyUpdate(info.version, async () => {
@@ -630,31 +735,40 @@ function initUpdater(ctx, deps = {}) {
       try { report("[updater] error", "error", { message: err && err.message, code: err && err.code, status: updateStatus }); } catch {}
       const shouldShowErrorBubble = manualUpdateCheck || updateStatus === "downloading";
       const failedWhileDownloading = updateStatus === "downloading";
+      const source = manualUpdateSource;
       if (!shouldShowErrorBubble) {
-        updateStatus = "error";
+        setUpdateStatus("error");
         rebuildMenus();
         clearOverlay();
+        manualUpdateSource = "default";
+        setLastError(getErrorMessage(err));
         return;
       }
 
       manualUpdateCheck = false;
+      manualUpdateSource = "default";
       if (isUpdate404Error(err)) {
-        updateStatus = "idle";
+        setLatestVersion(app.getVersion());
+        setUpdateStatus("idle");
         rebuildMenus();
-        await showUpToDateBubble(app.getVersion());
+        if (source !== "settings") await showUpToDateBubble(app.getVersion());
+        else clearOverlay();
       } else {
-        updateStatus = "error";
+        setUpdateStatus("error");
         rebuildMenus();
         clearOverlay();
-        await showErrorBubble({
-          failureType: classifyFailureType(err.message),
-          operation: failedWhileDownloading ? "Download Update" : "Check for Updates",
-          reason: getErrorMessage(err),
-          nextStep: failedWhileDownloading
-            ? "Check your network connection and try downloading again."
-            : "Check your network connection and try again.",
-          detail: getErrorMessage(err),
-        });
+        setLastError(getErrorMessage(err));
+        if (source !== "settings") {
+          await showErrorBubble({
+            failureType: classifyFailureType(err.message),
+            operation: failedWhileDownloading ? "Download Update" : "Check for Updates",
+            reason: getErrorMessage(err),
+            nextStep: failedWhileDownloading
+              ? "Check your network connection and try downloading again."
+              : "Check your network connection and try again.",
+            detail: getErrorMessage(err),
+          });
+        }
       }
     });
   }
@@ -663,16 +777,20 @@ function initUpdater(ctx, deps = {}) {
     log(`simulateUpdate: mode=${simMode}`);
     const simVersion = "v99.0.0";
     manualUpdateCheck = true;
-    updateStatus = "checking";
+    manualUpdateSource = "default";
+    setLastError("");
+    setPendingVersion(simVersion);
+    setUpdateStatus("checking");
     setOverlay("checking");
     rebuildMenus();
     await showInfoBubble("checking", t("checkForUpdates", "Check for Updates"), t("checkingForUpdates", "Checking for Updates..."));
     await new Promise((r) => setTimeout(r, 800));
 
     if (simMode === "error") {
-      updateStatus = "error";
+      setUpdateStatus("error");
       rebuildMenus();
       clearOverlay();
+      setLastError("[Simulated] GitHub API request timed out (10s)");
       await showErrorBubble({
         failureType: "Network Error",
         operation: "Check for Updates",
@@ -684,7 +802,7 @@ function initUpdater(ctx, deps = {}) {
     }
 
     if (simMode === "ready") {
-      updateStatus = "ready";
+      setUpdateStatus("ready");
       rebuildMenus();
       clearOverlay();
       await promptReadyUpdate(simVersion, async () => {
@@ -698,18 +816,18 @@ function initUpdater(ctx, deps = {}) {
       return;
     }
 
-    updateStatus = "available";
+    setUpdateStatus("available");
     rebuildMenus();
     await promptAvailableUpdate({
       mode: "win",
       version: simVersion,
       onPrimary: async () => {
-        updateStatus = "downloading";
+        setUpdateStatus("downloading");
         setOverlay("downloading");
         rebuildMenus();
         await showInfoBubble("downloading", t("updateDownloading", "Downloading Update..."), t("updateDownloading", "Downloading Update..."));
         await new Promise((r) => setTimeout(r, 1500));
-        updateStatus = "ready";
+        setUpdateStatus("ready");
         rebuildMenus();
         clearOverlay();
         await promptReadyUpdate(simVersion, async () => {
@@ -725,7 +843,11 @@ function initUpdater(ctx, deps = {}) {
   }
 
   async function checkForUpdates(manual = false) {
-    log(`checkForUpdates: manual=${manual}, packaged=${app.isPackaged}`);
+    const options =
+      manual && typeof manual === "object"
+        ? { manual: !!manual.manual, source: manual.source || "default" }
+        : { manual: !!manual, source: "default" };
+    log(`checkForUpdates: manual=${options.manual}, source=${options.source}, packaged=${app.isPackaged}`);
     if (updateStatus === "checking" || updateStatus === "downloading") {
       log(`Check skipped: already ${updateStatus}`);
       return;
@@ -734,30 +856,34 @@ function initUpdater(ctx, deps = {}) {
     const simMode = !app.isPackaged && process.env.DEV_SIMULATE_UPDATE;
     if (simMode) return simulateUpdate(simMode);
 
-    if (typeof ctx.savePendingState === "function") {
-      ctx.savePendingState({ lastUpdateCheckAt: Date.now() });
-    }
+    persistPendingState({ lastUpdateCheckAt: Date.now() });
 
     const repoRoot = getRepoRoot();
-    if (repoRoot) return gitCheckForUpdates(repoRoot, manual);
+    if (repoRoot) return gitCheckForUpdates(repoRoot, options);
 
-    manualUpdateCheck = manual;
-    updateStatus = "checking";
+    manualUpdateCheck = options.manual;
+    manualUpdateSource = options.source;
+    setLastError("");
+    setUpdateStatus("checking");
     setOverlay("checking");
     rebuildMenus();
-    await showInfoBubble(
-      "checking",
-      t("checkForUpdates", "Check for Updates"),
-      t("checkingForUpdates", "Checking for Updates...")
-    );
+    if (options.source !== "settings") {
+      await showInfoBubble(
+        "checking",
+        t("checkForUpdates", "Check for Updates"),
+        t("checkingForUpdates", "Checking for Updates...")
+      );
+    }
 
     const autoUpdater = getAutoUpdater();
     if (!autoUpdater) {
-      updateStatus = "error";
+      setUpdateStatus("error");
       manualUpdateCheck = false;
+      manualUpdateSource = "default";
       rebuildMenus();
       clearOverlay();
-      if (manual) {
+      setLastError("AutoUpdater not available");
+      if (options.manual && options.source !== "settings") {
         await showErrorBubble({
           failureType: "Updater Unavailable",
           operation: "Check for Updates",
@@ -774,24 +900,32 @@ function initUpdater(ctx, deps = {}) {
     try {
       const result = await autoUpdater.checkForUpdates();
       if (!result) {
-        updateStatus = "idle";
+        setLatestVersion(app.getVersion());
+        setUpdateStatus("idle");
         manualUpdateCheck = false;
+        manualUpdateSource = "default";
         rebuildMenus();
-        dismissToResolvedState();
+        if (options.source !== "settings") dismissToResolvedState();
+        else clearOverlay();
       }
     } catch (err) {
       if (isUpdate404Error(err)) {
-        updateStatus = "idle";
+        setLatestVersion(app.getVersion());
+        setUpdateStatus("idle");
         manualUpdateCheck = false;
+        manualUpdateSource = "default";
         rebuildMenus();
-        if (manual) await showUpToDateBubble(app.getVersion());
-        else dismissToResolvedState();
+        if (options.manual && options.source !== "settings") await showUpToDateBubble(app.getVersion());
+        else if (options.source !== "settings") dismissToResolvedState();
+        else clearOverlay();
       } else {
-        updateStatus = "error";
+        setUpdateStatus("error");
         manualUpdateCheck = false;
+        manualUpdateSource = "default";
         rebuildMenus();
         clearOverlay();
-        if (manual) {
+        setLastError(getErrorMessage(err));
+        if (options.manual && options.source !== "settings") {
           await showErrorBubble({
             failureType: classifyFailureType(err.message),
             operation: "Check for Updates",
@@ -799,7 +933,7 @@ function initUpdater(ctx, deps = {}) {
             nextStep: "Check your network connection and try again.",
             detail: getErrorMessage(err),
           });
-        } else {
+        } else if (options.source !== "settings") {
           hideBubble();
         }
       }
@@ -828,6 +962,49 @@ function initUpdater(ctx, deps = {}) {
   function stopScheduler() {
     if (schedulerStartupTimer) { clearTimeout(schedulerStartupTimer); schedulerStartupTimer = null; }
     if (schedulerIntervalTimer) { clearInterval(schedulerIntervalTimer); schedulerIntervalTimer = null; }
+  }
+
+  async function applyUpdateFromSettings() {
+    if (updateStatus === "checking" || updateStatus === "downloading") return;
+    const repoRoot = getRepoRoot();
+    setLastError("");
+    if (repoRoot) {
+      const branch = await gitCmd(["rev-parse", "--abbrev-ref", "HEAD"], repoRoot);
+      const localHead = await gitCmd(["rev-parse", "HEAD"], repoRoot);
+      const dirty = await gitCmd(["status", "--porcelain"], repoRoot);
+      if (dirty) {
+        setUpdateStatus("error");
+        setLastError("Local files have uncommitted changes.");
+        rebuildMenus();
+        return;
+      }
+      await runGitUpdate(repoRoot, branch, localHead);
+      return;
+    }
+
+    const autoUpdater = getAutoUpdater();
+    if (!autoUpdater) {
+      setUpdateStatus("error");
+      setLastError("AutoUpdater not available");
+      rebuildMenus();
+      return;
+    }
+    setUpdateStatus("downloading");
+    setOverlay("downloading");
+    rebuildMenus();
+    autoUpdater.downloadUpdate();
+  }
+
+  async function restartToUpdateFromSettings() {
+    if (updateStatus !== "ready") return;
+    const autoUpdater = getAutoUpdater();
+    if (!autoUpdater) {
+      setUpdateStatus("error");
+      setLastError("AutoUpdater not available");
+      rebuildMenus();
+      return;
+    }
+    autoUpdater.quitAndInstall(false, true);
   }
 
   function getUpdateMenuLabel() {
@@ -873,6 +1050,9 @@ function initUpdater(ctx, deps = {}) {
     startScheduler,
     stopScheduler,
     reevaluateDeferred,
+    getUpdateState,
+    applyUpdateFromSettings,
+    restartToUpdateFromSettings,
   };
 }
 
