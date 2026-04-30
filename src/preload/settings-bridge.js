@@ -26,6 +26,7 @@ function createSettingsBridge({ invoke, subscribe, }) {
         throw new TypeError("createSettingsBridge: subscribe is required");
     }
     const changedListeners = new Set();
+    const updateStateListeners = new Set();
     const tabListeners = new Set();
     const sessionExpiredListeners = new Set();
     subscribe("settings-changed", (_event, payload) => {
@@ -34,11 +35,15 @@ function createSettingsBridge({ invoke, subscribe, }) {
     subscribe("settings:set-tab", (_event, tab) => {
         emitTo(tabListeners, tab);
     });
+    subscribe("settings:update-state-changed", (_event, state) => {
+        emitTo(updateStateListeners, state);
+    });
     subscribe("auth:session-expired", () => {
         emitTo(sessionExpiredListeners, undefined);
     });
     return {
         getSnapshot: () => invoke("settings:get-snapshot"),
+        getUpdateState: () => invoke("settings:get-update-state"),
         update: (key, value) => invoke("settings:update", { key, value }),
         command: (action, payload) => invoke("settings:command", { action, payload }),
         listAgents: () => invoke("settings:list-agents"),
@@ -46,6 +51,7 @@ function createSettingsBridge({ invoke, subscribe, }) {
         openExternal: (url) => invoke("settings:open-external", url),
         getUser: () => invoke("settings:get-user"),
         onChanged: (cb) => addListener(changedListeners, cb),
+        onUpdateStateChanged: (cb) => addListener(updateStateListeners, cb),
         onSetTab: (cb) => addListener(tabListeners, cb),
         onSessionExpired: (cb) => addListener(sessionExpiredListeners, cb),
     };
