@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <!--
+    Shared error bubble accessory — pixel-art speech bubble with flashing red !
+    Flash cycle 0.8s ease-in-out
+    Position via theme.json anchor transform
+  -->
+  <g>
+    <style>
+      @keyframes acc-bubble-error-flash {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: 0.15; }
+      }
+      .acc-bubble-error-flash { animation: acc-bubble-error-flash 0.8s ease-in-out infinite; }
+    </style>
+    <!-- Bubble body -->
+    <g fill="white" fill-opacity="0.92">
+      <rect x="1" y="0" width="4" height="5"/>
+      <rect x="0" y="1" width="6" height="3"/>
+      <rect x="1" y="5" width="2" height="1"/>
+      <rect x="0" y="6" width="1" height="1"/>
+    </g>
+    <!-- ! mark -->
+    <rect class="acc-bubble-error-flash" x="2.5" y="1"   width="1" height="2" fill="#FF4444"/>
+    <rect class="acc-bubble-error-flash" x="2.5" y="3.5" width="1" height="1" fill="#FF4444"/>
+  </g>
+</svg>
