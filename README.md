@@ -75,6 +75,14 @@ Claude Code가 툴 실행 권한을 요청할 때, 터미널 대신 화면에 �
 - 눈동자 추적 — idle 상태에서 커서를 따라 시선 이동
 - 클릭 반응 — 더블클릭 콕콕, 4회 연속 클릭 발버둥
 
+## 개발
+
+- Preview 툴 설치: `cd tools/preview && pnpm install` 또는 루트에서 `npm run preview:install`
+- Preview 툴 실행: `cd tools/preview && pnpm dev` 또는 루트에서 `npm run preview`
+- Preview 툴 빌드: `cd tools/preview && pnpm build`
+
+루트 `package.json`은 다른 패키지 매니저 메타데이터를 유지하므로, preview는 서브프로젝트 디렉토리에서 직접 `pnpm`을 실행하는 방식으로 분리되어 있습니다.
+
 ## 기여
 
 버그 리포트, 기능 제안, Pull Request 모두 환영합니다. [이슈](https://github.com/git-goods/gitaniamals-on-desk/issues)를 열어 논의하거나 PR을 바로 보내주세요.
