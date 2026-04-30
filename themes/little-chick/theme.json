@@ -13,12 +13,18 @@
     {
       "id": "little-chick",
       "name": "Little Chick",
-      "accessories": ["notebook", "zzz", "bubble-thinking"]
+      "accessories": ["notebook", "zzz", "bubble-thinking", "bubble-error"]
     },
     {
       "id": "little-chick-sunglasses",
       "name": "Little Chick Sunglasses",
-      "accessories": ["sunglasses", "notebook", "zzz", "bubble-thinking"]
+      "accessories": [
+        "sunglasses",
+        "notebook",
+        "zzz",
+        "bubble-thinking",
+        "bubble-error"
+      ]
     }
   ],
 
@@ -47,9 +53,12 @@
       "name": "Zzz",
       "file": "shared:acc-zzz.svg",
       "anchors": {
-        "sleeping":         { "parentId": "root", "transform": "translate(10, -2)" },
-        "mini-sleep":       { "parentId": "root", "transform": "translate(12, -2)" },
-        "mini-enter-sleep": { "parentId": "root", "transform": "translate(12, -2)" },
+        "sleeping": { "parentId": "root", "transform": "translate(10, -2)" },
+        "mini-sleep": { "parentId": "root", "transform": "translate(12, -2)" },
+        "mini-enter-sleep": {
+          "parentId": "root",
+          "transform": "translate(12, -2)"
+        },
         "*": null
       }
     },
@@ -57,7 +66,18 @@
       "name": "말풍선",
       "file": "shared:acc-bubble-thinking.svg",
       "anchors": {
-        "thinking": { "parentId": "root", "transform": "translate(10, -8)" },
+        "thinking": {
+          "parentId": "root",
+          "transform": "translate(10, -9.1) scale(0.75) rotate(-1)"
+        },
+        "*": null
+      }
+    },
+    "bubble-error": {
+      "name": "에러 말풍선",
+      "file": "shared:acc-bubble-error.svg",
+      "anchors": {
+        "error": { "parentId": "root", "transform": "translate(11, -9)" },
         "*": null
       }
     }
@@ -79,14 +99,14 @@
   },
 
   "states": {
-    "idle":         ["idle-follow.svg"],
-    "thinking":     ["thinking.svg"],
-    "working":      ["typing.svg"],
-    "error":        ["error.svg"],
-    "attention":    ["happy.svg"],
+    "idle": ["idle-follow.svg"],
+    "thinking": ["thinking.svg"],
+    "working": ["typing.svg"],
+    "error": ["error.svg"],
+    "attention": ["happy.svg"],
     "notification": ["notification.svg"],
-    "sleeping":     ["sleeping.svg"],
-    "waking":       ["waking.svg"]
+    "sleeping": ["sleeping.svg"],
+    "waking": ["waking.svg"]
   },
 
   "timings": {
