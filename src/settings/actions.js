@@ -295,7 +295,6 @@ exports.commandRegistry = {
     removeTheme: notImplemented("removeTheme"),
     installHooks: notImplemented("installHooks"),
     uninstallHooks: notImplemented("uninstallHooks"),
-    registerShortcut: notImplemented("registerShortcut"),
     setAgentFlag,
     togglePinnedTheme,
     refreshThemes,

@@ -39,13 +39,7 @@ export interface SettingsChangedPayload {
   snapshot?: SettingsSnapshot;
 }
 
-export type SettingsTabId =
-  | "general"
-  | "agents"
-  | "theme"
-  | "animMap"
-  | "shortcuts"
-  | "about";
+export type SettingsTabId = "general" | "agents" | "theme" | "about";
 
 export interface SettingsAPI {
   getSnapshot(): Promise<SettingsSnapshot>;

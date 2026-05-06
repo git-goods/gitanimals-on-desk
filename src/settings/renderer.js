@@ -17,10 +17,15 @@ const STRINGS = {
     sidebarGeneral: "General",
     sidebarAgents: "Agents",
     sidebarTheme: "Theme",
-    sidebarAnimMap: "Animation Map",
-    sidebarShortcuts: "Shortcuts",
     sidebarAbout: "About",
     sidebarSoon: "Soon",
+    aboutSubtitle: "App version and links.",
+    aboutVersion: "Version",
+    aboutLicense: "License",
+    aboutLicenseValue: "MIT",
+    aboutRepository: "Repository",
+    aboutHomepage: "Homepage",
+    aboutOpenLink: "Open",
     sectionAppearance: "Appearance",
     sectionStartup: "Startup",
     sectionBubbles: "Bubbles",
@@ -119,10 +124,15 @@ const STRINGS = {
     sidebarGeneral: "通用",
     sidebarAgents: "Agent 管理",
     sidebarTheme: "主题",
-    sidebarAnimMap: "动画映射",
-    sidebarShortcuts: "快捷键",
     sidebarAbout: "关于",
     sidebarSoon: "待推出",
+    aboutSubtitle: "应用版本与相关链接。",
+    aboutVersion: "版本",
+    aboutLicense: "许可证",
+    aboutLicenseValue: "MIT",
+    aboutRepository: "代码仓库",
+    aboutHomepage: "主页",
+    aboutOpenLink: "打开",
     sectionAppearance: "外观",
     sectionStartup: "启动",
     sectionBubbles: "气泡",
@@ -215,10 +225,15 @@ const STRINGS = {
     sidebarGeneral: "일반",
     sidebarAgents: "Agents",
     sidebarTheme: "테마",
-    sidebarAnimMap: "애니메이션 매핑",
-    sidebarShortcuts: "단축키",
     sidebarAbout: "정보",
     sidebarSoon: "준비 중",
+    aboutSubtitle: "앱 버전과 관련 링크예요.",
+    aboutVersion: "버전",
+    aboutLicense: "라이선스",
+    aboutLicenseValue: "MIT",
+    aboutRepository: "저장소",
+    aboutHomepage: "홈페이지",
+    aboutOpenLink: "열기",
     sectionAppearance: "모양",
     sectionStartup: "시작",
     sectionBubbles: "버블",
@@ -319,20 +334,13 @@ const SIDEBAR_TABS = [
   },
   { id: "agents", icon: "\u26A1", labelKey: "sidebarAgents", available: true },
   { id: "theme", icon: "\u{1F3A8}", labelKey: "sidebarTheme", available: true },
-  {
-    id: "animMap",
-    icon: "\u{1F3AC}",
-    labelKey: "sidebarAnimMap",
-    available: false,
-  },
-  {
-    id: "shortcuts",
-    icon: "\u2328",
-    labelKey: "sidebarShortcuts",
-    available: false,
-  },
-  { id: "about", icon: "\u2139", labelKey: "sidebarAbout", available: false },
+  { id: "about", icon: "\u2139", labelKey: "sidebarAbout", available: true },
 ];
+
+const ABOUT_LINKS = {
+  repository: "https://github.com/git-goods/gitanimals-on-desk",
+  homepage: "https://gitanimals.org",
+};
 
 function translate(snapshot, key) {
   const lang = (snapshot && snapshot.lang) || "en";
@@ -1034,6 +1042,65 @@ function PlaceholderTab({ t }) {
   );
 }
 
+function AboutTab({ snapshot, t }) {
+  const version = (snapshot && snapshot.appVersion) || "—";
+  const openLink = (url) => (event) => {
+    event.preventDefault();
+    window.settingsAPI.openExternal(url);
+  };
+  const linkButton = (url) =>
+    h(
+      "div",
+      { className: "row-control" },
+      h(
+        "button",
+        {
+          className: "btn",
+          type: "button",
+          onClick: openLink(url),
+        },
+        t("aboutOpenLink"),
+      ),
+    );
+
+  return h(
+    React.Fragment,
+    null,
+    h("h1", null, t("sidebarAbout")),
+    h("p", { className: "subtitle" }, t("aboutSubtitle")),
+    h(
+      Section,
+      { title: "" },
+      h(SettingRow, {
+        label: t("aboutVersion"),
+        control: h(
+          "div",
+          { className: "row-control" },
+          h("span", { className: "mono" }, `v${version}`),
+        ),
+      }),
+      h(SettingRow, {
+        label: t("aboutLicense"),
+        control: h(
+          "div",
+          { className: "row-control" },
+          h("span", null, t("aboutLicenseValue")),
+        ),
+      }),
+      h(SettingRow, {
+        label: t("aboutRepository"),
+        desc: ABOUT_LINKS.repository,
+        control: linkButton(ABOUT_LINKS.repository),
+      }),
+      h(SettingRow, {
+        label: t("aboutHomepage"),
+        desc: ABOUT_LINKS.homepage,
+        control: linkButton(ABOUT_LINKS.homepage),
+      }),
+    ),
+  );
+}
+
 function App() {
   const [snapshot, setSnapshot] = useState(null);
   const [updateState, setUpdateState] = useState(null);
@@ -1241,6 +1308,9 @@ function App() {
         runCommand,
         refreshThemes,
       });
+    }
+    if (activeTab === "about") {
+      return h(AboutTab, { snapshot: safeSnapshot, t });
     }
     return h(PlaceholderTab, { t });
   }, [

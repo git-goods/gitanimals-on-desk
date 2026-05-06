@@ -1223,7 +1223,11 @@ function wireSettingsSubscribers() {
         ) {
           bw.webContents.send("settings-changed", {
             changes,
-            snapshot: { ..._settingsController.getSnapshot(), platform: process.platform },
+            snapshot: {
+              ..._settingsController.getSnapshot(),
+              platform: process.platform,
+              appVersion: app.getVersion(),
+            },
           });
         }
       }
@@ -1243,6 +1247,7 @@ wireSettingsSubscribers();
 ipcMain.handle("settings:get-snapshot", () => ({
   ..._settingsController.getSnapshot(),
   platform: process.platform,
+  appVersion: app.getVersion(),
 }));
 ipcMain.handle("settings:get-update-state", () => _updater.getUpdateState());
 ipcMain.handle("settings:update", (_event, payload) => {
