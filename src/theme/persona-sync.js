@@ -54,6 +54,11 @@ function _notifyUnauthorized() {
 /**
  * Read cached persona list synchronously.
  * Returns [{ id, name, personaType }] or [].
+ *
+ * Re-resolves each entry's id through the current bundled-theme mapping so a
+ * cache written by a previous version (e.g. id="dessert_fox") still surfaces
+ * under the canonical bundle id ("fox"). Then dedupes — older API responses
+ * could return the same persona many times.
  */
 function loadCachedPersonas() {
   if (!themeCacheDir) return [];
@@ -61,7 +66,11 @@ function loadCachedPersonas() {
   try {
     const raw = JSON.parse(fs.readFileSync(p, "utf8"));
     if (!raw || !Array.isArray(raw.personas)) return [];
-    return raw.personas.filter(_isValidPersonaEntry);
+    const normalized = raw.personas
+      .filter(_isValidPersonaEntry)
+      .map((e) => ({ ...e, id: _personaThemeId(e.personaType) }))
+      .filter(_isValidPersonaEntry);
+    return _dedupeById(normalized);
   } catch { return []; }
 }
 
@@ -104,7 +113,7 @@ async function _syncAllInternal({ force = false } = {}) {
       if (!me || typeof me.username !== "string") throw new Error("unexpected /users shape (no username)");
       const userData = await getUserPersonas(me.username);
       if (!userData || !Array.isArray(userData.personas)) throw new Error("unexpected /users/{username} shape");
-      personas = userData.personas.map(_toPersonaEntry).filter(Boolean);
+      personas = _dedupeById(userData.personas.map(_toPersonaEntry).filter(Boolean));
       fs.writeFileSync(metaPath, JSON.stringify({ fetchedAt: Date.now(), personas }, null, 2), "utf8");
     } catch (e) {
       if (e instanceof UnauthorizedError) { _notifyUnauthorized(); return; }
@@ -115,7 +124,8 @@ async function _syncAllInternal({ force = false } = {}) {
 
   // 2. Sync each persona's theme assets
   let anyUpdated = false;
-  for (const p of personas.filter(_isValidPersonaEntry)) {
+  for (const p of _dedupeById(personas.filter(_isValidPersonaEntry))) {
+    if (_isBundledPersona(p.personaType)) continue; // bundled theme owns the assets
     try {
       const updated = await _syncPersona(p, { force, getAssets, downloadBuffer, UnauthorizedError });
       if (updated) anyUpdated = true;
@@ -293,8 +303,39 @@ function _urlToFilename(url, stateName, index) {
 }
 
 function _personaThemeId(personaType) {
-  // DESSERT_FOX → dessert_fox
+  // Prefer a bundled/user theme that declares this personaType — that way the
+  // API persona and its bundled equivalent share an id and the theme list
+  // shows one row instead of two.
+  const mapped = _bundledThemeIdFor(personaType);
+  if (mapped) return mapped;
+  // Fallback for personas with no bundled theme: DESSERT_FOX → dessert_fox.
   return personaType.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+}
+
+function _bundledThemeIdFor(personaType) {
+  if (typeof personaType !== "string" || !personaType) return null;
+  try {
+    const { personaTypeToThemeId } = require("./loader");
+    if (typeof personaTypeToThemeId === "function") {
+      return personaTypeToThemeId(personaType) || null;
+    }
+  } catch (_e) {}
+  return null;
+}
+
+function _isBundledPersona(personaType) {
+  return _bundledThemeIdFor(personaType) !== null;
+}
+
+function _dedupeById(entries) {
+  const out = [];
+  const seen = new Set();
+  for (const e of entries) {
+    if (!e || typeof e.id !== "string" || seen.has(e.id)) continue;
+    seen.add(e.id);
+    out.push(e);
+  }
+  return out;
 }
 
 function _toPersonaEntry(p) {

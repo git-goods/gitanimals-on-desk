@@ -3,6 +3,7 @@
 
   "schemaVersion": 1,
   "type": "persona",
+  "personaType": "CAPYBARA_CARROT",
   "name": "Capybara Carrot",
   "author": "sumi",
   "version": "1.0.0",

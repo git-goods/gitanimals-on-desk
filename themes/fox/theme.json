@@ -3,6 +3,7 @@
 
   "schemaVersion": 1,
   "type": "persona",
+  "personaType": "DESSERT_FOX",
   "name": "Dessert Fox",
   "author": "sumi",
   "version": "1.0.0",

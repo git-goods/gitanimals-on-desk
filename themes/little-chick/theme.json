@@ -3,6 +3,7 @@
 
   "schemaVersion": 1,
   "type": "free",
+  "personaType": "LITTLE_CHICK",
   "name": "Little Chick",
   "author": "sumi",
   "version": "1.0.0",

@@ -3,6 +3,7 @@
 
   "schemaVersion": 1,
   "type": "persona",
+  "personaType": "RABBIT",
   "name": "Rabbit",
   "author": "sumi",
   "version": "1.0.0",
