@@ -228,8 +228,8 @@ function verifySettingsRuntime({ createSettingsRuntime, createSettingsController
 function verifyThemeLoader(themeLoader) {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "gitanimals-theme-shadow-"));
   const fakeSrc = path.join(tmpRoot, "fake-src");
-  const foxDir = path.join(tmpRoot, "themes", "fox");
-  const assetsDir = path.join(foxDir, "assets");
+  const themeDir = path.join(tmpRoot, "themes", "little-chick");
+  const assetsDir = path.join(themeDir, "assets");
   const userData = path.join(tmpRoot, "userData");
 
   fs.mkdirSync(fakeSrc, { recursive: true });
@@ -237,10 +237,10 @@ function verifyThemeLoader(themeLoader) {
   fs.mkdirSync(userData, { recursive: true });
   fs.writeFileSync(path.join(assetsDir, "idle.svg"), "<svg/>\n");
   fs.writeFileSync(
-    path.join(foxDir, "theme.json"),
+    path.join(themeDir, "theme.json"),
     JSON.stringify({
       schemaVersion: 1,
-      name: "fox",
+      name: "little-chick",
       version: "shadow-test",
       viewBox: { x: 0, y: 0, width: 100, height: 100 },
       states: {
@@ -255,8 +255,8 @@ function verifyThemeLoader(themeLoader) {
   );
 
   themeLoader.init(fakeSrc, userData);
-  const theme = themeLoader.loadTheme("fox");
-  assert.strictEqual(theme.name, "fox");
+  const theme = themeLoader.loadTheme("little-chick");
+  assert.strictEqual(theme.name, "little-chick");
   assert.deepStrictEqual(theme.states.idle, ["idle.svg"]);
   assert.ok(themeLoader.sanitizeSvg('<svg><script>alert(1)</script><rect/></svg>').includes("<rect"));
 

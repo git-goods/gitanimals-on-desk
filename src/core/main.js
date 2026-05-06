@@ -129,7 +129,7 @@ function _deferredDismissPermissionsByAgent(id) {
 function getOwnedThemes() {
   const all = themeLoader.discoverThemes();
   const ownedIds = new Set(personaSync.loadCachedPersonas().map((p) => p.id));
-  const activeId = activeTheme ? activeTheme._id : "fox";
+  const activeId = activeTheme ? activeTheme._id : "little-chick";
   return all.filter(
     (t) => t.type !== "persona" || ownedIds.has(t.id) || t.id === activeId,
   );
@@ -149,7 +149,7 @@ const _settingsController = createSettingsController({
     dismissPermissionsByAgent: _deferredDismissPermissionsByAgent,
     setTelemetryEnabled: (v) => telemetry.setEnabled(v),
     getDiscoveredThemes: () => getOwnedThemes(),
-    getActiveThemeId: () => (activeTheme ? activeTheme._id : "fox"),
+    getActiveThemeId: () => (activeTheme ? activeTheme._id : "little-chick"),
     resyncPersonas: () => personaSync.syncAll({ force: true }),
     checkForUpdates: (...args) => checkForUpdates(...args),
     applyUpdateFromSettings: () => applyUpdateFromSettings(),
@@ -217,7 +217,7 @@ const { LoginWindow } = require("../auth/login-window");
 const tokenStore = require("../auth/token-store");
 
 let activeTheme = themeLoader.loadTheme(
-  _settingsController.get("theme") || "fox",
+  _settingsController.get("theme") || "little-chick",
 );
 
 // ── CSS <object> sizing (from theme) ──
@@ -1077,7 +1077,7 @@ const _menuCtx = {
   reapplyMacVisibility,
   switchTheme: (id) => switchTheme(id),
   discoverThemes: () => getOwnedThemes(),
-  getActiveThemeId: () => (activeTheme ? activeTheme._id : "fox"),
+  getActiveThemeId: () => (activeTheme ? activeTheme._id : "little-chick"),
   getPinnedThemes: () => _settingsController.get("pinnedThemes") || {},
   openSettingsWindow: (initialTab) => openSettingsWindow(initialTab),
   logout: () => {
@@ -1291,7 +1291,7 @@ ipcMain.handle("settings:list-themes", () => {
   try {
     const all = themeLoader.discoverThemes();
     const ownedIds = new Set(personaSync.loadCachedPersonas().map((p) => p.id));
-    const activeId = activeTheme ? activeTheme._id : "fox";
+    const activeId = activeTheme ? activeTheme._id : "little-chick";
     return all.map((t) => ({
       id: t.id,
       name: t.name,

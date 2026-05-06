@@ -222,20 +222,21 @@ function loadTheme(themeId: string): ThemeLike {
 
   if (!raw) {
     console.error(`[theme-loader] Theme "${themeId}" not found`);
-    try { report("[theme] not found", "error", { themeId, fallingBackToFox: themeId !== "fox" }); } catch {}
-    if (themeId !== "fox") return loadTheme("fox");
-    throw new Error("Default theme 'fox' not found");
+    try { report("[theme] not found", "error", { themeId, fallingBackToDefault: themeId !== "little-chick" }); } catch {}
+    if (themeId !== "little-chick") return loadTheme("little-chick");
+    throw new Error("Default theme 'little-chick' not found");
   }
 
   const errors = validateTheme(raw);
   if (errors.length > 0) {
     console.error(`[theme-loader] Theme "${themeId}" validation errors:`, errors);
     try { report("[theme] validation errors", "error", { themeId, errors: errors.slice(0, 10) }); } catch {}
-    if (themeId !== "fox") return loadTheme("fox");
-    // Phase 1: fox itself is corrupt. Booting with an invalid theme would
-    // leave STATE_SVGS.idle empty and eventually surface as a silent
-    // "disappearing pet". Fail loud — Sentry already captured the details.
-    throw new Error(`Default theme 'fox' is corrupt: ${errors.slice(0, 3).join("; ")}`);
+    if (themeId !== "little-chick") return loadTheme("little-chick");
+    // Phase 1: little-chick (default theme) itself is corrupt. Booting with
+    // an invalid theme would leave STATE_SVGS.idle empty and eventually
+    // surface as a silent "disappearing pet". Fail loud — Sentry already
+    // captured the details.
+    throw new Error(`Default theme 'little-chick' is corrupt: ${errors.slice(0, 3).join("; ")}`);
   }
 
   // Merge defaults for optional fields
