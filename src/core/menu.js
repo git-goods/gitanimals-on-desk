@@ -32,7 +32,7 @@ module.exports = function initMenu(ctx) {
   // ── Theme submenu builder ──
   function buildThemeSubmenu() {
     const themes = ctx.discoverThemes ? ctx.discoverThemes() : [];
-    const activeId = ctx.getActiveThemeId ? ctx.getActiveThemeId() : "fox";
+    const activeId = ctx.getActiveThemeId ? ctx.getActiveThemeId() : "little-chick";
     const pinned = ctx.getPinnedThemes ? ctx.getPinnedThemes() : null;
 
     // Show only pinned themes; always include the active theme as a safety net.

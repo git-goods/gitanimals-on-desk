@@ -53,7 +53,7 @@ export const SCHEMA: Record<string, SchemaField> = {
   updateSnoozeUntil: { type: "number", default: 0, validate: (v) => Number.isFinite(v) },
   pendingUpdateVersion: { type: "string", default: "" },
   sendDiagnostics: { type: "boolean", default: true },
-  theme: { type: "string", default: "fox" },
+  theme: { type: "string", default: "little-chick" },
   agents: {
     type: "object",
     defaultFactory: () => ({
