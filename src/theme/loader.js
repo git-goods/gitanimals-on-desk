@@ -85,6 +85,11 @@ let themeCacheDir = null; // {userData}/theme-cache/
 // Variant map: variant ID → { parentId, parentDir, accessories, builtin, source }
 // Populated by discoverThemes(), consumed by loadTheme().
 let _variantMap = {};
+// Persona-type → bundled theme id. Built from `personaType` field in
+// builtin/user theme.json. Lets persona-sync route a remote persona to its
+// bundled equivalent (e.g. "DESSERT_FOX" → "fox") instead of synthesising a
+// duplicate cache directory.
+let _personaTypeMap = {};
 // ── Public API ──
 /**
  * Initialize the loader. Call once at startup from main.js.
@@ -110,6 +115,7 @@ function discoverThemes() {
     const themes = /** @type {ThemeCatalogEntry[]} */ ([]);
     const seen = new Set();
     _variantMap = {};
+    _personaTypeMap = {};
     // Built-in themes
     if (builtinThemesDir) {
         _scanThemesDir(builtinThemesDir, true, themes, seen);
@@ -124,6 +130,21 @@ function discoverThemes() {
         _scanThemesDir(themeCacheDir, false, themes, seen, { source: "remote" });
     }
     return themes;
+}
+/**
+ * Resolve an API personaType (e.g. "DESSERT_FOX") to the matching bundled
+ * theme id (e.g. "fox") if any bundled or user theme declares it. Returns
+ * null when no mapping exists (caller should fall back to a synthesised id).
+ *
+ * Lazily populates the map on first call so persona-sync can use it before
+ * any explicit discoverThemes() call.
+ */
+function personaTypeToThemeId(personaType) {
+    if (typeof personaType !== "string" || !personaType)
+        return null;
+    if (Object.keys(_personaTypeMap).length === 0)
+        discoverThemes();
+    return _personaTypeMap[personaType] || null;
 }
 function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
     try {
@@ -140,6 +161,23 @@ function _scanThemesDir(dir, builtin, themes, seen, opts = {}) {
             try {
                 const cfg = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
                 const themeDir = path.join(dir, entry.name);
+                // Persona mapping: builtin/user theme.json may declare `personaType`
+                // (e.g. "DESSERT_FOX") so persona-sync can route the API persona of
+                // the same name to this bundled theme instead of creating a duplicate
+                // cache row. Cache dirs use `_personaType` (written by persona-sync's
+                // _rewriteToLocal) — if it maps to a theme id that's already seen,
+                // the bundled/user version wins and we skip the cache duplicate.
+                const declaredPersonaType = (cfg && typeof cfg.personaType === "string" && cfg.personaType) ||
+                    (cfg && typeof cfg._personaType === "string" && cfg._personaType) ||
+                    null;
+                if (opts.source === "remote") {
+                    if (declaredPersonaType && _personaTypeMap[declaredPersonaType] && seen.has(_personaTypeMap[declaredPersonaType])) {
+                        continue; // bundled/user theme already represents this persona
+                    }
+                }
+                else if (declaredPersonaType && !_personaTypeMap[declaredPersonaType]) {
+                    _personaTypeMap[declaredPersonaType] = entry.name;
+                }
                 // Variants: if theme declares variants, register each as a separate selectable entry
                 if (Array.isArray(cfg.variants) && cfg.variants.length > 0) {
                     for (const v of cfg.variants) {
@@ -905,4 +943,5 @@ module.exports = {
     ensureUserThemesDir,
     getSoundUrl,
     sanitizeSvg,
+    personaTypeToThemeId,
 };
