@@ -1,11 +1,23 @@
 import { h } from "./react.js";
 import { SIDEBAR_TABS } from "./settings-data.js";
+import type {
+  PendingMap,
+  RunCommand,
+  Toast,
+  Translator,
+  UpdateState,
+  UserInfo,
+} from "./types.js";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-export function ToastStack({ toasts }: any) {
+interface ToastStackProps {
+  toasts: Toast[];
+}
+
+export function ToastStack({ toasts }: ToastStackProps) {
   return (
     <div className="toast-stack" id="toastStack">
       {toasts.map((toast) => (
@@ -20,7 +32,13 @@ export function ToastStack({ toasts }: any) {
   );
 }
 
-export function Sidebar({ activeTab, setActiveTab, t }: any) {
+interface SidebarProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  t: Translator;
+}
+
+export function Sidebar({ activeTab, setActiveTab, t }: SidebarProps) {
   return (
     <nav className="sidebar" id="sidebar">
       {SIDEBAR_TABS.map((tab) => (
@@ -119,13 +137,21 @@ export function ToggleRow({
   );
 }
 
+interface UserCardProps {
+  t: Translator;
+  userInfo: UserInfo | null;
+  pending: boolean;
+  onLogout: () => void;
+  onSignInAgain: () => void;
+}
+
 export function UserCard({
   t,
   userInfo,
   pending,
   onLogout,
   onSignInAgain,
-}: any) {
+}: UserCardProps) {
   return (
     <Section title="">
       <div className="row">
@@ -172,12 +198,19 @@ function formatDateTime(value) {
   }
 }
 
+interface UpdateSectionProps {
+  t: Translator;
+  updateState: UpdateState | null;
+  pending: PendingMap;
+  runCommand: RunCommand;
+}
+
 export function UpdateSection({
   t,
   updateState,
   pending,
   runCommand,
-}: any) {
+}: UpdateSectionProps) {
   const status = (updateState && updateState.status) || "idle";
   const currentVersion = (updateState && updateState.currentVersion) || "0.0.0";
   const latestVersion = (updateState && updateState.latestVersion) || "";

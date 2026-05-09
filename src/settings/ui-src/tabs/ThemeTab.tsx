@@ -1,5 +1,22 @@
 import { React, h } from "../react.js";
 import { Section, ToggleRow } from "../components.js";
+import type {
+  PendingMap,
+  RunCommand,
+  Snapshot,
+  ThemeMetadata,
+  Translator,
+} from "../types.js";
+
+interface ThemeTabProps {
+  snapshot: Snapshot;
+  t: Translator;
+  themeMetadata: ThemeMetadata[] | null;
+  themeRefreshing: boolean;
+  pending: PendingMap;
+  runCommand: RunCommand;
+  refreshThemes: () => void;
+}
 
 export function ThemeTab({
   snapshot,
@@ -9,7 +26,7 @@ export function ThemeTab({
   pending,
   runCommand,
   refreshThemes,
-}: any) {
+}: ThemeTabProps) {
   const hasUnowned =
     Array.isArray(themeMetadata) &&
     themeMetadata.some((th) => th.type === "persona" && !th.owned);

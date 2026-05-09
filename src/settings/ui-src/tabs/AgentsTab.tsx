@@ -1,5 +1,20 @@
 import { React, h } from "../react.js";
 import { Section, ToggleRow } from "../components.js";
+import type {
+  AgentMetadata,
+  PendingMap,
+  RunCommand,
+  Snapshot,
+  Translator,
+} from "../types.js";
+
+interface AgentsTabProps {
+  snapshot: Snapshot;
+  t: Translator;
+  agentMetadata: AgentMetadata[];
+  pending: PendingMap;
+  runCommand: RunCommand;
+}
 
 export function AgentsTab({
   snapshot,
@@ -7,7 +22,7 @@ export function AgentsTab({
   agentMetadata,
   pending,
   runCommand,
-}: any) {
+}: AgentsTabProps) {
   const isEmpty = !agentMetadata || agentMetadata.length === 0;
   return (
     <>
@@ -73,7 +88,12 @@ export function AgentsTab({
   );
 }
 
-function AgentBadges({ agent, t }: any) {
+interface AgentBadgesProps {
+  agent: AgentMetadata;
+  t: Translator;
+}
+
+function AgentBadges({ agent, t }: AgentBadgesProps) {
   const eventSourceKey =
     agent.eventSource === "log-poll"
       ? "eventSourceLogPoll"

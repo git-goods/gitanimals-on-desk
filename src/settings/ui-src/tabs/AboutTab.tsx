@@ -1,8 +1,14 @@
 import { React, h } from "../react.js";
 import { ABOUT_LINKS } from "../settings-data.js";
 import { Section, SettingRow } from "../components.js";
+import type { Snapshot, Translator } from "../types.js";
 
-export function AboutTab({ snapshot, t }: any) {
+interface AboutTabProps {
+  snapshot: Snapshot;
+  t: Translator;
+}
+
+export function AboutTab({ snapshot, t }: AboutTabProps) {
   const version = (snapshot && snapshot.appVersion) || "—";
   const openLink = (url) => (event) => {
     event.preventDefault();

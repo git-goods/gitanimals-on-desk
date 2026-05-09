@@ -5,6 +5,25 @@ import {
   UpdateSection,
   UserCard,
 } from "../components.js";
+import type {
+  PendingMap,
+  RunCommand,
+  RunUpdate,
+  Snapshot,
+  Translator,
+  UpdateState,
+  UserInfo,
+} from "../types.js";
+
+interface GeneralTabProps {
+  snapshot: Snapshot;
+  t: Translator;
+  pending: PendingMap;
+  runUpdate: RunUpdate;
+  runCommand: RunCommand;
+  userInfo: UserInfo | null;
+  updateState: UpdateState | null;
+}
 
 export function GeneralTab({
   snapshot,
@@ -14,7 +33,7 @@ export function GeneralTab({
   runCommand,
   userInfo,
   updateState,
-}: any) {
+}: GeneralTabProps) {
   const soundEnabled = !snapshot.soundMuted;
 
   return (
@@ -173,7 +192,14 @@ export function GeneralTab({
   );
 }
 
-function LanguageRow({ snapshot, t, pending, onChange }: any) {
+interface LanguageRowProps {
+  snapshot: Snapshot;
+  t: Translator;
+  pending: boolean;
+  onChange: (lang: string) => void;
+}
+
+function LanguageRow({ snapshot, t, pending, onChange }: LanguageRowProps) {
   const current = snapshot.lang || "en";
   const options = [
     { value: "en", label: t("langEnglish") },

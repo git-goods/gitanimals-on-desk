@@ -1,6 +1,11 @@
 import { h } from "../react.js";
+import type { Translator } from "../types.js";
 
-export function PlaceholderTab({ t }: any) {
+interface PlaceholderTabProps {
+  t: Translator;
+}
+
+export function PlaceholderTab({ t }: PlaceholderTabProps) {
   return (
     <div className="placeholder">
       <div className="placeholder-icon">{"\u{1F6E0}"}</div>

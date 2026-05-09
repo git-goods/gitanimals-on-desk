@@ -8,20 +8,33 @@ import {
   PlaceholderTab,
   ThemeTab,
 } from "./tabs/index.js";
+import type {
+  AgentMetadata,
+  PendingMap,
+  Snapshot,
+  ThemeMetadata,
+  Toast,
+  UpdateState,
+  UserInfo,
+} from "./types.js";
 
 export function App() {
-  const [snapshot, setSnapshot] = useState(null);
-  const [updateState, setUpdateState] = useState(null);
-  const [activeTab, setActiveTab] = useState("general");
-  const [agentMetadata, setAgentMetadata] = useState([]);
-  const [themeMetadata, setThemeMetadata] = useState(null);
-  const [userInfo, setUserInfo] = useState(null);
-  const [themeRefreshing, setThemeRefreshing] = useState(false);
-  const [pending, setPending] = useState({});
-  const [toasts, setToasts] = useState([]);
-  const toastTimers = useRef(new Map());
-  const pendingRef = useRef({});
-  const snapshotRef = useRef(null);
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [updateState, setUpdateState] = useState<UpdateState | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("general");
+  const [agentMetadata, setAgentMetadata] = useState<AgentMetadata[]>([]);
+  const [themeMetadata, setThemeMetadata] = useState<ThemeMetadata[] | null>(
+    null,
+  );
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [themeRefreshing, setThemeRefreshing] = useState<boolean>(false);
+  const [pending, setPending] = useState<PendingMap>({});
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+  const pendingRef = useRef<PendingMap>({});
+  const snapshotRef = useRef<Snapshot | null>(null);
 
   const t = (key: string) => translate(snapshot || {}, key);
 
@@ -33,7 +46,10 @@ export function App() {
     snapshotRef.current = snapshot;
   }, [snapshot]);
 
-  function pushToast(message: string, options: any = {}) {
+  function pushToast(
+    message: string,
+    options: { error?: boolean; ttl?: number } = {},
+  ) {
     const id = `${Date.now()}:${Math.random()}`;
     setToasts((current) =>
       current.concat([{ id, message, error: !!options.error }]),
