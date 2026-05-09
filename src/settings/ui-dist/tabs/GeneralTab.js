@@ -1,6 +1,5 @@
 import { React, h } from "../react.js";
-import { Section, UpdateSection, UserCard, } from "../components.js";
-import { ToggleRow } from "./ToggleRow.js";
+import { Section, ToggleRow, UpdateSection, UserCard, } from "../components.js";
 export function GeneralTab({ snapshot, t, pending, runUpdate, runCommand, userInfo, updateState, }) {
     const soundEnabled = !snapshot.soundMuted;
     return (h(React.Fragment, null,

@@ -36,6 +36,9 @@ export function SettingRow({ label, desc, control, extraClass }) {
             desc ? h("span", { className: "row-desc" }, desc) : null),
         control));
 }
+export function ToggleRow({ label, desc, on, pending, disabled, onToggle, extraClass, }) {
+    return (h(SettingRow, { label: label, desc: desc, extraClass: extraClass, control: h(SwitchControl, { on: on, pending: pending, disabled: disabled, onToggle: onToggle }) }));
+}
 export function UserCard({ t, userInfo, pending, onLogout, onSignInAgain, }) {
     return (h(Section, { title: "" },
         h("div", { className: "row" },

@@ -93,6 +93,32 @@ export function SettingRow({ label, desc, control, extraClass }: any) {
   );
 }
 
+export function ToggleRow({
+  label,
+  desc,
+  on,
+  pending,
+  disabled,
+  onToggle,
+  extraClass,
+}: any) {
+  return (
+    <SettingRow
+      label={label}
+      desc={desc}
+      extraClass={extraClass}
+      control={
+        <SwitchControl
+          on={on}
+          pending={pending}
+          disabled={disabled}
+          onToggle={onToggle}
+        />
+      }
+    />
+  );
+}
+
 export function UserCard({
   t,
   userInfo,

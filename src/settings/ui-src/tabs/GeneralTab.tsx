@@ -1,10 +1,10 @@
 import { React, h } from "../react.js";
 import {
   Section,
+  ToggleRow,
   UpdateSection,
   UserCard,
 } from "../components.js";
-import { ToggleRow } from "./ToggleRow.js";
 
 export function GeneralTab({
   snapshot,

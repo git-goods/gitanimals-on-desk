@@ -1,6 +1,5 @@
 import { React, h } from "../react.js";
-import { Section } from "../components.js";
-import { ToggleRow } from "./ToggleRow.js";
+import { Section, ToggleRow } from "../components.js";
 export function AgentsTab({ snapshot, t, agentMetadata, pending, runCommand, }) {
     const isEmpty = !agentMetadata || agentMetadata.length === 0;
     return (h(React.Fragment, null,
