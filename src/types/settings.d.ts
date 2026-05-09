@@ -59,9 +59,14 @@ export interface SettingsStore {
   };
 }
 
+export interface SettingsPrefsModule {
+  load(prefsPath: string): SettingsLoadResult;
+  save(prefsPath: string, snapshot: SettingsSnapshot): void;
+}
+
 export interface CreateSettingsControllerOptions {
   prefsPath?: string;
-  prefs?: typeof import("../settings/prefs");
+  prefs?: SettingsPrefsModule;
   updates?: SettingsUpdateRegistry;
   commands?: SettingsCommandRegistry;
   injectedDeps?: Record<string, unknown>;
