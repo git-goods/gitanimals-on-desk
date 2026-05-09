@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "checkJs": false,
+    "noEmit": false,
+    "noEmitOnError": true,
+    "declaration": false,
+    "sourceMap": false,
+    "module": "ES2022",
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "React.Fragment",
+    "rootDir": "src/settings/ui-src",
+    "outDir": "src/settings/ui-dist"
+  },
+  "include": ["src/settings/ui-src/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".worktrees",
+    ".tsbuild",
+    "tools/preview"
+  ]
+}
