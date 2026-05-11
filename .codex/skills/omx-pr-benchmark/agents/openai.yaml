@@ -1,0 +1,4 @@
+interface:
+  display_name: "OMX PR Benchmark"
+  short_description: "Run before/after PR experiments with KPI evidence"
+  default_prompt: "Use $omx-pr-benchmark to set up a baseline vs OMX experiment with shared tests, KPI capture, worktrees, and PR-ready result artifacts."

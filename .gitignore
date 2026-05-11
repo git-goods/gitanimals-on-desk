@@ -19,6 +19,8 @@ PLAN-*.md
 codex-*.md
 CHANGELOG-draft.md
 docs/*
+!docs/experiments/
+!docs/experiments/**
 !docs/copilot-setup.md
 !docs/release-v0.5.5.md
 !docs/release-and-signing.md
@@ -44,6 +46,8 @@ logs/
 
 # GIF recording tools (not part of main project)
 scripts/*
+!scripts/experiments/
+!scripts/experiments/**
 !scripts/remote-deploy.sh
 !scripts/run-gitanimalsbot-stress.sh
 !scripts/monitor-gitanimals-resources.sh

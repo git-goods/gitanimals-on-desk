@@ -1,0 +1,72 @@
+{
+  "experiment_slug": "omx-vs-baseline-batch-01",
+  "goal": "Benchmark OMX-assisted execution against a non-OMX baseline for migrating the settings panel renderer to a React-managed JSX or TSX implementation.",
+  "task_batch": [
+    {
+      "id": "settings-react-001",
+      "title": "Define the migration boundary for the settings panel React conversion",
+      "acceptance_criteria": [
+        "Identify the current settings entry points and renderer ownership boundaries",
+        "Keep the same migration scope and stop condition in both branches",
+        "Avoid folding unrelated settings architecture changes into the benchmark"
+      ],
+      "notes": "Use src/settings/settings.html, src/settings/renderer.js, and src/preload/settings-bridge.ts as the primary migration anchors."
+    },
+    {
+      "id": "settings-react-002",
+      "title": "Add or tighten acceptance tests before implementation",
+      "acceptance_criteria": [
+        "Introduce task-specific tests or harness checks before implementation starts",
+        "Preserve existing settings and preload bridge tests unless stricter replacements are added",
+        "Run the same verification commands in both branches"
+      ],
+      "notes": "This is the TDD gate for the experiment."
+    },
+    {
+      "id": "settings-react-003",
+      "title": "Convert the settings renderer to React-managed JSX or TSX",
+      "acceptance_criteria": [
+        "The settings UI is rendered through React components rather than a monolithic ad hoc renderer script",
+        "Tabs general, agents, theme, and about still render and use the existing settings API contract",
+        "The settings window still loads from src/settings/settings.html"
+      ],
+      "notes": "TSX is preferred if the branch introduces a maintained TypeScript UI surface."
+    },
+    {
+      "id": "settings-react-004",
+      "title": "Keep behavior parity and verify the migrated panel",
+      "acceptance_criteria": [
+        "Existing settings interactions remain functional",
+        "No regression is introduced in settings bridge usage",
+        "Verification output is recorded into the result JSON files"
+      ],
+      "notes": "Use the same KPI capture flow for baseline and OMX branches."
+    }
+  ],
+  "fairness_constraints": [
+    "same base commit",
+    "same acceptance tests",
+    "same task list",
+    "same stop condition",
+    "same model and reasoning configuration where possible",
+    "same verification commands"
+  ],
+  "verification_commands": [
+    "node --test test/experiments/*.test.js",
+    "npm test",
+    "npm run typecheck"
+  ],
+  "reporting_requirements": [
+    "fill docs/experiments/omx-vs-baseline-batch-01/results/baseline.json",
+    "fill docs/experiments/omx-vs-baseline-batch-01/results/with-omx.json",
+    "copy the benchmark summary into both PR descriptions"
+  ],
+  "repo_anchors": [
+    "src/settings/settings.html",
+    "src/settings/renderer.js",
+    "src/preload/settings-bridge.ts",
+    "src/types/settings-ui.d.ts",
+    "test/settings",
+    "test/preload/settings-bridge.test.js"
+  ]
+}
