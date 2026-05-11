@@ -12,6 +12,7 @@
     "src/core/state-selectors.ts",
     "src/core/settings-runtime.ts",
     "src/preload/settings-bridge.ts",
+    "src/settings/renderer.tsx",
     "src/settings/actions.ts",
     "src/settings/controller.ts",
     "src/settings/prefs.ts",
