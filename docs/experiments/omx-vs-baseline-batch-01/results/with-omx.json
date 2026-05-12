@@ -1,0 +1,23 @@
+{
+  "variant": "with-omx",
+  "experiment_slug": "omx-vs-baseline-batch-01",
+  "base_ref": "main",
+  "harness_branch": "exp/omx-vs-baseline-batch-01-harness",
+  "branch_name": "exp/omx-vs-baseline-batch-01-with-omx",
+  "token_source": "unrecorded",
+  "tasks_total": null,
+  "tasks_succeeded": null,
+  "tests_passed": null,
+  "tests_total": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "total_tokens": null,
+  "wall_clock_minutes": null,
+  "turn_count": null,
+  "tool_call_count": null,
+  "files_changed": null,
+  "lines_added": null,
+  "lines_deleted": null,
+  "verification_commands": [],
+  "qualitative_notes": []
+}

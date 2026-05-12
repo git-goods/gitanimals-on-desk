@@ -18,6 +18,7 @@
     "dev": "npm run transpile:ts-sources && node scripts/dev.js",
     "dev:clean": "node scripts/clean-cache.js && npm run transpile:ts-sources && node scripts/dev.js",
     "dev:real": "npm run transpile:ts-sources && node launch.js",
+    "experiments:collect-kpi": "node scripts/experiments/collect-kpi.js",
     "clear-auth": "node scripts/clear-auth.js",
     "clean-cache": "node scripts/clean-cache.js",
     "install:gemini-hooks": "node hooks/gemini-install.js",
