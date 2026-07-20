@@ -23,8 +23,17 @@ const CORE_HOOKS = [
   "Notification",
   // PermissionRequest: handled by HTTP_HOOKS (blocking), not command hook
   "Elicitation",
-  "WorktreeCreate",
+  // WorktreeCreate: intentionally NOT registered. Unlike the other events, it is a
+  // decision-control hook that *replaces* Claude Code's default git worktree behavior —
+  // the command hook must print the created worktree path to stdout, and "missing path
+  // fails creation". Our cosmetic pet-state hook prints nothing, so registering it here
+  // broke worktree creation ("WorktreeCreate hook failed: ... no output").
+  // See DEPRECATED_COMMAND_EVENTS below for migration of already-installed hooks.
 ];
+
+// Command-hook events we used to register but must not — see WorktreeCreate note above.
+// Existing installs get these stale gitanimals command hooks cleaned up on next register.
+const DEPRECATED_COMMAND_EVENTS = ["WorktreeCreate"];
 
 // Hooks that require a minimum Claude Code version
 const VERSIONED_HOOKS = [
@@ -444,6 +453,23 @@ function registerHooks(options = {}) {
       return true;
     });
     if (settings.hooks.SessionStart.length < beforeLen) changed = true;
+  }
+
+  // Clean up stale command hooks for deprecated events (e.g. WorktreeCreate).
+  // A previous version registered our cosmetic hook there; because WorktreeCreate
+  // requires the hook to return a worktree path, that no-op broke worktree creation.
+  for (const event of DEPRECATED_COMMAND_EVENTS) {
+    if (!Array.isArray(settings.hooks[event])) continue;
+    const result = removeMatchingCommandHooks(
+      settings.hooks[event],
+      (command) => command.includes(MARKER)
+    );
+    if (result.changed) {
+      removed += result.removed;
+      changed = true;
+      if (result.entries.length > 0) settings.hooks[event] = result.entries;
+      else delete settings.hooks[event];
+    }
   }
 
   // Clean up stale command hooks for HTTP-only events (e.g. PermissionRequest).
