@@ -122,6 +122,52 @@ describe("Hook installer version compatibility", () => {
     assert.strictEqual(result.removed, 1);
   });
 
+  it("never registers a WorktreeCreate command hook (it would break worktree creation)", () => {
+    const settingsPath = makeTempSettings({});
+
+    registerHooks({
+      silent: true,
+      settingsPath,
+      claudeVersionInfo: { version: "2.1.78", source: "test", status: "known" },
+    });
+
+    const settings = readSettings(settingsPath);
+    assert.ok(!Object.prototype.hasOwnProperty.call(settings.hooks, "WorktreeCreate"));
+  });
+
+  it("removes a stale GitAnimals WorktreeCreate hook while preserving third-party entries", () => {
+    const settingsPath = makeTempSettings({
+      hooks: {
+        WorktreeCreate: [
+          {
+            matcher: "",
+            hooks: [{ type: "command", command: 'node "/tmp/gitanimals-hook.js" WorktreeCreate' }],
+          },
+          {
+            matcher: "",
+            hooks: [{ type: "command", command: 'node "/tmp/third-party-worktree.js" WorktreeCreate' }],
+          },
+        ],
+      },
+    });
+
+    const result = registerHooks({
+      silent: true,
+      settingsPath,
+      claudeVersionInfo: { version: "2.1.78", source: "test", status: "known" },
+    });
+
+    const settings = readSettings(settingsPath);
+    assert.strictEqual(getGitAnimalsCommands(settings, "WorktreeCreate").length, 0);
+    assert.ok(Array.isArray(settings.hooks.WorktreeCreate));
+    assert.strictEqual(settings.hooks.WorktreeCreate.length, 1);
+    assert.strictEqual(
+      settings.hooks.WorktreeCreate[0].hooks[0].command.includes("third-party-worktree.js"),
+      true
+    );
+    assert.strictEqual(result.removed, 1);
+  });
+
   it("keeps existing versioned hooks when Claude Code version is unknown", () => {
     const settingsPath = makeTempSettings({
       hooks: {
